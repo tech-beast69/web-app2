@@ -11,14 +11,13 @@ const DASHBOARD_CONFIG = {
     REFRESH_INTERVAL: 5000,
     
     // Enable debug logging
-    DEBUG: false
+    DEBUG: true  // Enable for troubleshooting
 };
 
 // Auto-detect if running on GitHub Pages
 if (window.location.hostname.endsWith('.github.io')) {
     // Running on GitHub Pages - use your bot server URL
-    // TODO: Replace with your actual bot server URL
-    DASHBOARD_CONFIG.API_URL = 'http://YOUR_BOT_SERVER_IP:5000';
+    DASHBOARD_CONFIG.API_URL = 'http://us36.glacierhosting.org:5000';
     console.log('GitHub Pages detected - using remote API:', DASHBOARD_CONFIG.API_URL);
 }
 
