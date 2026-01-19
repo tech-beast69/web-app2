@@ -5,7 +5,7 @@ const DASHBOARD_CONFIG = {
     // API endpoint configuration
     // For GitHub Pages: Set this to your bot server's public URL
     // Example: 'http://your-server-ip:5000' or 'https://your-domain.com'
-    API_URL: 'http://localhost:5000', // Change this to your bot server URL
+    API_URL: 'http://localhost:3027', // Change this to your bot server URL
     
     // Refresh interval in milliseconds (default: 5000ms = 5 seconds)
     REFRESH_INTERVAL: 5000,
@@ -23,6 +23,7 @@ if (window.location.hostname.endsWith('.github.io')) {
 
 // Export config
 window.DASHBOARD_CONFIG = DASHBOARD_CONFIG;
+
 
 
 
