@@ -1,6 +1,6 @@
 // Dashboard JavaScript - Real-time updates
 // API configuration is loaded from config.js
-const API_BASE = 'http://us36.glacierhosting.org:3027';
+const API_BASE = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
 const REFRESH_INTERVAL = 30000;
 const DEBUG = window.DASHBOARD_CONFIG?.DEBUG || false;
 
@@ -192,6 +192,7 @@ window.addEventListener('beforeunload', () => {
         clearInterval(updateInterval);
     }
 });
+
 
 
 
