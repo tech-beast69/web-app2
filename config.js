@@ -17,11 +17,12 @@ const DASHBOARD_CONFIG = {
 // Auto-detect if running on GitHub Pages
 if (window.location.hostname.endsWith('.github.io')) {
     // Running on GitHub Pages - use your bot server URL
-    DASHBOARD_CONFIG.API_URL = 'https://us36.glacierhosting.org:3027';
+    DASHBOARD_CONFIG.API_URL = 'https://us36.glacierhosting.org:2022';
     console.log('GitHub Pages detected - using remote API:', DASHBOARD_CONFIG.API_URL);
 }
 
 // Export config
 window.DASHBOARD_CONFIG = DASHBOARD_CONFIG;
+
 
 
