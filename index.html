@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Dashboard - Status & Statistics</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-robot"></i> Bot Dashboard</h1>
+            <p class="subtitle">Real-time Bot Status & User Statistics</p>
+        </header>
+
+        <!-- Bot Status Section -->
+        <section class="status-section">
+            <h2><i class="fas fa-heartbeat"></i> Bot Status</h2>
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-indicator" id="statusIndicator">
+                        <i class="fas fa-circle"></i> <span id="botStatus">Loading...</span>
+                    </div>
+                    <p class="status-label">Bot Status</p>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-clock stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="uptime">--</h3>
+                        <p>Uptime</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-microchip stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="cpuUsage">--</h3>
+                        <p>CPU Usage</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-memory stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="memoryUsage">--</h3>
+                        <p>Memory Usage</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- User Statistics Section -->
+        <section class="stats-section">
+            <h2><i class="fas fa-users"></i> User Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card highlight">
+                    <i class="fas fa-users stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="totalUsers">--</h3>
+                        <p>Total Users</p>
+                    </div>
+                </div>
+                <div class="stat-card highlight">
+                    <i class="fas fa-user-check stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="activeUsers">--</h3>
+                        <p>Active Today</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-user-plus stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="newUsers">--</h3>
+                        <p>New Users (24h)</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-crown stat-icon" style="color: #ffd700;"></i>
+                    <div class="stat-info">
+                        <h3 id="premiumUsers">--</h3>
+                        <p>Premium Users</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Download Statistics Section -->
+        <section class="stats-section">
+            <h2><i class="fas fa-download"></i> Download Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card highlight">
+                    <i class="fas fa-download stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="totalDownloads">--</h3>
+                        <p>Total Downloads</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-calendar-day stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="todayDownloads">--</h3>
+                        <p>Today's Downloads</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-upload stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="totalUploads">--</h3>
+                        <p>Total Uploads</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-hourglass-half stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="activeDownloads">--</h3>
+                        <p>Active Downloads</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Additional Stats Section -->
+        <section class="stats-section">
+            <h2><i class="fas fa-chart-line"></i> Additional Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-link stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="linksSaved">--</h3>
+                        <p>Links Saved</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-users-cog stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="admins">--</h3>
+                        <p>Total Admins</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-comments stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="totalMessages">--</h3>
+                        <p>Messages Handled</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-exclamation-triangle stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="errors">--</h3>
+                        <p>Errors (24h)</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- System Statistics Section -->
+        <section class="stats-section">
+            <h2><i class="fas fa-server"></i> System Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-database stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="cacheSize">--</h3>
+                        <p>Cache Size</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-hdd stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="diskUsage">--</h3>
+                        <p>Disk Usage</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>Last updated: <span id="lastUpdate">--</span></p>
+            <p><i class="fas fa-sync-alt"></i> Auto-refresh every 5 seconds</p>
+        </footer>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>
