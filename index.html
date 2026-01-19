@@ -52,124 +52,110 @@
         <section class="stats-section">
             <h2><i class="fas fa-users"></i> User Statistics</h2>
             <div class="stats-grid">
-                <div class="stat-card highlight">
+                <div class="stat-card primary">
                     <i class="fas fa-users stat-icon"></i>
                     <div class="stat-info">
-                        <h3 id="totalUsers">--</h3>
+                        <h3 id="totalUsers">0</h3>
                         <p>Total Users</p>
                     </div>
                 </div>
-                <div class="stat-card highlight">
+                <div class="stat-card success">
                     <i class="fas fa-user-check stat-icon"></i>
                     <div class="stat-info">
-                        <h3 id="activeUsers">--</h3>
-                        <p>Active Today</p>
+                        <h3 id="activeUsers">0</h3>
+                        <p>Active Users</p>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <i class="fas fa-user-plus stat-icon"></i>
+                <div class="stat-card warning">
+                    <i class="fas fa-user-clock stat-icon"></i>
                     <div class="stat-info">
-                        <h3 id="newUsers">--</h3>
-                        <p>New Users (24h)</p>
+                        <h3 id="inactiveUsers">0</h3>
+                        <p>Inactive Users</p>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <i class="fas fa-crown stat-icon" style="color: #ffd700;"></i>
+                <div class="stat-card premium">
+                    <i class="fas fa-crown stat-icon"></i>
                     <div class="stat-info">
-                        <h3 id="premiumUsers">--</h3>
+                        <h3 id="premiumUsers">0</h3>
                         <p>Premium Users</p>
                     </div>
                 </div>
+                <div class="stat-card info">
+                    <i class="fas fa-user-plus stat-icon"></i>
+                    <div class="stat-info">
+                        <h3 id="recentUsers">0</h3>
+                        <p>Recent Users (7d)</p>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <!-- Download Statistics Section -->
+        <!-- Download/Upload Statistics -->
         <section class="stats-section">
-            <h2><i class="fas fa-download"></i> Download Statistics</h2>
+            <h2><i class="fas fa-chart-line"></i> Activity Statistics</h2>
             <div class="stats-grid">
-                <div class="stat-card highlight">
+                <div class="stat-card download">
                     <i class="fas fa-download stat-icon"></i>
                     <div class="stat-info">
-                        <h3 id="totalDownloads">--</h3>
+                        <h3 id="totalDownloads">0</h3>
                         <p>Total Downloads</p>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <i class="fas fa-calendar-day stat-icon"></i>
-                    <div class="stat-info">
-                        <h3 id="todayDownloads">--</h3>
-                        <p>Today's Downloads</p>
-                    </div>
-                </div>
-                <div class="stat-card">
+                <div class="stat-card upload">
                     <i class="fas fa-upload stat-icon"></i>
                     <div class="stat-info">
-                        <h3 id="totalUploads">--</h3>
+                        <h3 id="totalUploads">0</h3>
                         <p>Total Uploads</p>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <i class="fas fa-hourglass-half stat-icon"></i>
+                <div class="stat-card media">
+                    <i class="fas fa-photo-video stat-icon"></i>
                     <div class="stat-info">
-                        <h3 id="activeDownloads">--</h3>
-                        <p>Active Downloads</p>
+                        <h3 id="totalMedia">0</h3>
+                        <p>Total Media Files</p>
                     </div>
                 </div>
-            </div>
-        </section>
-
-        <!-- Additional Stats Section -->
-        <section class="stats-section">
-            <h2><i class="fas fa-chart-line"></i> Additional Statistics</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <i class="fas fa-link stat-icon"></i>
+                <div class="stat-card groups">
+                    <i class="fas fa-layer-group stat-icon"></i>
                     <div class="stat-info">
-                        <h3 id="linksSaved">--</h3>
-                        <p>Links Saved</p>
+                        <h3 id="totalGroups">0</h3>
+                        <p>Total Groups</p>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <i class="fas fa-users-cog stat-icon"></i>
-                    <div class="stat-info">
-                        <h3 id="admins">--</h3>
-                        <p>Total Admins</p>
-                    </div>
-                </div>
-                <div class="stat-card">
+                <div class="stat-card feedback">
                     <i class="fas fa-comments stat-icon"></i>
                     <div class="stat-info">
-                        <h3 id="totalMessages">--</h3>
-                        <p>Messages Handled</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <i class="fas fa-exclamation-triangle stat-icon"></i>
-                    <div class="stat-info">
-                        <h3 id="errors">--</h3>
-                        <p>Errors (24h)</p>
+                        <h3 id="totalFeedback">0</h3>
+                        <p>Feedback Received</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- System Statistics Section -->
-        <section class="stats-section">
-            <h2><i class="fas fa-server"></i> System Statistics</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <i class="fas fa-database stat-icon"></i>
-                    <div class="stat-info">
-                        <h3 id="cacheSize">--</h3>
-                        <p>Cache Size</p>
+        <!-- System Resources Section -->
+        <section class="system-section">
+            <h2><i class="fas fa-server"></i> System Resources</h2>
+            <div class="resource-grid">
+                <div class="resource-card">
+                    <h4><i class="fas fa-microchip"></i> CPU</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="cpuProgress" style="width: 0%"></div>
                     </div>
+                    <p id="cpuDetails">0%</p>
                 </div>
-                <div class="stat-card">
-                    <i class="fas fa-hdd stat-icon"></i>
-                    <div class="stat-info">
-                        <h3 id="diskUsage">--</h3>
-                        <p>Disk Usage</p>
+                <div class="resource-card">
+                    <h4><i class="fas fa-memory"></i> Memory</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="memoryProgress" style="width: 0%"></div>
                     </div>
+                    <p id="memoryDetails">0 GB / 0 GB</p>
+                </div>
+                <div class="resource-card">
+                    <h4><i class="fas fa-hdd"></i> Disk Space</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="diskProgress" style="width: 0%"></div>
+                    </div>
+                    <p id="diskDetails">0 GB / 0 GB</p>
                 </div>
             </div>
         </section>
