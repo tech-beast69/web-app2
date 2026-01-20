@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bot Dashboard - Status & Statistics</title>
-    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/brands.min.css">
 </head>
 <body>
     <div class="container">
@@ -44,6 +45,23 @@
                         <h3 id="memoryUsage">--</h3>
                         <p>Memory Usage</p>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Telegram Group Search Section -->
+        <section class="search-section">
+            <h2><i class="fas fa-search"></i> Search Telegram Groups</h2>
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search for Telegram groups on Google...">
+                    <button id="searchBtn" onclick="searchTelegramGroups()">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+                <div id="searchResults" class="search-results"></div>
+                <div id="searchLoader" class="search-loader" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> Searching...
                 </div>
             </div>
         </section>
@@ -163,12 +181,11 @@
         <!-- Footer -->
         <footer>
             <p>Last updated: <span id="lastUpdate">--</span></p>
-            <p><i class="fas fa-sync-alt"></i> Auto-refresh every 30 seconds</p>
+            <p><i class="fas fa-sync-alt"></i> Auto-refresh every 5 seconds</p>
         </footer>
     </div>
 
-    <script src="config.js"></script>
-    <script src="dashboard.js"></script>
+    <script src="{{ url_for('static', filename='config.js') }}"></script>
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
 </body>
 </html>
-
