@@ -1,7 +1,7 @@
 // Dashboard JavaScript - Real-time updates
 // API configuration is loaded from config.js
-const API_BASE = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
-const REFRESH_INTERVAL = 30000;
+const API_BASE = window.DASHBOARD_CONFIG?.API_URL || '';
+const REFRESH_INTERVAL = window.DASHBOARD_CONFIG?.REFRESH_INTERVAL || 5000;
 const DEBUG = window.DASHBOARD_CONFIG?.DEBUG || false;
 
 let updateInterval;
@@ -193,7 +193,117 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
+// Search Telegram Groups on Google
+async function searchTelegramGroups() {
+    const searchInput = document.getElementById('searchInput');
+    const searchQuery = searchInput.value.trim();
+    
+    if (!searchQuery) {
+        alert('Please enter a search query');
+        return;
+    }
+    
+    const resultsDiv = document.getElementById('searchResults');
+    const loaderDiv = document.getElementById('searchLoader');
+    const searchBtn = document.getElementById('searchBtn');
+    
+    // Show loader and disable button
+    loaderDiv.style.display = 'block';
+    resultsDiv.innerHTML = '';
+    searchBtn.disabled = true;
+    
+    try {
+        debugLog('Searching for:', searchQuery);
+        
+        const response = await fetch(`${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(searchQuery)}`);
+        const data = await response.json();
+        
+        loaderDiv.style.display = 'none';
+        searchBtn.disabled = false;
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Search failed');
+        }
+        
+        if (data.results && data.results.length > 0) {
+            displaySearchResults(data.results);
+        } else {
+            displayNoResults();
+        }
+        
+    } catch (error) {
+        console.error('Error searching:', error);
+        loaderDiv.style.display = 'none';
+        searchBtn.disabled = false;
+        displaySearchError(error.message);
+    }
+}
 
+// Display search results
+function displaySearchResults(results) {
+    const resultsDiv = document.getElementById('searchResults');
+    resultsDiv.innerHTML = '';
+    
+    results.forEach((result, index) => {
+        const resultCard = document.createElement('div');
+        resultCard.className = 'search-result-card';
+        resultCard.style.animationDelay = `${index * 0.1}s`;
+        
+        resultCard.innerHTML = `
+            <div class="search-result-title">
+                <i class="fab fa-telegram"></i>
+                ${escapeHtml(result.title)}
+            </div>
+            <a href="${escapeHtml(result.link)}" target="_blank" class="search-result-link">
+                <i class="fas fa-external-link-alt"></i> ${escapeHtml(result.link)}
+            </a>
+            <div class="search-result-snippet">
+                ${escapeHtml(result.snippet || 'No description available')}
+            </div>
+        `;
+        
+        resultsDiv.appendChild(resultCard);
+    });
+}
 
+// Display no results message
+function displayNoResults() {
+    const resultsDiv = document.getElementById('searchResults');
+    resultsDiv.innerHTML = `
+        <div class="search-no-results">
+            <i class="fas fa-search"></i>
+            <p>No results found. Try a different search term.</p>
+        </div>
+    `;
+}
 
+// Display search error
+function displaySearchError(errorMessage) {
+    const resultsDiv = document.getElementById('searchResults');
+    resultsDiv.innerHTML = `
+        <div class="search-error">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p><strong>Error:</strong> ${escapeHtml(errorMessage)}</p>
+            <p>Please try again later.</p>
+        </div>
+    `;
+}
 
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Allow Enter key to trigger search
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchTelegramGroups();
+            }
+        });
+    }
+});
