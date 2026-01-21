@@ -241,6 +241,8 @@ async function searchTelegramGroups(loadMore = false) {
         }
         
         if (data.results && data.results.length > 0) {
+            console.log('Search response:', data);
+            console.log('Has more results:', data.has_more);
             displaySearchResults(data.results, loadMore);
             hasMoreResults = data.has_more;
             updateLoadMoreButton(data);
@@ -269,7 +271,9 @@ function updateLoadMoreButton(data) {
     }
     
     // Only show if there are more results
+    console.log('updateLoadMoreButton called with has_more:', data.has_more, 'total:', data.total);
     if (data.has_more) {
+        const shownCount = data.page * data.per_page;
         loadMoreContainer = document.createElement('div');
         loadMoreContainer.id = 'loadMoreContainer';
         loadMoreContainer.className = 'load-more-btn';
@@ -278,10 +282,13 @@ function updateLoadMoreButton(data) {
                 Load More Results
             </button>
             <div class="results-info">
-                Showing ${data.count * data.page} of ${data.total} results
+                Showing ${Math.min(shownCount, data.total)} of ${data.total} results
             </div>
         `;
         resultsDiv.appendChild(loadMoreContainer);
+        console.log('Load More button added!');
+    } else {
+        console.log('No more results to load');
     }
 }
 
