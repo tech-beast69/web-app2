@@ -468,3 +468,39 @@ footer p {
     background-size: 1000px 100%;
     animation: shimmer 2s infinite;
 }
+
+/* Load More Button */
+.load-more-btn {
+    text-align: center;
+    margin: 30px 0;
+    padding: 20px 0;
+}
+
+.load-more-btn button {
+    background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 30px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.load-more-btn button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.load-more-btn button:active {
+    transform: translateY(0);
+}
+
+.load-more-btn .results-info {
+    margin-top: 15px;
+    color: var(--gray);
+    font-size: 0.85em;
+    opacity: 0.9;
+}
