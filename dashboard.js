@@ -193,25 +193,24 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
-// Search state management
+// Search Telegram Groups on Google
 let currentSearchQuery = '';
 let currentPage = 1;
 let hasMoreResults = false;
 
-// Search Telegram Groups with pagination
 async function searchTelegramGroups(loadMore = false) {
     const searchInput = document.getElementById('searchInput');
     const searchQuery = searchInput.value.trim();
     
-    if (!searchQuery && !loadMore) {
+    if (!searchQuery) {
         alert('Please enter a search query');
         return;
     }
     
-    // If this is a new search, reset pagination
-    if (!loadMore) {
-        currentSearchQuery = searchQuery;
+    // Reset pagination if new search
+    if (!loadMore || searchQuery !== currentSearchQuery) {
         currentPage = 1;
+        currentSearchQuery = searchQuery;
     } else {
         currentPage++;
     }
@@ -222,15 +221,22 @@ async function searchTelegramGroups(loadMore = false) {
     
     // Show loader and disable button
     loaderDiv.style.display = 'block';
-    if (!loadMore) {
-        resultsDiv.innerHTML = '';
-    }
     searchBtn.disabled = true;
     
+    // Only clear results if not loading more
+    if (!loadMore) {
+        resultsDiv.innerHTML = '';
+        // Remove existing load more button
+        const existingBtn = document.getElementById('loadMoreBtn');
+        if (existingBtn) {
+            existingBtn.remove();
+        }
+    }
+    
     try {
-        debugLog('Searching for:', currentSearchQuery, 'Page:', currentPage);
+        debugLog('Searching for:', searchQuery);
         
-        const response = await fetch(`${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=10`);
+        const response = await fetch(`${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(searchQuery)}&page=${currentPage}&per_page=10`);
         const data = await response.json();
         
         loaderDiv.style.display = 'none';
@@ -243,45 +249,43 @@ async function searchTelegramGroups(loadMore = false) {
         if (data.results && data.results.length > 0) {
             displaySearchResults(data.results, loadMore);
             hasMoreResults = data.has_more;
+            
+            // Show load more button if there are more results
             updateLoadMoreButton(data);
-        } else {
-            if (!loadMore) {
-                displayNoResults();
-            }
+        } else if (!loadMore) {
+            displayNoResults();
         }
         
     } catch (error) {
         console.error('Error searching:', error);
         loaderDiv.style.display = 'none';
         searchBtn.disabled = false;
-        displaySearchError(error.message);
+        if (!loadMore) {
+            displaySearchError(error.message);
+        }
     }
 }
 
-// Update or create "Load More" button
+// Update or create Load More button
 function updateLoadMoreButton(data) {
-    const resultsDiv = document.getElementById('searchResults');
-    let loadMoreContainer = document.getElementById('loadMoreContainer');
-    
-    // Remove existing container if present
-    if (loadMoreContainer) {
-        loadMoreContainer.remove();
+    // Remove existing button
+    const existingBtn = document.getElementById('loadMoreBtn');
+    if (existingBtn) {
+        existingBtn.remove();
     }
     
-    // Only show if there are more results
     if (data.has_more) {
-        loadMoreContainer = document.createElement('div');
-        loadMoreContainer.id = 'loadMoreContainer';
-        loadMoreContainer.className = 'load-more-btn';
-        loadMoreContainer.innerHTML = `
+        const resultsDiv = document.getElementById('searchResults');
+        const loadMoreBtn = document.createElement('div');
+        loadMoreBtn.id = 'loadMoreBtn';
+        loadMoreBtn.className = 'load-more-btn';
+        loadMoreBtn.innerHTML = `
             <button onclick="searchTelegramGroups(true)">
-                Load More Results
+                <i class="fas fa-plus-circle"></i> Load More Results
+                <span class="results-info">(Showing ${data.page * data.per_page} of ${data.total})</span>
             </button>
-            <div class="results-info">
-                Showing ${data.count * data.page} of ${data.total} results
-            </div>
         `;
-        resultsDiv.appendChild(loadMoreContainer);
+        resultsDiv.parentNode.insertBefore(loadMoreBtn, resultsDiv.nextSibling);
     }
 }
 
@@ -289,23 +293,16 @@ function updateLoadMoreButton(data) {
 function displaySearchResults(results, append = false) {
     const resultsDiv = document.getElementById('searchResults');
     
-    // If not appending, clear existing results
     if (!append) {
         resultsDiv.innerHTML = '';
-    } else {
-        // Remove old load more button if it exists
-        const oldLoadMore = document.getElementById('loadMoreContainer');
-        if (oldLoadMore) {
-            oldLoadMore.remove();
-        }
     }
+    
+    const startIndex = resultsDiv.children.length;
     
     results.forEach((result, index) => {
         const resultCard = document.createElement('div');
         resultCard.className = 'search-result-card';
-        if (!append) {
-            resultCard.style.animationDelay = `${index * 0.1}s`;
-        }
+        resultCard.style.animationDelay = `${index * 0.1}s`;
         
         resultCard.innerHTML = `
             <div class="search-result-title">
@@ -365,4 +362,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
