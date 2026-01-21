@@ -107,16 +107,15 @@ function updateUserInfoDisplay(userData) {
     const infoContainer = document.createElement('div');
     infoContainer.className = 'user-details';
     
-    // Add premium badge if user is premium
-    if (userData.is_premium) {
-        const premiumBadge = document.createElement('div');
-        premiumBadge.className = 'premium-badge';
-        premiumBadge.innerHTML = `
-            <i class="fas fa-crown"></i>
-            <span>Premium</span>
-            ${userData.premium_expiry ? `<span class="premium-expiry">Until ${userData.premium_expiry}</span>` : ''}
+    // Add admin badge if user is admin
+    if (userData.is_admin) {
+        const adminBadge = document.createElement('div');
+        adminBadge.className = 'admin-badge';
+        adminBadge.innerHTML = `
+            <i class="fas fa-user-shield"></i>
+            <span>Admin</span>
         `;
-        infoContainer.appendChild(premiumBadge);
+        infoContainer.appendChild(adminBadge);
     }
     
     // Add token balance
@@ -382,14 +381,6 @@ async function searchTelegramGroups(loadMore = false) {
         return;
     }
     
-    // Show token cost warning for new searches
-    if (!loadMore) {
-        const confirmed = confirm(`🔍 Search will cost ${10} tokens.\n\n💰 Make sure you have enough tokens before proceeding.\n\nContinue with search?`);
-        if (!confirmed) {
-            return;
-        }
-    }
-    
     // If this is a new search, reset pagination
     if (!loadMore) {
         currentSearchQuery = searchQuery;
@@ -432,16 +423,32 @@ async function searchTelegramGroups(loadMore = false) {
             return;
         }
         
+        // Handle no results found (404)
+        if (response.status === 404 || data.total === 0) {
+            if (!loadMore) {
+                displayNoResults();
+                showTokenMessage('🔍 No Telegram groups found. Try different keywords.', 'warning');
+            }
+            return;
+        }
+        
+        // Handle other errors
         if (!response.ok) {
             throw new Error(data.error || 'Search failed');
         }
         
-        // Show success message for new searches (tokens deducted)
+        // Show success message based on admin status and token deduction
         if (!loadMore && currentPage === 1) {
-            showTokenMessage(`✅ Search successful! 10 tokens deducted.`, 'success');
-            // Refresh user token balance
-            if (telegramUser) {
-                fetchUserDetails(telegramUser.id);
+            if (data.is_admin) {
+                showTokenMessage(`✅ Search successful! (Admin - Free Search)`, 'success');
+            } else if (data.tokens_deducted) {
+                showTokenMessage(`✅ Search successful! 10 tokens deducted.`, 'success');
+                // Refresh user token balance
+                if (telegramUser) {
+                    fetchUserDetails(telegramUser.id);
+                }
+            } else {
+                showTokenMessage(`✅ Search completed successfully!`, 'success');
             }
         }
         
