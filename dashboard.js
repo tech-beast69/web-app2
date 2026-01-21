@@ -1,6 +1,6 @@
 // Dashboard JavaScript - Real-time updates
 // API configuration is loaded from config.js
-const API_BASE = window.DASHBOARD_CONFIG?.API_URL || '';
+const API_BASE = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
 const REFRESH_INTERVAL = window.DASHBOARD_CONFIG?.REFRESH_INTERVAL || 5000;
 const DEBUG = window.DASHBOARD_CONFIG?.DEBUG || false;
 
@@ -365,3 +365,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
