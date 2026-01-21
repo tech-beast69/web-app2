@@ -1,0 +1,626 @@
+/* Modern Dashboard CSS */
+:root {
+    --primary: #6366f1;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    --premium: #a855f7;
+    --dark: #1e293b;
+    --light: #f8fafc;
+    --gray: #64748b;
+    --border: #e2e8f0;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: var(--dark);
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+header .subtitle {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+/* Telegram User Info */
+.user-info {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 15px 25px;
+    border-radius: 10px;
+    margin-top: 15px;
+    display: none; /* Hidden by default, shown when Telegram user detected */
+}
+
+.user-info.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.user-name {
+    font-size: 1.1em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.premium-badge {
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    color: #1e293b;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.user-id {
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+section {
+    padding: 40px;
+    border-bottom: 1px solid var(--border);
+}
+
+section:last-of-type {
+    border-bottom: none;
+}
+
+h2 {
+    font-size: 1.8em;
+    margin-bottom: 25px;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Status Section */
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.status-card {
+    background: var(--light);
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.status-card:hover {
+    transform: translateY(-5px);
+}
+
+.status-indicator {
+    font-size: 1.5em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.status-indicator.online {
+    color: var(--success);
+}
+
+.status-indicator.offline {
+    color: var(--danger);
+}
+
+.status-indicator i {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.status-label {
+    color: var(--gray);
+    font-size: 0.9em;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.stat-card {
+    background: white;
+    border: 2px solid var(--border);
+    padding: 25px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card.primary {
+    border-color: var(--primary);
+    background: linear-gradient(135deg, var(--primary), #8b5cf6);
+    color: white;
+}
+
+.stat-card.success {
+    border-color: var(--success);
+    background: linear-gradient(135deg, var(--success), #34d399);
+    color: white;
+}
+
+.stat-card.warning {
+    border-color: var(--warning);
+    background: linear-gradient(135deg, var(--warning), #fbbf24);
+    color: white;
+}
+
+.stat-card.premium {
+    border-color: var(--premium);
+    background: linear-gradient(135deg, var(--premium), #c084fc);
+    color: white;
+}
+
+.stat-card.info {
+    border-color: var(--info);
+    background: linear-gradient(135deg, var(--info), #60a5fa);
+    color: white;
+}
+
+.stat-card.download {
+    border-color: #14b8a6;
+    background: linear-gradient(135deg, #14b8a6, #5eead4);
+    color: white;
+}
+
+.stat-card.upload {
+    border-color: #f43f5e;
+    background: linear-gradient(135deg, #f43f5e, #fb7185);
+    color: white;
+}
+
+.stat-card.media {
+    border-color: #8b5cf6;
+    background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+    color: white;
+}
+
+.stat-card.groups {
+    border-color: #06b6d4;
+    background: linear-gradient(135deg, #06b6d4, #22d3ee);
+    color: white;
+}
+
+.stat-card.feedback {
+    border-color: #f97316;
+    background: linear-gradient(135deg, #f97316, #fb923c);
+    color: white;
+}
+
+.stat-icon {
+    font-size: 2.5em;
+    opacity: 0.9;
+}
+
+.stat-info h3 {
+    font-size: 2em;
+    margin-bottom: 5px;
+    font-weight: 700;
+}
+
+.stat-info p {
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+/* Resource Section */
+.resource-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.resource-card {
+    background: var(--light);
+    padding: 25px;
+    border-radius: 15px;
+}
+
+.resource-card h4 {
+    font-size: 1.2em;
+    margin-bottom: 15px;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--info));
+    border-radius: 10px;
+    transition: width 0.5s ease;
+}
+
+.resource-card p {
+    color: var(--gray);
+    font-size: 0.95em;
+}
+
+/* Footer */
+footer {
+    background: var(--light);
+    padding: 20px 40px;
+    text-align: center;
+    color: var(--gray);
+}
+
+footer p {
+    margin: 5px 0;
+}
+
+#lastUpdate {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* Search Section */
+.search-section {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.search-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.search-box {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    background: white;
+    padding: 10px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.search-box input {
+    flex: 1;
+    padding: 15px 20px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 1em;
+    transition: all 0.3s ease;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.search-box button {
+    padding: 15px 30px;
+    background: linear-gradient(135deg, var(--primary), var(--info));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.search-box button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+}
+
+.search-box button:active {
+    transform: translateY(0);
+}
+
+.search-loader {
+    text-align: center;
+    padding: 30px;
+    font-size: 1.2em;
+    color: var(--primary);
+}
+
+.search-loader i {
+    font-size: 2em;
+    margin-bottom: 10px;
+}
+
+.search-results {
+    display: grid;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.search-result-card {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border-left: 4px solid var(--primary);
+}
+
+.search-result-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.search-result-title {
+    font-size: 1.3em;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.search-result-title i {
+    color: var(--primary);
+}
+
+.search-result-link {
+    color: var(--info);
+    text-decoration: none;
+    font-size: 0.95em;
+    display: block;
+    margin-bottom: 12px;
+    word-break: break-all;
+}
+
+.search-result-link:hover {
+    text-decoration: underline;
+}
+
+.search-result-snippet {
+    color: var(--gray);
+    line-height: 1.6;
+    font-size: 0.95em;
+}
+
+.search-no-results {
+    text-align: center;
+    padding: 50px;
+    color: var(--gray);
+    font-size: 1.1em;
+}
+
+.search-no-results i {
+    font-size: 3em;
+    margin-bottom: 15px;
+    color: var(--border);
+}
+
+.search-error {
+    background: #fee;
+    color: #c33;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    border-left: 4px solid var(--danger);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 1.8em;
+    }
+    
+    section {
+        padding: 20px;
+    }
+    
+    .stats-grid,
+    .status-grid,
+    .resource-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-card {
+        padding: 20px;
+    }
+    
+    .search-box {
+        flex-direction: column;
+    }
+    
+    .search-box button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .user-info.active {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+/* Telegram Mini App Specific Styles */
+.telegram-badge {
+    background: linear-gradient(135deg, #0088cc, #00aced);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.welcome-banner {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    text-align: center;
+    display: none;
+    border-radius: 10px;
+    margin: 20px;
+    animation: slideDown 0.5s ease-out;
+}
+
+.welcome-banner.active {
+    display: block;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.welcome-banner h3 {
+    margin-bottom: 10px;
+    font-size: 1.5em;
+}
+
+.welcome-banner p {
+    opacity: 0.9;
+}
+
+/* User Stats Badge */
+.user-stats {
+    display: inline-flex;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.user-stat-item {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 15px;
+    border-radius: 8px;
+    font-size: 0.9em;
+}
+
+.user-stat-item strong {
+    font-weight: 700;
+    margin-right: 5px;
+}
+
+/* Loading Animation */
+@keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+}
+
+.loading {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+}
+
+/* Load More Button */
+.load-more-btn {
+    text-align: center;
+    margin: 30px 0;
+    padding: 20px 0;
+}
+
+.load-more-btn button {
+    background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 30px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.load-more-btn button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.load-more-btn button:active {
+    transform: translateY(0);
+}
+
+.load-more-btn .results-info {
+    margin-top: 15px;
+    color: var(--gray);
+    font-size: 0.85em;
+    opacity: 0.9;
+}
