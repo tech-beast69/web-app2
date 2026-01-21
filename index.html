@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/brands.min.css">
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="container">
@@ -53,10 +55,14 @@
         <section class="search-section">
             <h2><i class="fas fa-search"></i> Search Telegram Groups</h2>
             <div class="search-container">
+                <div class="search-info-banner">
+                    <i class="fas fa-info-circle"></i>
+                    <span><strong>Search Cost:</strong> 10 tokens per search | <strong>Admins:</strong> Free unlimited searches</span>
+                </div>
                 <div class="search-box">
                     <input type="text" id="searchInput" placeholder="Search for Telegram groups on Google...">
                     <button id="searchBtn" onclick="searchTelegramGroups()">
-                        <i class="fas fa-search"></i> Search
+                        <i class="fas fa-search"></i> Search <span class="token-cost">(10 🪙)</span>
                     </button>
                 </div>
                 <div id="searchResults" class="search-results"></div>
