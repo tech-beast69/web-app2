@@ -230,7 +230,7 @@ async function searchTelegramGroups(loadMore = false) {
     try {
         debugLog('Searching for:', currentSearchQuery, 'Page:', currentPage);
         
-        const response = await fetch(`${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=10`);
+        const response = await fetch(`${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=5`);
         const data = await response.json();
         
         loaderDiv.style.display = 'none';
