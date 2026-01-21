@@ -53,7 +53,7 @@ function displayTelegramUserInfo(user) {
         header.appendChild(userInfo);
     }
     
-    // Build user info HTML
+    // Build user info HTML with loading state
     let infoHTML = `
         <div class="user-name">
             <i class="fab fa-telegram"></i>
@@ -62,19 +62,80 @@ function displayTelegramUserInfo(user) {
         </div>
     `;
     
-    if (user.is_premium) {
-        infoHTML += `
-            <div class="premium-badge">
-                <i class="fas fa-star"></i>
-                <span>Premium</span>
-            </div>
-        `;
-    }
+    // Show loading for premium status
+    infoHTML += `<div class="premium-status-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>`;
     
     infoHTML += `<div class="user-id">ID: ${user.id}</div>`;
     
     userInfo.innerHTML = infoHTML;
     userInfo.classList.add('active');
+    
+    // Fetch detailed user info from backend
+    fetchUserDetails(user.id);
+}
+
+// Fetch user details including token balance and premium status
+async function fetchUserDetails(userId) {
+    try {
+        const response = await fetch(`${API_BASE}/api/user/${userId}/info`);
+        const data = await response.json();
+        
+        console.log('User details fetched:', data);
+        
+        // Update the display with actual data
+        updateUserInfoDisplay(data);
+        
+    } catch (error) {
+        console.error('Error fetching user details:', error);
+        // Remove loading indicator on error
+        const loadingEl = document.querySelector('.premium-status-loading');
+        if (loadingEl) {
+            loadingEl.remove();
+        }
+    }
+}
+
+// Update user info display with fetched data
+function updateUserInfoDisplay(userData) {
+    const userInfo = document.getElementById('telegramUserInfo');
+    if (!userInfo) return;
+    
+    // Find the loading element and replace it with actual info
+    const loadingEl = userInfo.querySelector('.premium-status-loading');
+    
+    // Create premium/token info container
+    const infoContainer = document.createElement('div');
+    infoContainer.className = 'user-details';
+    
+    // Add premium badge if user is premium
+    if (userData.is_premium) {
+        const premiumBadge = document.createElement('div');
+        premiumBadge.className = 'premium-badge';
+        premiumBadge.innerHTML = `
+            <i class="fas fa-crown"></i>
+            <span>Premium</span>
+            ${userData.premium_expiry ? `<span class="premium-expiry">Until ${userData.premium_expiry}</span>` : ''}
+        `;
+        infoContainer.appendChild(premiumBadge);
+    }
+    
+    // Add token balance
+    const tokenBalance = document.createElement('div');
+    tokenBalance.className = 'token-balance';
+    tokenBalance.innerHTML = `
+        <i class="fas fa-coins"></i>
+        <span class="token-count">${userData.token_balance || 0}</span>
+        <span class="token-label">Tokens</span>
+    `;
+    infoContainer.appendChild(tokenBalance);
+    
+    // Replace loading with actual info
+    if (loadingEl) {
+        loadingEl.replaceWith(infoContainer);
+    } else {
+        // If no loading element, append to userInfo
+        userInfo.appendChild(infoContainer);
+    }
 }
 
 // Track Mini App access
@@ -311,8 +372,22 @@ async function searchTelegramGroups(loadMore = false) {
     const searchQuery = searchInput.value.trim();
     
     if (!searchQuery && !loadMore) {
-        alert('Please enter a search query');
+        showTokenMessage('⚠️ Please enter a search query', 'warning');
         return;
+    }
+    
+    // Check if Telegram user is available
+    if (!telegramUser) {
+        showTokenMessage('⚠️ Please access this dashboard through Telegram Mini App to use search functionality', 'error');
+        return;
+    }
+    
+    // Show token cost warning for new searches
+    if (!loadMore) {
+        const confirmed = confirm(`🔍 Search will cost ${10} tokens.\n\n💰 Make sure you have enough tokens before proceeding.\n\nContinue with search?`);
+        if (!confirmed) {
+            return;
+        }
     }
     
     // If this is a new search, reset pagination
@@ -337,14 +412,37 @@ async function searchTelegramGroups(loadMore = false) {
     try {
         debugLog('Searching for:', currentSearchQuery, 'Page:', currentPage);
         
-        const response = await fetch(`${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=5`);
+        // Add user_id to request
+        const userId = telegramUser.id;
+        const response = await fetch(`${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=5&user_id=${userId}`);
         const data = await response.json();
         
         loaderDiv.style.display = 'none';
         searchBtn.disabled = false;
         
+        // Handle insufficient tokens
+        if (response.status === 402 || data.insufficient_tokens) {
+            showInsufficientTokensMessage(data);
+            return;
+        }
+        
+        // Handle authentication required
+        if (response.status === 401 || data.requires_auth) {
+            showTokenMessage('🔐 Authentication required. Please access via Telegram Mini App.', 'error');
+            return;
+        }
+        
         if (!response.ok) {
             throw new Error(data.error || 'Search failed');
+        }
+        
+        // Show success message for new searches (tokens deducted)
+        if (!loadMore && currentPage === 1) {
+            showTokenMessage(`✅ Search successful! 10 tokens deducted.`, 'success');
+            // Refresh user token balance
+            if (telegramUser) {
+                fetchUserDetails(telegramUser.id);
+            }
         }
         
         if (data.results && data.results.length > 0) {
@@ -461,6 +559,52 @@ function displaySearchError(errorMessage) {
     `;
 }
 
+// Show token-related messages
+function showTokenMessage(message, type = 'info') {
+    // Remove existing message if any
+    const existing = document.querySelector('.token-message');
+    if (existing) existing.remove();
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `token-message token-message-${type}`;
+    messageDiv.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()" class="close-btn">&times;</button>
+    `;
+    
+    const searchSection = document.querySelector('.search-section');
+    const searchContainer = document.querySelector('.search-container');
+    searchContainer.insertBefore(messageDiv, searchContainer.firstChild);
+    
+    // Auto-remove after 8 seconds
+    setTimeout(() => {
+        if (messageDiv.parentElement) {
+            messageDiv.style.opacity = '0';
+            setTimeout(() => messageDiv.remove(), 300);
+        }
+    }, 8000);
+}
+
+// Show insufficient tokens message
+function showInsufficientTokensMessage(data) {
+    const message = `
+        <div style="text-align: left;">
+            <strong>❌ Insufficient Tokens</strong><br><br>
+            💰 Current Balance: <strong>${data.current_balance || 0} tokens</strong><br>
+            🔍 Required for Search: <strong>${data.required_tokens || 10} tokens</strong><br>
+            📉 You need <strong>${(data.required_tokens || 10) - (data.current_balance || 0)} more tokens</strong><br><br>
+            <strong>💡 How to get more tokens:</strong><br>
+            • Contact admin to purchase tokens<br>
+            • Earn weekly free tokens<br>
+            • Upgrade to premium membership<br><br>
+            📞 <strong>Contact admin for token purchases</strong>
+        </div>
+    `;
+    
+    showTokenMessage(message, 'error');
+}
+
 // Escape HTML to prevent XSS
 function escapeHtml(text) {
     const div = document.createElement('div');
@@ -479,4 +623,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
