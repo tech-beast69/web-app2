@@ -1,6 +1,6 @@
 // Dashboard JavaScript - Real-time updates
 // API configuration is loaded from config.js
-const API_BASE = 'Https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+const API_BASE = window.DASHBOARD_CONFIG?.API_URL || '';
 const REFRESH_INTERVAL = window.DASHBOARD_CONFIG?.REFRESH_INTERVAL || 5000;
 const DEBUG = window.DASHBOARD_CONFIG?.DEBUG || false;
 
@@ -193,14 +193,27 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
-// Search Telegram Groups on Google
-async function searchTelegramGroups() {
+// Search state management
+let currentSearchQuery = '';
+let currentPage = 1;
+let hasMoreResults = false;
+
+// Search Telegram Groups with pagination
+async function searchTelegramGroups(loadMore = false) {
     const searchInput = document.getElementById('searchInput');
     const searchQuery = searchInput.value.trim();
     
-    if (!searchQuery) {
+    if (!searchQuery && !loadMore) {
         alert('Please enter a search query');
         return;
+    }
+    
+    // If this is a new search, reset pagination
+    if (!loadMore) {
+        currentSearchQuery = searchQuery;
+        currentPage = 1;
+    } else {
+        currentPage++;
     }
     
     const resultsDiv = document.getElementById('searchResults');
@@ -209,13 +222,15 @@ async function searchTelegramGroups() {
     
     // Show loader and disable button
     loaderDiv.style.display = 'block';
-    resultsDiv.innerHTML = '';
+    if (!loadMore) {
+        resultsDiv.innerHTML = '';
+    }
     searchBtn.disabled = true;
     
     try {
-        debugLog('Searching for:', searchQuery);
+        debugLog('Searching for:', currentSearchQuery, 'Page:', currentPage);
         
-        const response = await fetch(`${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(searchQuery)}`);
+        const response = await fetch(`${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=10`);
         const data = await response.json();
         
         loaderDiv.style.display = 'none';
@@ -226,9 +241,13 @@ async function searchTelegramGroups() {
         }
         
         if (data.results && data.results.length > 0) {
-            displaySearchResults(data.results);
+            displaySearchResults(data.results, loadMore);
+            hasMoreResults = data.has_more;
+            updateLoadMoreButton(data);
         } else {
-            displayNoResults();
+            if (!loadMore) {
+                displayNoResults();
+            }
         }
         
     } catch (error) {
@@ -239,15 +258,54 @@ async function searchTelegramGroups() {
     }
 }
 
-// Display search results
-function displaySearchResults(results) {
+// Update or create "Load More" button
+function updateLoadMoreButton(data) {
     const resultsDiv = document.getElementById('searchResults');
-    resultsDiv.innerHTML = '';
+    let loadMoreContainer = document.getElementById('loadMoreContainer');
+    
+    // Remove existing container if present
+    if (loadMoreContainer) {
+        loadMoreContainer.remove();
+    }
+    
+    // Only show if there are more results
+    if (data.has_more) {
+        loadMoreContainer = document.createElement('div');
+        loadMoreContainer.id = 'loadMoreContainer';
+        loadMoreContainer.className = 'load-more-btn';
+        loadMoreContainer.innerHTML = `
+            <button onclick="searchTelegramGroups(true)">
+                Load More Results
+            </button>
+            <div class="results-info">
+                Showing ${data.count * data.page} of ${data.total} results
+            </div>
+        `;
+        resultsDiv.appendChild(loadMoreContainer);
+    }
+}
+
+// Display search results
+function displaySearchResults(results, append = false) {
+    const resultsDiv = document.getElementById('searchResults');
+    
+    // If not appending, clear existing results
+    if (!append) {
+        resultsDiv.innerHTML = '';
+    } else {
+        // Remove old load more button if it exists
+        const oldLoadMore = document.getElementById('loadMoreContainer');
+        if (oldLoadMore) {
+            oldLoadMore.remove();
+        }
+    }
     
     results.forEach((result, index) => {
         const resultCard = document.createElement('div');
         resultCard.className = 'search-result-card';
-        resultCard.style.animationDelay = `${index * 0.1}s`;
+        if (!append) {
+            resultCard.style.animationDelay = `${index * 0.1}s`;
+        }
         
         resultCard.innerHTML = `
             <div class="search-result-title">
@@ -307,4 +365,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
