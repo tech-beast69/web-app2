@@ -364,6 +364,7 @@ window.addEventListener('beforeunload', () => {
 let currentSearchQuery = '';
 let currentPage = 1;
 let hasMoreResults = false;
+let currentSessionId = null; // Track search session for progressive loading
 
 // Search Telegram Groups with pagination
 async function searchTelegramGroups(loadMore = false) {
@@ -381,10 +382,11 @@ async function searchTelegramGroups(loadMore = false) {
         return;
     }
     
-    // If this is a new search, reset pagination
+    // If this is a new search, reset pagination and session
     if (!loadMore) {
         currentSearchQuery = searchQuery;
         currentPage = 1;
+        currentSessionId = null; // Reset session for new search
     } else {
         currentPage++;
     }
@@ -401,15 +403,38 @@ async function searchTelegramGroups(loadMore = false) {
     searchBtn.disabled = true;
     
     try {
-        debugLog('Searching for:', currentSearchQuery, 'Page:', currentPage);
+        debugLog('Searching for:', currentSearchQuery, 'Page:', currentPage, 'Session:', currentSessionId);
         
-        // Add user_id to request
+        // Build request URL with session support
         const userId = telegramUser.id;
-        const response = await fetch(`${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=5&user_id=${userId}`);
+        let url = `${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=10&user_id=${userId}`;
+        
+        // Add session ID if continuing a search
+        if (currentSessionId) {
+            url += `&session_id=${encodeURIComponent(currentSessionId)}`;
+        }
+        
+        const response = await fetch(url);
         const data = await response.json();
         
         loaderDiv.style.display = 'none';
         searchBtn.disabled = false;
+        
+        // Store session ID for subsequent requests
+        if (data.session_id) {
+            currentSessionId = data.session_id;
+            debugLog('Session ID:', currentSessionId);
+        }
+        
+        // Handle session expired
+        if (response.status === 410 || data.session_expired) {
+            showTokenMessage('⏱️ Search session expired. Please start a new search.', 'warning');
+            // Reset and allow new search
+            currentSessionId = null;
+            currentPage = 1;
+            displayNoResults();
+            return;
+        }
         
         // Handle insufficient tokens
         if (response.status === 402 || data.insufficient_tokens) {
@@ -424,10 +449,16 @@ async function searchTelegramGroups(loadMore = false) {
         }
         
         // Handle no results found (404)
-        if (response.status === 404 || data.total === 0) {
+        if (response.status === 404 || (data.results && data.results.length === 0)) {
             if (!loadMore) {
                 displayNoResults();
-                showTokenMessage('🔍 No Telegram groups found. Try different keywords.', 'warning');
+                if (data.tokens_refunded) {
+                    showTokenMessage('🔍 No Telegram groups found. Tokens refunded. Try different keywords.', 'warning');
+                } else {
+                    showTokenMessage('🔍 No more results found.', 'warning');
+                }
+            } else {
+                showTokenMessage('✅ No more results available.', 'info');
             }
             return;
         }
@@ -437,19 +468,21 @@ async function searchTelegramGroups(loadMore = false) {
             throw new Error(data.error || 'Search failed');
         }
         
-        // Show success message based on admin status and token deduction
+        // Show success message for new searches
         if (!loadMore && currentPage === 1) {
             if (data.is_admin) {
-                showTokenMessage(`✅ Search successful! (Admin - Free Search)`, 'success');
+                showTokenMessage(`✅ Search successful! Found ${data.total_unique_found || data.count} groups (Admin - Free)`, 'success');
             } else if (data.tokens_deducted) {
-                showTokenMessage(`✅ Search successful! 10 tokens deducted.`, 'success');
+                showTokenMessage(`✅ Search successful! 10 tokens deducted. Found ${data.total_unique_found || data.count} groups.`, 'success');
                 // Refresh user token balance
                 if (telegramUser) {
                     fetchUserDetails(telegramUser.id);
                 }
             } else {
-                showTokenMessage(`✅ Search completed successfully!`, 'success');
+                showTokenMessage(`✅ Search completed! Found ${data.total_unique_found || data.count} groups.`, 'success');
             }
+        } else if (loadMore && data.count > 0) {
+            showTokenMessage(`✅ Loaded ${data.count} more results! Total found: ${data.total_unique_found}`, 'success');
         }
         
         if (data.results && data.results.length > 0) {
@@ -483,24 +516,37 @@ function updateLoadMoreButton(data) {
     }
     
     // Only show if there are more results
-    console.log('updateLoadMoreButton called with has_more:', data.has_more, 'total:', data.total);
+    console.log('updateLoadMoreButton called with has_more:', data.has_more);
     if (data.has_more) {
-        const shownCount = data.page * data.per_page;
+        const totalFound = data.total_unique_found || data.count;
         loadMoreContainer = document.createElement('div');
         loadMoreContainer.id = 'loadMoreContainer';
         loadMoreContainer.className = 'load-more-btn';
         loadMoreContainer.innerHTML = `
-            <button onclick="searchTelegramGroups(true)">
-                Load More Results
+            <button onclick="searchTelegramGroups(true)" class="load-more-button">
+                <i class="fas fa-sync-alt"></i> Load More Groups
             </button>
             <div class="results-info">
-                Showing ${Math.min(shownCount, data.total)} of ${data.total} results
+                <i class="fas fa-check-circle"></i> ${totalFound} unique groups found so far
+                <br><small>Click to search more sources</small>
             </div>
         `;
         resultsDiv.appendChild(loadMoreContainer);
         console.log('Load More button added!');
     } else {
-        console.log('No more results to load');
+        // Show end of results message
+        loadMoreContainer = document.createElement('div');
+        loadMoreContainer.id = 'loadMoreContainer';
+        loadMoreContainer.className = 'load-more-btn end-of-results';
+        const totalFound = data.total_unique_found || data.count;
+        loadMoreContainer.innerHTML = `
+            <div class="results-info">
+                <i class="fas fa-flag-checkered"></i> All available results loaded
+                <br><small>Found ${totalFound} unique groups total</small>
+            </div>
+        `;
+        resultsDiv.appendChild(loadMoreContainer);
+        console.log('No more results to load - showing end message');
     }
 }
 
