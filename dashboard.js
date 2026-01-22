@@ -419,7 +419,7 @@ async function searchTelegramGroups(loadMore = false, autoLoad = false) {
         
         // Build request URL with session support
         const userId = telegramUser.id;
-        let url = `${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=10&user_id=${userId}`;
+        let url = `${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=20&user_id=${userId}`;
         
         // Add session ID if continuing a search
         if (currentSessionId) {
@@ -625,13 +625,34 @@ function displaySearchResults(results, append = false) {
         if (oldLoadMore) {
             oldLoadMore.remove();
         }
+        // Remove old counter if it exists
+        const oldCounter = document.getElementById('resultsCounter');
+        if (oldCounter) {
+            oldCounter.remove();
+        }
     }
+    
+    // Add results counter at the top (for new searches or update for appended)
+    let counter = document.getElementById('resultsCounter');
+    const currentDisplayCount = resultsDiv.querySelectorAll('.search-result-card').length + results.length;
+    
+    if (!counter) {
+        counter = document.createElement('div');
+        counter.id = 'resultsCounter';
+        counter.className = 'results-counter';
+        resultsDiv.insertBefore(counter, resultsDiv.firstChild);
+    }
+    
+    counter.innerHTML = `
+        <i class="fas fa-list"></i> 
+        <strong>${currentDisplayCount}</strong> results displayed
+    `;
     
     results.forEach((result, index) => {
         const resultCard = document.createElement('div');
         resultCard.className = 'search-result-card';
         if (!append) {
-            resultCard.style.animationDelay = `${index * 0.1}s`;
+            resultCard.style.animationDelay = `${index * 0.05}s`; // Reduced delay for faster display
         }
         
         resultCard.innerHTML = `
@@ -719,6 +740,31 @@ function showInsufficientTokensMessage(data) {
     
     showTokenMessage(message, 'error');
 }
+
+// Scroll to top button functionality
+function initScrollToTop() {
+    // Create scroll-to-top button
+    const scrollBtn = document.createElement('button');
+    scrollBtn.id = 'scrollToTopBtn';
+    scrollBtn.className = 'scroll-to-top';
+    scrollBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+    scrollBtn.onclick = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    document.body.appendChild(scrollBtn);
+    
+    // Show/hide button based on scroll position
+    window.addEventListener('scroll', () => {
+        if (window.pageYOffset > 300) {
+            scrollBtn.classList.add('visible');
+        } else {
+            scrollBtn.classList.remove('visible');
+        }
+    });
+}
+
+// Initialize scroll to top on page load
+document.addEventListener('DOMContentLoaded', initScrollToTop);
 
 // Escape HTML to prevent XSS
 function escapeHtml(text) {
