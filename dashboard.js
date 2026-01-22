@@ -365,9 +365,11 @@ let currentSearchQuery = '';
 let currentPage = 1;
 let hasMoreResults = false;
 let currentSessionId = null; // Track search session for progressive loading
+let isSearching = false; // Track if endless search is active
+let stopSearchRequested = false; // Track if user wants to stop
 
-// Search Telegram Groups with pagination
-async function searchTelegramGroups(loadMore = false) {
+// Search Telegram Groups with pagination and endless auto-loading
+async function searchTelegramGroups(loadMore = false, autoLoad = false) {
     const searchInput = document.getElementById('searchInput');
     const searchQuery = searchInput.value.trim();
     
@@ -387,6 +389,8 @@ async function searchTelegramGroups(loadMore = false) {
         currentSearchQuery = searchQuery;
         currentPage = 1;
         currentSessionId = null; // Reset session for new search
+        isSearching = true;
+        stopSearchRequested = false;
     } else {
         currentPage++;
     }
@@ -395,10 +399,18 @@ async function searchTelegramGroups(loadMore = false) {
     const loaderDiv = document.getElementById('searchLoader');
     const searchBtn = document.getElementById('searchBtn');
     
+    // Update loader text for endless search
+    if (autoLoad) {
+        loaderDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Auto-loading more results...';
+    } else {
+        loaderDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
+    }
+    
     // Show loader and disable button
     loaderDiv.style.display = 'block';
     if (!loadMore) {
         resultsDiv.innerHTML = '';
+        updateStopButton(true); // Show stop button for new searches
     }
     searchBtn.disabled = true;
     
@@ -471,18 +483,18 @@ async function searchTelegramGroups(loadMore = false) {
         // Show success message for new searches
         if (!loadMore && currentPage === 1) {
             if (data.is_admin) {
-                showTokenMessage(`✅ Search successful! Found ${data.total_unique_found || data.count} groups (Admin - Free)`, 'success');
+                showTokenMessage(`✅ Endless search started! Found ${data.total_unique_found || data.count} groups. Will auto-load more... (Admin - Free)`, 'success');
             } else if (data.tokens_deducted) {
-                showTokenMessage(`✅ Search successful! 10 tokens deducted. Found ${data.total_unique_found || data.count} groups.`, 'success');
+                showTokenMessage(`✅ Endless search started! 10 tokens deducted. Found ${data.total_unique_found || data.count} groups. Auto-loading more...`, 'success');
                 // Refresh user token balance
                 if (telegramUser) {
                     fetchUserDetails(telegramUser.id);
                 }
             } else {
-                showTokenMessage(`✅ Search completed! Found ${data.total_unique_found || data.count} groups.`, 'success');
+                showTokenMessage(`✅ Endless search started! Found ${data.total_unique_found || data.count} groups. Auto-loading more...`, 'success');
             }
         } else if (loadMore && data.count > 0) {
-            showTokenMessage(`✅ Loaded ${data.count} more results! Total found: ${data.total_unique_found}`, 'success');
+            showTokenMessage(`✅ Loaded ${data.count} more results! Total found: ${data.total_unique_found}`, 'info');
         }
         
         if (data.results && data.results.length > 0) {
@@ -491,17 +503,66 @@ async function searchTelegramGroups(loadMore = false) {
             displaySearchResults(data.results, loadMore);
             hasMoreResults = data.has_more;
             updateLoadMoreButton(data);
+            
+            // Auto-load more results if endless search is active and not stopped
+            if (data.endless_search && isSearching && !stopSearchRequested && data.has_more) {
+                // Wait 2 seconds before auto-loading next batch
+                setTimeout(() => {
+                    if (isSearching && !stopSearchRequested) {
+                        searchTelegramGroups(true, true);
+                    }
+                }, 2000);
+            } else if (stopSearchRequested) {
+                isSearching = false;
+                showTokenMessage(`🛑 Search stopped by user. Found ${data.total_unique_found} unique groups total.`, 'info');
+                updateStopButton(false);
+            }
         } else {
             if (!loadMore) {
                 displayNoResults();
             }
+            isSearching = false;
+            updateStopButton(false);
         }
         
     } catch (error) {
         console.error('Error searching:', error);
         loaderDiv.style.display = 'none';
         searchBtn.disabled = false;
+        isSearching = false;
+        stopSearchRequested = false;
+        updateStopButton(false);
         displaySearchError(error.message);
+    }
+}
+
+// Stop the endless search
+function stopSearch() {
+    stopSearchRequested = true;
+    isSearching = false;
+    showTokenMessage('🛑 Stopping search...', 'info');
+    updateStopButton(false);
+}
+
+// Update the stop button visibility
+function updateStopButton(show) {
+    let stopBtn = document.getElementById('stopSearchBtn');
+    if (show) {
+        if (!stopBtn) {
+            stopBtn = document.createElement('button');
+            stopBtn.id = 'stopSearchBtn';
+            stopBtn.className = 'stop-search-btn';
+            stopBtn.innerHTML = '<i class="fas fa-stop-circle"></i> Stop Search';
+            stopBtn.onclick = stopSearch;
+            
+            const searchBtn = document.getElementById('searchBtn');
+            searchBtn.parentNode.insertBefore(stopBtn, searchBtn.nextSibling);
+        }
+        stopBtn.style.display = 'inline-block';
+    } else {
+        if (stopBtn) {
+            stopBtn.style.display = 'none';
+        }
     }
 }
 
@@ -515,39 +576,40 @@ function updateLoadMoreButton(data) {
         loadMoreContainer.remove();
     }
     
-    // Only show if there are more results
+    // Show endless search status
     console.log('updateLoadMoreButton called with has_more:', data.has_more);
-    if (data.has_more) {
-        const totalFound = data.total_unique_found || data.count;
-        loadMoreContainer = document.createElement('div');
-        loadMoreContainer.id = 'loadMoreContainer';
-        loadMoreContainer.className = 'load-more-btn';
+    loadMoreContainer = document.createElement('div');
+    loadMoreContainer.id = 'loadMoreContainer';
+    loadMoreContainer.className = 'load-more-btn endless-search-status';
+    const totalFound = data.total_unique_found || data.count;
+    
+    if (isSearching && !stopSearchRequested) {
+        loadMoreContainer.innerHTML = `
+            <div class="endless-search-indicator">
+                <i class="fas fa-infinity"></i> <strong>Endless Search Active</strong>
+            </div>
+            <div class="results-info">
+                <i class="fas fa-check-circle"></i> ${totalFound} unique groups found so far
+                <br><small>Automatically searching more sources...</small>
+            </div>
+            <button onclick="stopSearch()" class="stop-button">
+                <i class="fas fa-stop-circle"></i> Stop Search
+            </button>
+        `;
+    } else {
         loadMoreContainer.innerHTML = `
             <button onclick="searchTelegramGroups(true)" class="load-more-button">
                 <i class="fas fa-sync-alt"></i> Load More Groups
             </button>
             <div class="results-info">
-                <i class="fas fa-check-circle"></i> ${totalFound} unique groups found so far
-                <br><small>Click to search more sources</small>
+                <i class="fas fa-check-circle"></i> ${totalFound} unique groups found
+                <br><small>Click to continue searching</small>
             </div>
         `;
-        resultsDiv.appendChild(loadMoreContainer);
-        console.log('Load More button added!');
-    } else {
-        // Show end of results message
-        loadMoreContainer = document.createElement('div');
-        loadMoreContainer.id = 'loadMoreContainer';
-        loadMoreContainer.className = 'load-more-btn end-of-results';
-        const totalFound = data.total_unique_found || data.count;
-        loadMoreContainer.innerHTML = `
-            <div class="results-info">
-                <i class="fas fa-flag-checkered"></i> All available results loaded
-                <br><small>Found ${totalFound} unique groups total</small>
-            </div>
-        `;
-        resultsDiv.appendChild(loadMoreContainer);
-        console.log('No more results to load - showing end message');
     }
+    
+    resultsDiv.appendChild(loadMoreContainer);
+    console.log('Load More / Status indicator added');
 }
 
 // Display search results
