@@ -483,18 +483,19 @@ async function searchTelegramGroups(loadMore = false, autoLoad = false) {
         // Show success message for new searches
         if (!loadMore && currentPage === 1) {
             if (data.is_admin) {
-                showTokenMessage(`✅ Endless search started! Found ${data.total_unique_found || data.count} groups. Will auto-load more... (Admin - Free)`, 'success');
+                showTokenMessage(`✅ Endless search started! Searching real Telegram groups from web sources. Click "Stop" when done. (Admin - Free)`, 'success');
             } else if (data.tokens_deducted) {
-                showTokenMessage(`✅ Endless search started! 10 tokens deducted. Found ${data.total_unique_found || data.count} groups. Auto-loading more...`, 'success');
+                showTokenMessage(`✅ Endless search started! 10 tokens deducted. Searching real groups continuously. Click "Stop" when done.`, 'success');
                 // Refresh user token balance
                 if (telegramUser) {
                     fetchUserDetails(telegramUser.id);
                 }
             } else {
-                showTokenMessage(`✅ Endless search started! Found ${data.total_unique_found || data.count} groups. Auto-loading more...`, 'success');
+                showTokenMessage(`✅ Endless search started! Finding real Telegram groups. Click "Stop" when satisfied.`, 'success');
             }
-        } else if (loadMore && data.count > 0) {
-            showTokenMessage(`✅ Loaded ${data.count} more results! Total found: ${data.total_unique_found}`, 'info');
+        } else if (loadMore && data.count > 0 && !autoLoad) {
+            // Only show message for manual load more, not auto-load
+            showTokenMessage(`✅ Loaded ${data.count} more real groups! Total: ${data.total_unique_found}`, 'info');
         }
         
         if (data.results && data.results.length > 0) {
@@ -504,19 +505,28 @@ async function searchTelegramGroups(loadMore = false, autoLoad = false) {
             hasMoreResults = data.has_more;
             updateLoadMoreButton(data);
             
-            // Auto-load more results if endless search is active and not stopped
-            if (data.endless_search && isSearching && !stopSearchRequested && data.has_more) {
-                // Wait 2 seconds before auto-loading next batch
+            // Truly endless search - ALWAYS continue until user stops (ignore has_more flag)
+            if (isSearching && !stopSearchRequested) {
+                // Wait 1.5 seconds before auto-loading next batch (reduced from 2s for faster results)
                 setTimeout(() => {
                     if (isSearching && !stopSearchRequested) {
+                        console.log('Auto-loading more results... Current count:', data.total_unique_found);
                         searchTelegramGroups(true, true);
                     }
-                }, 2000);
+                }, 1500);
             } else if (stopSearchRequested) {
                 isSearching = false;
                 showTokenMessage(`🛑 Search stopped by user. Found ${data.total_unique_found} unique groups total.`, 'info');
                 updateStopButton(false);
             }
+        } else if (data.results && data.results.length === 0 && loadMore && isSearching && !stopSearchRequested) {
+            // Even if no results in this batch, keep trying (may find more in next batch)
+            console.log('No results in this batch, but continuing search...');
+            setTimeout(() => {
+                if (isSearching && !stopSearchRequested) {
+                    searchTelegramGroups(true, true);
+                }
+            }, 2000);
         } else {
             if (!loadMore) {
                 displayNoResults();
@@ -586,11 +596,11 @@ function updateLoadMoreButton(data) {
     if (isSearching && !stopSearchRequested) {
         loadMoreContainer.innerHTML = `
             <div class="endless-search-indicator">
-                <i class="fas fa-infinity"></i> <strong>Endless Search Active</strong>
+                <i class="fas fa-search"></i> <strong>Finding Real Groups...</strong>
             </div>
             <div class="results-info">
-                <i class="fas fa-check-circle"></i> ${totalFound} unique groups found so far
-                <br><small>Automatically searching more sources...</small>
+                <i class="fas fa-check-circle"></i> <strong>${totalFound}</strong> real groups found
+                <br><small>🌐 Searching web sources continuously - Click stop when satisfied</small>
             </div>
             <button onclick="stopSearch()" class="stop-button">
                 <i class="fas fa-stop-circle"></i> Stop Search
@@ -599,11 +609,11 @@ function updateLoadMoreButton(data) {
     } else {
         loadMoreContainer.innerHTML = `
             <button onclick="searchTelegramGroups(true)" class="load-more-button">
-                <i class="fas fa-sync-alt"></i> Load More Groups
+                <i class="fas fa-sync-alt"></i> Find More Groups
             </button>
             <div class="results-info">
-                <i class="fas fa-check-circle"></i> ${totalFound} unique groups found
-                <br><small>Click to continue searching</small>
+                <i class="fas fa-check-circle"></i> ${totalFound} groups found
+                <br><small>Click to search for more real groups</small>
             </div>
         `;
     }
