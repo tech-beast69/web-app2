@@ -465,7 +465,7 @@ async function searchTelegramGroups(loadMore = false, autoLoad = false) {
             if (!loadMore) {
                 displayNoResults();
                 if (data.tokens_refunded) {
-                    showTokenMessage('🔍 No Telegram groups found. Tokens refunded. Try different keywords.', 'warning');
+                    showTokenMessage('🔍 No search results found. Search engines may be temporarily unavailable. Tokens refunded. Try different keywords.', 'warning');
                 } else {
                     showTokenMessage('🔍 No more results found.', 'warning');
                 }
@@ -483,19 +483,19 @@ async function searchTelegramGroups(loadMore = false, autoLoad = false) {
         // Show success message for new searches
         if (!loadMore && currentPage === 1) {
             if (data.is_admin) {
-                showTokenMessage(`✅ Endless search started! Searching real Telegram groups from web sources. Click "Stop" when done. (Admin - Free)`, 'success');
+                showTokenMessage(`✅ Endless web search started! Searching across multiple search engines with proxy protection. Click "Stop" when done. (Admin - Free)`, 'success');
             } else if (data.tokens_deducted) {
-                showTokenMessage(`✅ Endless search started! 10 tokens deducted. Searching real groups continuously. Click "Stop" when done.`, 'success');
+                showTokenMessage(`✅ Endless web search started! 10 tokens deducted. Searching continuously across engines. Click "Stop" when done.`, 'success');
                 // Refresh user token balance
                 if (telegramUser) {
                     fetchUserDetails(telegramUser.id);
                 }
             } else {
-                showTokenMessage(`✅ Endless search started! Finding real Telegram groups. Click "Stop" when satisfied.`, 'success');
+                showTokenMessage(`✅ Endless web search started! Finding comprehensive web results. Click "Stop" when satisfied.`, 'success');
             }
         } else if (loadMore && data.count > 0 && !autoLoad) {
             // Only show message for manual load more, not auto-load
-            showTokenMessage(`✅ Loaded ${data.count} more real groups! Total: ${data.total_unique_found}`, 'info');
+            showTokenMessage(`✅ Loaded ${data.count} more web results! Total: ${data.total_unique_found}`, 'info');
         }
         
         if (data.results && data.results.length > 0) {
@@ -667,7 +667,7 @@ function displaySearchResults(results, append = false) {
         
         resultCard.innerHTML = `
             <div class="search-result-title">
-                <i class="fab fa-telegram"></i>
+                <i class="fas fa-globe"></i>
                 ${escapeHtml(result.title)}
             </div>
             <a href="${escapeHtml(result.link)}" target="_blank" class="search-result-link">
