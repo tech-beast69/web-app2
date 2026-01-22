@@ -854,7 +854,8 @@ footer p {
     padding: 20px 0;
 }
 
-.load-more-btn button {
+.load-more-btn button,
+.load-more-btn .load-more-button {
     background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
     color: white;
     border: none;
@@ -867,18 +868,40 @@ footer p {
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
-.load-more-btn button:hover {
+.load-more-btn button:hover,
+.load-more-btn .load-more-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
 }
 
-.load-more-btn button:active {
+.load-more-btn button:active,
+.load-more-btn .load-more-button:active {
     transform: translateY(0);
+}
+
+.load-more-btn.end-of-results {
+    background: rgba(75, 181, 67, 0.1);
+    border: 2px solid rgba(75, 181, 67, 0.3);
+    border-radius: 15px;
+    padding: 20px;
+    margin: 20px 0;
 }
 
 .load-more-btn .results-info {
     margin-top: 15px;
     color: var(--gray);
-    font-size: 0.85em;
+    font-size: 0.9em;
     opacity: 0.9;
+    line-height: 1.6;
+}
+
+.load-more-btn .results-info i {
+    color: var(--success);
+    margin-right: 5px;
+}
+
+.load-more-btn.end-of-results .results-info {
+    color: var(--success);
+    font-weight: 600;
+    margin-top: 0;
 }
