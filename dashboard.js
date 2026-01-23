@@ -367,40 +367,8 @@ let hasMoreResults = false;
 let currentSessionId = null; // Track search session for progressive loading
 let isSearching = false; // Track if endless search is active
 let stopSearchRequested = false; // Track if user wants to stop
-let captchaSessionId = null; // Track CAPTCHA session
-
-// CAPTCHA verification functions
-async function checkCaptchaVerification() {
-    try {
-        // Check if already verified recently
-        const response = await fetch(`${API_BASE}/api/captcha/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: telegramUser.id })
-        });
-        
-        const data = await response.json();
-        
-        if (data.already_verified) {
-            return true; // Already verified, proceed with search
-        }
-        
-        if (data.type === 'recaptcha' && data.site_key) {
-            // Show Google reCAPTCHA modal
-            return await showRecaptchaModal(data.site_key);
-        } else if (data.type === 'custom' && data.session_id && data.challenge) {
-            // Show custom math CAPTCHA modal
-            captchaSessionId = data.session_id;
-            return await showCaptchaModal(data.challenge);
-        }
-        
-        return false;
-    } catch (error) {
-        console.error('Error checking CAPTCHA:', error);
-        showTokenMessage('❌ Error verifying CAPTCHA. Please try again.', 'error');
-        return false;
-    }
-}
+// CAPTCHA verification removed - using Docker Chrome for direct search
+// No CAPTCHA needed when using Docker Chrome container
 
 async function showCaptchaModal(challenge) {
     return new Promise((resolve) => {
@@ -610,13 +578,8 @@ async function searchTelegramGroups(loadMore = false, autoLoad = false) {
         return;
     }
     
-    // For new searches, check CAPTCHA verification
-    if (!loadMore && !autoLoad) {
-        const captchaVerified = await checkCaptchaVerification();
-        if (!captchaVerified) {
-            return; // CAPTCHA modal will be shown
-        }
-    }
+    // CAPTCHA verification removed - using Docker Chrome for direct search
+    // No manual verification needed
     
     // If this is a new search, reset pagination and session
     if (!loadMore) {
@@ -651,9 +614,9 @@ async function searchTelegramGroups(loadMore = false, autoLoad = false) {
     try {
         debugLog('Searching for:', currentSearchQuery, 'Page:', currentPage, 'Session:', currentSessionId);
         
-        // Build request URL with session support
+        // Build request URL with session support (no CAPTCHA needed with Docker Chrome)
         const userId = telegramUser.id;
-        let url = `${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=20&user_id=${userId}&captcha_verified=true`;
+        let url = `${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=20&user_id=${userId}`;
         
         // Add session ID if continuing a search
         if (currentSessionId) {
@@ -688,17 +651,7 @@ async function searchTelegramGroups(loadMore = false, autoLoad = false) {
             return;
         }
         
-        // Handle CAPTCHA required
-        if (response.status === 403 || data.requires_captcha) {
-            showTokenMessage('🛡️ CAPTCHA verification required. Please solve the security challenge.', 'warning');
-            // Trigger CAPTCHA verification
-            const captchaVerified = await checkCaptchaVerification();
-            if (captchaVerified) {
-                // Retry the search after CAPTCHA verification
-                return searchTelegramGroups(loadMore, autoLoad);
-            }
-            return;
-        }
+        // Docker Chrome handles all searches - no CAPTCHA needed
         
         // Handle authentication required
         if (response.status === 401 || data.requires_auth) {
