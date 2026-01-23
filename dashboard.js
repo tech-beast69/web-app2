@@ -385,7 +385,11 @@ async function checkCaptchaVerification() {
             return true; // Already verified, proceed with search
         }
         
-        if (data.session_id && data.challenge) {
+        if (data.type === 'recaptcha' && data.site_key) {
+            // Show Google reCAPTCHA modal
+            return await showRecaptchaModal(data.site_key);
+        } else if (data.type === 'custom' && data.session_id && data.challenge) {
+            // Show custom math CAPTCHA modal
             captchaSessionId = data.session_id;
             return await showCaptchaModal(data.challenge);
         }
@@ -486,6 +490,108 @@ async function showCaptchaModal(challenge) {
             }
         };
     });
+}
+
+async function showRecaptchaModal(siteKey) {
+    return new Promise((resolve) => {
+        // Load Google reCAPTCHA script if not already loaded
+        if (!window.grecaptcha) {
+            const script = document.createElement('script');
+            script.src = `https://www.google.com/recaptcha/api.js`;
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+            
+            // Wait for script to load
+            script.onload = () => showModal();
+        } else {
+            showModal();
+        }
+        
+        function showModal() {
+            // Create modal HTML
+            const modal = document.createElement('div');
+            modal.className = 'captcha-modal';
+            modal.innerHTML = `
+                <div class="captcha-modal-content">
+                    <div class="captcha-modal-header">
+                        <h3><i class="fas fa-shield-alt"></i> Security Verification</h3>
+                        <p>Please complete the reCAPTCHA to continue:</p>
+                    </div>
+                    <div class="captcha-modal-body">
+                        <div id="recaptcha-container"></div>
+                        <div class="captcha-buttons">
+                            <button id="recaptchaCancel" class="captcha-cancel-btn">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Render reCAPTCHA
+            setTimeout(() => {
+                if (window.grecaptcha) {
+                    window.grecaptcha.render('recaptcha-container', {
+                        'sitekey': siteKey,
+                        'callback': (token) => {
+                            // Verify the token
+                            verifyRecaptchaToken(token).then(success => {
+                                modal.remove();
+                                resolve(success);
+                            });
+                        },
+                        'expired-callback': () => {
+                            showTokenMessage('⚠️ reCAPTCHA expired. Please try again.', 'warning');
+                        },
+                        'error-callback': () => {
+                            showTokenMessage('❌ reCAPTCHA error. Please try again.', 'error');
+                        }
+                    });
+                } else {
+                    showTokenMessage('❌ Failed to load reCAPTCHA. Please try again.', 'error');
+                    modal.remove();
+                    resolve(false);
+                }
+            }, 100);
+            
+            // Handle cancel
+            document.getElementById('recaptchaCancel').onclick = () => {
+                modal.remove();
+                resolve(false);
+            };
+        }
+    });
+}
+
+async function verifyRecaptchaToken(token) {
+    try {
+        const response = await fetch(`${API_BASE}/api/captcha/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'recaptcha',
+                token: token,
+                user_id: telegramUser.id
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.verified) {
+            showTokenMessage('✅ Google reCAPTCHA verified successfully!', 'success');
+            return true;
+        } else {
+            showTokenMessage('❌ Google reCAPTCHA verification failed. Please try again.', 'error');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error verifying reCAPTCHA:', error);
+        showTokenMessage('❌ Error verifying reCAPTCHA. Please try again.', 'error');
+        return false;
+    }
 }
 
 // Search Telegram Groups with pagination and endless auto-loading
