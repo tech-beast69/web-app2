@@ -367,6 +367,126 @@ let hasMoreResults = false;
 let currentSessionId = null; // Track search session for progressive loading
 let isSearching = false; // Track if endless search is active
 let stopSearchRequested = false; // Track if user wants to stop
+let captchaSessionId = null; // Track CAPTCHA session
+
+// CAPTCHA verification functions
+async function checkCaptchaVerification() {
+    try {
+        // Check if already verified recently
+        const response = await fetch(`${API_BASE}/api/captcha/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: telegramUser.id })
+        });
+        
+        const data = await response.json();
+        
+        if (data.already_verified) {
+            return true; // Already verified, proceed with search
+        }
+        
+        if (data.session_id && data.challenge) {
+            captchaSessionId = data.session_id;
+            return await showCaptchaModal(data.challenge);
+        }
+        
+        return false;
+    } catch (error) {
+        console.error('Error checking CAPTCHA:', error);
+        showTokenMessage('❌ Error verifying CAPTCHA. Please try again.', 'error');
+        return false;
+    }
+}
+
+async function showCaptchaModal(challenge) {
+    return new Promise((resolve) => {
+        // Create modal HTML
+        const modal = document.createElement('div');
+        modal.className = 'captcha-modal';
+        modal.innerHTML = `
+            <div class="captcha-modal-content">
+                <div class="captcha-modal-header">
+                    <h3><i class="fas fa-shield-alt"></i> Security Verification</h3>
+                    <p>Please solve this simple math problem to continue:</p>
+                </div>
+                <div class="captcha-modal-body">
+                    <div class="captcha-question">${challenge}</div>
+                    <input type="text" id="captchaAnswer" placeholder="Enter your answer" autocomplete="off">
+                    <div class="captcha-buttons">
+                        <button id="captchaSubmit" class="captcha-submit-btn">
+                            <i class="fas fa-check"></i> Verify
+                        </button>
+                        <button id="captchaCancel" class="captcha-cancel-btn">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Focus on input
+        setTimeout(() => {
+            document.getElementById('captchaAnswer').focus();
+        }, 100);
+        
+        // Handle submit
+        document.getElementById('captchaSubmit').onclick = async () => {
+            const answer = document.getElementById('captchaAnswer').value.trim();
+            if (!answer) {
+                showTokenMessage('⚠️ Please enter an answer', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/captcha/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: captchaSessionId,
+                        answer: answer
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.verified) {
+                    showTokenMessage('✅ CAPTCHA verified successfully!', 'success');
+                    modal.remove();
+                    resolve(true);
+                } else {
+                    showTokenMessage('❌ Incorrect answer. Please try again.', 'error');
+                    document.getElementById('captchaAnswer').value = '';
+                    document.getElementById('captchaAnswer').focus();
+                }
+            } catch (error) {
+                console.error('Error verifying CAPTCHA:', error);
+                showTokenMessage('❌ Error verifying CAPTCHA. Please try again.', 'error');
+            }
+        };
+        
+        // Handle cancel
+        document.getElementById('captchaCancel').onclick = () => {
+            modal.remove();
+            resolve(false);
+        };
+        
+        // Handle Enter key
+        document.getElementById('captchaAnswer').onkeypress = (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('captchaSubmit').click();
+            }
+        };
+        
+        // Handle Escape key
+        document.onkeydown = (e) => {
+            if (e.key === 'Escape') {
+                document.getElementById('captchaCancel').click();
+            }
+        };
+    });
+}
 
 // Search Telegram Groups with pagination and endless auto-loading
 async function searchTelegramGroups(loadMore = false, autoLoad = false) {
@@ -382,6 +502,14 @@ async function searchTelegramGroups(loadMore = false, autoLoad = false) {
     if (!telegramUser) {
         showTokenMessage('⚠️ Please access this dashboard through Telegram Mini App to use search functionality', 'error');
         return;
+    }
+    
+    // For new searches, check CAPTCHA verification
+    if (!loadMore && !autoLoad) {
+        const captchaVerified = await checkCaptchaVerification();
+        if (!captchaVerified) {
+            return; // CAPTCHA modal will be shown
+        }
     }
     
     // If this is a new search, reset pagination and session
@@ -419,7 +547,7 @@ async function searchTelegramGroups(loadMore = false, autoLoad = false) {
         
         // Build request URL with session support
         const userId = telegramUser.id;
-        let url = `${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=20&user_id=${userId}`;
+        let url = `${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=20&user_id=${userId}&captcha_verified=true`;
         
         // Add session ID if continuing a search
         if (currentSessionId) {
@@ -451,6 +579,18 @@ async function searchTelegramGroups(loadMore = false, autoLoad = false) {
         // Handle insufficient tokens
         if (response.status === 402 || data.insufficient_tokens) {
             showInsufficientTokensMessage(data);
+            return;
+        }
+        
+        // Handle CAPTCHA required
+        if (response.status === 403 || data.requires_captcha) {
+            showTokenMessage('🛡️ CAPTCHA verification required. Please solve the security challenge.', 'warning');
+            // Trigger CAPTCHA verification
+            const captchaVerified = await checkCaptchaVerification();
+            if (captchaVerified) {
+                // Retry the search after CAPTCHA verification
+                return searchTelegramGroups(loadMore, autoLoad);
+            }
             return;
         }
         
