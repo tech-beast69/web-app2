@@ -163,6 +163,72 @@
             </div>
         </section>
 
+        <!-- Telegram Links Browser Section -->
+        <section class="links-section">
+            <h2><i class="fas fa-link"></i> Telegram Links Browser</h2>
+            
+            <!-- User Info & Token Balance -->
+            <div class="user-info-card">
+                <div class="user-info-content">
+                    <div class="user-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-id-input">
+                            <label for="userIdInput">User ID:</label>
+                            <input type="number" id="userIdInput" placeholder="Enter your Telegram User ID">
+                            <button id="loadUserBtn" class="btn-primary">
+                                <i class="fas fa-check"></i> Load
+                            </button>
+                        </div>
+                        <div id="userTokenInfo" class="user-token-info" style="display: none;">
+                            <p><strong>Token Balance:</strong> <span id="userTokenBalance">0</span> tokens</p>
+                            <p class="token-cost-info"><i class="fas fa-info-circle"></i> Each link costs 10 tokens</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-container">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="linkSearchInput" placeholder="Search for Telegram groups, channels, or links...">
+                    <button id="clearSearchBtn" class="clear-btn" style="display: none;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="search-actions">
+                    <button id="searchBtn" class="btn-primary">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <button id="showAllBtn" class="btn-secondary">
+                        <i class="fas fa-list"></i> Show All Links
+                    </button>
+                </div>
+            </div>
+
+            <!-- Links Display Area -->
+            <div id="linksContainer" class="links-container">
+                <div class="links-placeholder">
+                    <i class="fas fa-info-circle"></i>
+                    <p>Enter your User ID above and search for Telegram links</p>
+                    <p class="hint">Or click "Show All Links" to browse all available links</p>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div id="paginationContainer" class="pagination-container" style="display: none;">
+                <button id="prevPageBtn" class="btn-secondary" disabled>
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>
+                <span id="pageInfo">Page 1</span>
+                <button id="nextPageBtn" class="btn-secondary" disabled>
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+
         <!-- Footer -->
         <footer>
             <p>Last updated: <span id="lastUpdate">--</span></p>
