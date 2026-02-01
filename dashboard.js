@@ -763,17 +763,34 @@ function displayLinks(links) {
     console.log('Displaying links:', links.length);
     
     if (!links || links.length === 0) {
+        const searchHint = currentSearchQuery 
+            ? `<p class="hint">No results found for "<strong>${escapeHtml(currentSearchQuery)}</strong>"</p>
+               <p class="hint">Try different keywords or check spelling</p>`
+            : `<p class="hint">Use the search bar above or click "Show All Links" to browse</p>`;
+        
         container.innerHTML = `
             <div class="links-placeholder">
                 <i class="fas fa-search"></i>
                 <p>No links found</p>
-                <p class="hint">Use the search bar above or click "Show All Links" to browse</p>
+                ${searchHint}
             </div>
         `;
         return;
     }
     
-    container.innerHTML = '';
+    // Show search results count
+    if (currentSearchQuery) {
+        const resultsInfo = document.createElement('div');
+        resultsInfo.className = 'search-results-info';
+        resultsInfo.innerHTML = `
+            <i class="fas fa-check-circle"></i>
+            Found <strong>${totalLinks}</strong> result${totalLinks !== 1 ? 's' : ''} for "<strong>${escapeHtml(currentSearchQuery)}</strong>"
+        `;
+        container.innerHTML = '';
+        container.appendChild(resultsInfo);
+    } else {
+        container.innerHTML = '';
+    }
     
     // Create cards immediately (non-blocking)
     links.forEach((link, index) => {
@@ -782,6 +799,27 @@ function displayLinks(links) {
     });
     
     console.log(`Successfully displayed ${links.length} link cards`);
+}
+
+// Helper function to highlight search terms in text
+function highlightSearchTerms(text, query) {
+    if (!query || !text) return escapeHtml(text);
+    
+    const searchTerms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+    let highlightedText = escapeHtml(text);
+    
+    // Highlight each search term
+    searchTerms.forEach(term => {
+        const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');
+        highlightedText = highlightedText.replace(regex, '<mark>$1</mark>');
+    });
+    
+    return highlightedText;
+}
+
+// Helper to escape regex special characters
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // Create a link card element
@@ -887,6 +925,10 @@ function createLinkCard(linkData, index) {
     
     console.log('Creating card:', { title, username, displayType, firstLetter, colorIndex, hasPhoto: !!photoUrl, url });
     
+    // Highlight search terms in title and description if searching
+    const displayTitle = currentSearchQuery ? highlightSearchTerms(title, currentSearchQuery) : escapeHtml(title);
+    const displayDescription = currentSearchQuery ? highlightSearchTerms(extractCleanDescription(description), currentSearchQuery) : escapeHtml(extractCleanDescription(description));
+    
     card.innerHTML = `
         <div class="link-card-header">
             <div class="link-profile-pic" style="background: ${bgGradient};">
@@ -894,13 +936,13 @@ function createLinkCard(linkData, index) {
                 <div class="profile-letter" style="${profileImageHtml ? 'display: none;' : ''}">${firstLetter}</div>
             </div>
             <div class="link-info">
-                <h3 class="link-title">${escapeHtml(title)}</h3>
+                <h3 class="link-title">${displayTitle}</h3>
             </div>
         </div>
         <div class="link-preview-container" id="preview-${index}">
             <div class="link-preview">
                 <div class="preview-content">
-                    <p class="preview-desc">${escapeHtml(extractCleanDescription(description))}</p>
+                    <p class="preview-desc">${displayDescription}</p>
                 </div>
             </div>
         </div>
