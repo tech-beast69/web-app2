@@ -658,7 +658,7 @@ async function loadLinks() {
         
         if (!data.success) {
             showNotification('Error loading links: ' + (data.error || 'Unknown error'), 'error');
-            await displayLinks([]);
+            displayLinks([]);
             hideLoading();
             return;
         }
@@ -668,20 +668,20 @@ async function loadLinks() {
         
         console.log(`✅ Loaded ${allLinks.length} links, total: ${totalLinks}`);
         
-        await displayLinks(allLinks);
+        displayLinks(allLinks);
         updatePagination();
         hideLoading();
         
     } catch (error) {
         console.error('❌ Error loading links:', error);
         showNotification('Failed to load links: ' + error.message, 'error');
-        await displayLinks([]);
+        displayLinks([]);
         hideLoading();
     }
 }
 
 // Display links in the container
-async function displayLinks(links) {
+function displayLinks(links) {
     const container = document.getElementById('linksContainer');
     
     if (!container) {
@@ -704,18 +704,17 @@ async function displayLinks(links) {
     
     container.innerHTML = '';
     
-    // Create cards asynchronously to fetch profile photos
-    for (let index = 0; index < links.length; index++) {
-        const link = links[index];
-        const linkCard = await createLinkCard(link, index);
+    // Create cards immediately (non-blocking)
+    links.forEach((link, index) => {
+        const linkCard = createLinkCard(link, index);
         container.appendChild(linkCard);
-    }
+    });
     
     console.log(`Successfully displayed ${links.length} link cards`);
 }
 
 // Create a link card element
-async function createLinkCard(linkData, index) {
+function createLinkCard(linkData, index) {
     const card = document.createElement('div');
     card.className = 'link-card';
     card.dataset.index = index;
@@ -775,32 +774,6 @@ async function createLinkCard(linkData, index) {
         firstLetter = title.charAt(0).toUpperCase();
     }
     
-    // Check if linkData has profile_photo or photo_url
-    let photoUrl = linkData.profile_photo || linkData.photo_url || linkData.avatar_url;
-    
-    // If no photo URL, try to fetch from backend by scraping the web page
-    if (!photoUrl) {
-        try {
-            // Use the full URL for scraping, it works better for invite links
-            const chatIdentifier = url;
-            const response = await fetch(`${API_BASE}/api/chat/photo/${encodeURIComponent(chatIdentifier)}`);
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success && data.photo_url) {
-                    photoUrl = data.photo_url;
-                    console.log('✅ Fetched profile photo:', photoUrl);
-                }
-            }
-        } catch (error) {
-            console.log('Could not fetch profile photo:', error);
-        }
-    }
-    
-    let profileImageHtml = '';
-    if (photoUrl) {
-        profileImageHtml = `<img src="${escapeHtml(photoUrl)}" alt="${escapeHtml(title)}" onerror="this.style.display='none'; this.parentElement.querySelector('.profile-letter').style.display='block';">`;
-    }
-    
     // Generate a color based on the first letter
     const colors = [
         'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // Purple
@@ -815,7 +788,15 @@ async function createLinkCard(linkData, index) {
     const colorIndex = firstLetter.charCodeAt(0) % colors.length;
     const bgGradient = colors[colorIndex];
     
-    console.log('Creating card:', { title, username, displayType, firstLetter, colorIndex, hasPhoto: !!photoUrl, photoUrl, url });
+    // Check if linkData has profile_photo or photo_url
+    let photoUrl = linkData.profile_photo || linkData.photo_url || linkData.avatar_url;
+    let profileImageHtml = '';
+    
+    if (photoUrl) {
+        profileImageHtml = `<img src="${escapeHtml(photoUrl)}" alt="${escapeHtml(title)}" onerror="this.style.display='none'; this.parentElement.querySelector('.profile-letter').style.display='block';">`;
+    }
+    
+    console.log('Creating card:', { title, username, displayType, firstLetter, colorIndex, hasPhoto: !!photoUrl, url });
     
     card.innerHTML = `
         <div class="link-card-header">
@@ -848,7 +829,45 @@ async function createLinkCard(linkData, index) {
     const accessBtn = card.querySelector('.btn-access');
     accessBtn.addEventListener('click', () => accessLink(url, title));
     
+    // If no photo URL, try to fetch from backend in the background (non-blocking)
+    if (!photoUrl) {
+        fetchProfilePhoto(url, card, title);
+    }
+    
     return card;
+}
+
+// Fetch profile photo in the background
+async function fetchProfilePhoto(url, card, title) {
+    try {
+        const response = await fetch(`${API_BASE}/api/chat/photo/${encodeURIComponent(url)}`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.photo_url) {
+                // Update the card with the photo
+                const profilePic = card.querySelector('.link-profile-pic');
+                const profileLetter = card.querySelector('.profile-letter');
+                
+                if (profilePic && profileLetter) {
+                    const img = document.createElement('img');
+                    img.src = data.photo_url;
+                    img.alt = title;
+                    img.onerror = function() {
+                        this.style.display = 'none';
+                        profileLetter.style.display = 'block';
+                    };
+                    img.onload = function() {
+                        profileLetter.style.display = 'none';
+                    };
+                    
+                    profilePic.insertBefore(img, profileLetter);
+                    console.log('✅ Updated profile photo for:', title);
+                }
+            }
+        }
+    } catch (error) {
+        console.log('Could not fetch profile photo:', error);
+    }
 }
 
 // Extract username from URL
