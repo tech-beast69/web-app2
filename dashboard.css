@@ -898,6 +898,45 @@ footer p {
     opacity: 0.8;
 }
 
+.links-placeholder .hint strong {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* Search Results Info */
+.search-results-info {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-left: 4px solid var(--primary);
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1em;
+    color: #1e40af;
+}
+
+.search-results-info i {
+    font-size: 1.2em;
+    color: var(--success);
+}
+
+.search-results-info strong {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+/* Search Term Highlighting */
+mark {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 /* Submit Link Section */
 .submit-link-section {
     background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
