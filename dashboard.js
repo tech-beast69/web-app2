@@ -98,10 +98,21 @@ async function fetchUserDetails(userId) {
 // Update user info display with fetched data
 function updateUserInfoDisplay(userData) {
     const userInfo = document.getElementById('telegramUserInfo');
-    if (!userInfo) return;
+    if (!userInfo) {
+        console.warn('telegramUserInfo element not found');
+        return;
+    }
+    
+    console.log('Updating user info display with:', userData);
     
     // Find the loading element and replace it with actual info
     const loadingEl = userInfo.querySelector('.premium-status-loading');
+    
+    // Remove any existing user-details to prevent duplicates
+    const existingDetails = userInfo.querySelector('.user-details');
+    if (existingDetails) {
+        existingDetails.remove();
+    }
     
     // Create premium/token info container
     const infoContainer = document.createElement('div');
@@ -109,6 +120,7 @@ function updateUserInfoDisplay(userData) {
     
     // Add admin badge if user is admin
     if (userData.is_admin) {
+        console.log('User is admin, adding admin badge');
         const adminBadge = document.createElement('div');
         adminBadge.className = 'admin-badge';
         adminBadge.innerHTML = `
@@ -116,6 +128,18 @@ function updateUserInfoDisplay(userData) {
             <span>Admin</span>
         `;
         infoContainer.appendChild(adminBadge);
+    }
+    
+    // Add premium badge if user is premium
+    if (userData.is_premium) {
+        console.log('User is premium, adding premium badge');
+        const premiumBadge = document.createElement('div');
+        premiumBadge.className = 'premium-badge';
+        premiumBadge.innerHTML = `
+            <i class="fas fa-crown"></i>
+            <span>Premium</span>
+        `;
+        infoContainer.appendChild(premiumBadge);
     }
     
     // Add token balance
@@ -135,6 +159,8 @@ function updateUserInfoDisplay(userData) {
         // If no loading element, append to userInfo
         userInfo.appendChild(infoContainer);
     }
+    
+    console.log('User info display updated successfully');
 }
 
 // Track Mini App access
@@ -384,10 +410,6 @@ function initLinksBrowser() {
     
     // Search button click
     searchBtn.addEventListener('click', () => {
-        if (!currentUserId) {
-            showNotification('Please load your User ID first', 'warning');
-            return;
-        }
         performSearch();
     });
     
@@ -416,10 +438,6 @@ function initLinksBrowser() {
     
     // Show all links button
     showAllBtn.addEventListener('click', () => {
-        if (!currentUserId) {
-            showNotification('Please load your User ID first', 'warning');
-            return;
-        }
         currentSearchQuery = '';
         searchInput.value = '';
         clearSearchBtn.style.display = 'none';
@@ -456,20 +474,30 @@ async function loadUserForLinks(userId) {
     try {
         currentUserId = userId;
         
+        console.log('Loading user for links browser:', userId);
+        
         // Fetch token balance
         const response = await fetch(`${API_BASE}/api/user/${userId}/info`);
         const data = await response.json();
         
         if (data.error) {
             console.error('Error loading user tokens:', data.error);
-            return;
+            // Still allow searching even if token fetch fails
+            currentUserBalance = 0;
+        } else {
+            currentUserBalance = data.token_balance || 0;
         }
         
-        currentUserBalance = data.token_balance || 0;
-        
         // Show token info and hide notice
-        document.getElementById('userTokenBalance').textContent = currentUserBalance;
-        document.getElementById('userTokenInfo').style.display = 'block';
+        const tokenBalanceEl = document.getElementById('userTokenBalance');
+        if (tokenBalanceEl) {
+            tokenBalanceEl.textContent = currentUserBalance;
+        }
+        
+        const tokenInfoEl = document.getElementById('userTokenInfo');
+        if (tokenInfoEl) {
+            tokenInfoEl.style.display = 'block';
+        }
         
         const notice = document.getElementById('linksSearchNotice');
         if (notice) {
@@ -480,6 +508,16 @@ async function loadUserForLinks(userId) {
         
     } catch (error) {
         console.error('Error loading user for links:', error);
+        // Still set user ID to allow searching
+        currentUserBalance = 0;
+        const tokenInfoEl = document.getElementById('userTokenInfo');
+        if (tokenInfoEl) {
+            tokenInfoEl.style.display = 'block';
+            const tokenBalanceEl = document.getElementById('userTokenBalance');
+            if (tokenBalanceEl) {
+                tokenBalanceEl.textContent = '0';
+            }
+        }
     }
 }
 
@@ -667,8 +705,13 @@ async function loadPreview(url, index) {
 
 // Access a link (deduct tokens and open)
 async function accessLink(url, title) {
+    // Auto-load user if Telegram user is available but currentUserId not set
+    if (!currentUserId && telegramUser && telegramUser.id) {
+        await loadUserForLinks(telegramUser.id);
+    }
+    
     if (!currentUserId) {
-        showNotification('Please load your User ID first', 'warning');
+        showNotification('Please open from Telegram to access links', 'warning');
         return;
     }
     
@@ -695,7 +738,18 @@ async function accessLink(url, title) {
         
         if (data.success) {
             currentUserBalance = data.remaining_balance;
-            document.getElementById('userTokenBalance').textContent = currentUserBalance;
+            
+            // Update token balance in links section
+            const linksTokenEl = document.getElementById('userTokenBalance');
+            if (linksTokenEl) {
+                linksTokenEl.textContent = currentUserBalance;
+            }
+            
+            // Update token balance in header if it exists
+            const headerTokenCount = document.querySelector('.token-count');
+            if (headerTokenCount) {
+                headerTokenCount.textContent = currentUserBalance;
+            }
             
             showNotification(
                 `Link accessed! ${data.tokens_deducted} tokens deducted. Remaining: ${data.remaining_balance}`,
