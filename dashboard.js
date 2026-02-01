@@ -658,7 +658,7 @@ async function loadLinks() {
         
         if (!data.success) {
             showNotification('Error loading links: ' + (data.error || 'Unknown error'), 'error');
-            displayLinks([]);
+            await displayLinks([]);
             hideLoading();
             return;
         }
@@ -668,20 +668,20 @@ async function loadLinks() {
         
         console.log(`✅ Loaded ${allLinks.length} links, total: ${totalLinks}`);
         
-        displayLinks(allLinks);
+        await displayLinks(allLinks);
         updatePagination();
         hideLoading();
         
     } catch (error) {
         console.error('❌ Error loading links:', error);
         showNotification('Failed to load links: ' + error.message, 'error');
-        displayLinks([]);
+        await displayLinks([]);
         hideLoading();
     }
 }
 
 // Display links in the container
-function displayLinks(links) {
+async function displayLinks(links) {
     const container = document.getElementById('linksContainer');
     
     if (!container) {
@@ -704,16 +704,18 @@ function displayLinks(links) {
     
     container.innerHTML = '';
     
-    links.forEach((link, index) => {
-        const linkCard = createLinkCard(link, index);
+    // Create cards asynchronously to fetch profile photos
+    for (let index = 0; index < links.length; index++) {
+        const link = links[index];
+        const linkCard = await createLinkCard(link, index);
         container.appendChild(linkCard);
-    });
+    }
     
     console.log(`Successfully displayed ${links.length} link cards`);
 }
 
 // Create a link card element
-function createLinkCard(linkData, index) {
+async function createLinkCard(linkData, index) {
     const card = document.createElement('div');
     card.className = 'link-card';
     card.dataset.index = index;
@@ -723,25 +725,20 @@ function createLinkCard(linkData, index) {
     const description = linkData.description || 'No description available';
     const url = linkData.link || '#';
     
-    // Get username from username_display or extract from URL/title
+    // Get username from username_display field
     let username = linkData.username_display || null;
     
-    // If title starts with @ or is a username, extract it properly
+    // If title starts with @, it's a username - extract it
     if (title.startsWith('@')) {
-        username = title.substring(1);
-        // Try to get a better title from description or URL
-        if (description && !description.includes('Type:')) {
-            title = description.split('|')[0].trim();
-        } else {
-            title = username; // Keep as is if no better option
-        }
-    } else if (title.toLowerCase().includes('group') || title.toLowerCase().includes('channel')) {
-        // Extract username from title if it contains "Group" or "Channel"
+        username = title.substring(1); // Store username without @
+        title = username; // Display name without @
+    } else if (title.includes('@')) {
+        // Extract username from title if it contains @
         const usernameMatch = title.match(/@(\w+)/);
         if (usernameMatch) {
             username = usernameMatch[1];
-            // Clean title by removing username and extra spaces
-            title = title.replace(/@\w+/g, '').replace(/Group|Channel/gi, '').trim();
+            // Clean title by removing @username
+            title = title.replace(/@\w+/g, '').trim();
         }
     }
     
@@ -750,29 +747,81 @@ function createLinkCard(linkData, index) {
         username = extractUsername(url);
     }
     
-    // Determine type
+    // Clean up title - remove "Group" and "Channel" keywords
+    title = title.replace(/\s*(Group|Channel)\s*/gi, '').trim();
+    
+    // If title is empty after cleanup, use username
+    if (!title && username) {
+        title = username;
+    }
+    
+    // Capitalize first letter of title
+    if (title && title.length > 0) {
+        title = title.charAt(0).toUpperCase() + title.slice(1);
+    }
+    
+    // Determine type from description
     const descLower = description.toLowerCase();
     let displayType = 'Telegram';
-    if (descLower.includes('channel') || title.toLowerCase().includes('channel')) {
+    if (descLower.includes('channel')) {
         displayType = 'Channel';
-    } else if (descLower.includes('group') || title.toLowerCase().includes('group')) {
+    } else if (descLower.includes('group')) {
         displayType = 'Group';
     }
     
-    // Create profile picture with first letter of the actual title
+    // Create profile picture with first letter of the cleaned title
     let firstLetter = 'T';
     if (title && title.length > 0) {
-        // Get first non-special character
-        const cleanTitle = title.replace(/[@+\s]/g, '');
-        if (cleanTitle.length > 0) {
-            firstLetter = cleanTitle.charAt(0).toUpperCase();
+        firstLetter = title.charAt(0).toUpperCase();
+    }
+    
+    // Check if linkData has profile_photo or photo_url
+    let photoUrl = linkData.profile_photo || linkData.photo_url || linkData.avatar_url;
+    
+    // If no photo URL, try to fetch from backend by scraping the web page
+    if (!photoUrl) {
+        try {
+            // Use the full URL for scraping, it works better for invite links
+            const chatIdentifier = url;
+            const response = await fetch(`${API_BASE}/api/chat/photo/${encodeURIComponent(chatIdentifier)}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.photo_url) {
+                    photoUrl = data.photo_url;
+                    console.log('✅ Fetched profile photo:', photoUrl);
+                }
+            }
+        } catch (error) {
+            console.log('Could not fetch profile photo:', error);
         }
     }
     
+    let profileImageHtml = '';
+    if (photoUrl) {
+        profileImageHtml = `<img src="${escapeHtml(photoUrl)}" alt="${escapeHtml(title)}" onerror="this.style.display='none'; this.parentElement.querySelector('.profile-letter').style.display='block';">`;
+    }
+    
+    // Generate a color based on the first letter
+    const colors = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // Purple
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', // Pink
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', // Blue
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', // Green
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', // Orange
+        'linear-gradient(135deg, #30cfd0 0%, #330867 100%)', // Teal
+        'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', // Light
+        'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', // Rose
+    ];
+    const colorIndex = firstLetter.charCodeAt(0) % colors.length;
+    const bgGradient = colors[colorIndex];
+    
+    console.log('Creating card:', { title, username, displayType, firstLetter, colorIndex, hasPhoto: !!photoUrl, photoUrl, url });
+    
     card.innerHTML = `
         <div class="link-card-header">
-            <div class="link-profile-pic">
-                <div class="profile-letter">${firstLetter}</div>
+            <div class="link-profile-pic" style="background: ${bgGradient};">
+                ${profileImageHtml}
+                <div class="profile-letter" style="${profileImageHtml ? 'display: none;' : ''}">${firstLetter}</div>
             </div>
             <div class="link-info">
                 <h3 class="link-title">${escapeHtml(title)}</h3>
