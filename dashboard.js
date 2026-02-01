@@ -1,8 +1,18 @@
 // Dashboard JavaScript - Real-time updates
 // API configuration - Try HTTPS first, fallback to HTTP
 let API_BASE = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
-const REFRESH_INTERVAL = window.DASHBOARDCONFIG?.REFRESH_INTERVAL || 5000;
+const REFRESH_INTERVAL = window.DASHBOARDCONFIG?.REFRESH_INTERVAL || 30000; // 30 seconds
 const DEBUG = window.DASHBOARDCONFIG?.DEBUG || false;
+
+// Cache to prevent redundant API calls
+const API_CACHE = {
+    status: { data: null, timestamp: 0 },
+    users: { data: null, timestamp: 0 },
+    media: { data: null, timestamp: 0 },
+    groups: { data: null, timestamp: 0 },
+    feedback: { data: null, timestamp: 0 }
+};
+const CACHE_TTL = 10000; // 10 seconds cache TTL
 
 // Check if we're on localhost and use HTTP
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -316,8 +326,16 @@ function formatNumber(num) {
 // Update bot status
 async function updateStatus() {
     try {
-        const response = await fetch(`${API_BASE}/api/status`);
-        const data = await response.json();
+        // Check cache first
+        const now = Date.now();
+        if (API_CACHE.status.data && (now - API_CACHE.status.timestamp) < CACHE_TTL) {
+            const data = API_CACHE.status.data;
+        } else {
+            const response = await fetch(`${API_BASE}/api/status`);
+            const data = await response.json();
+            API_CACHE.status = { data, timestamp: now };
+        }
+        const data = API_CACHE.status.data;
         
         // Bot Status
         const statusElement = document.getElementById('statusIndicator');
@@ -836,7 +854,6 @@ function createLinkCard(linkData, index) {
             </div>
             <div class="link-info">
                 <h3 class="link-title">${escapeHtml(title)}</h3>
-                <p class="link-type">${displayType}${username ? ' • @' + escapeHtml(username) : ''}</p>
             </div>
         </div>
         <div class="link-preview-container" id="preview-${index}">
