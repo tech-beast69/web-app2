@@ -1,8 +1,14 @@
 // Dashboard JavaScript - Real-time updates
-// API configuration is loaded from config.js
-const API_BASE = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+// API configuration - Try HTTPS first, fallback to HTTP
+let API_BASE = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
 const REFRESH_INTERVAL = window.DASHBOARDCONFIG?.REFRESH_INTERVAL || 5000;
 const DEBUG = window.DASHBOARDCONFIG?.DEBUG || false;
+
+// Check if we're on localhost and use HTTP
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    API_BASE = 'http://localhost:3027';
+    console.log('Running locally - using HTTP API:', API_BASE);
+}
 
 let updateInterval;
 let telegramUser = null;
@@ -651,7 +657,28 @@ async function loadLinks() {
         
         console.log('Fetching links from:', url);
         
-        const response = await fetch(url);
+        let response;
+        try {
+            response = await fetch(url);
+        } catch (fetchError) {
+            console.error('Fetch error:', fetchError);
+            
+            // If HTTPS fails and we're not on localhost, try HTTP
+            if (API_BASE.startsWith('https://') && !window.location.hostname.includes('localhost')) {
+                console.log('HTTPS failed, trying HTTP...');
+                const httpUrl = url.replace('https://', 'http://');
+                try {
+                    response = await fetch(httpUrl);
+                    // Update API_BASE if HTTP works
+                    API_BASE = API_BASE.replace('https://', 'http://');
+                    console.log('✅ HTTP connection successful, updated API_BASE:', API_BASE);
+                } catch (httpError) {
+                    throw new Error('Cannot connect to server (tried both HTTPS and HTTP): ' + httpError.message);
+                }
+            } else {
+                throw fetchError;
+            }
+        }
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
