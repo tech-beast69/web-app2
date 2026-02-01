@@ -1,6 +1,6 @@
 // Dashboard JavaScript - Real-time updates
-// API configuration - Will be replaced by GitHub Actions with secret value
-let API_BASE = '__API_BASE_URL__'; // This will be replaced during deployment
+// API configuration - Try HTTPS first, fallback to HTTP
+let API_BASE = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
 const REFRESH_INTERVAL = window.DASHBOARDCONFIG?.REFRESH_INTERVAL || 30000; // 30 seconds
 const DEBUG = window.DASHBOARDCONFIG?.DEBUG || false;
 
@@ -18,10 +18,6 @@ const CACHE_TTL = 10000; // 10 seconds cache TTL
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     API_BASE = 'http://localhost:3027';
     console.log('Running locally - using HTTP API:', API_BASE);
-} else if (API_BASE === '__API_BASE_URL__') {
-    // Placeholder wasn't replaced - show error
-    console.error('❌ API_BASE placeholder was not replaced during deployment!');
-    console.error('Make sure GitHub Actions workflow ran successfully and API_BASE secret is set.');
 }
 
 let updateInterval;
@@ -164,7 +160,6 @@ function displayTelegramUserInfo(user) {
 // Fetch user details including token balance and premium status
 async function fetchUserDetails(userId) {
     console.log('=== Fetching user details for ID:', userId);
-    console.log('API_BASE:', API_BASE);
     try {
         const url = `${API_BASE}/api/user/${userId}/info`;
         console.log('Fetching from:', url);
@@ -183,8 +178,6 @@ async function fetchUserDetails(userId) {
         
     } catch (error) {
         console.error('❌ Error fetching user details:', error);
-        console.error('API_BASE value:', API_BASE);
-        console.error('Is placeholder still there?', API_BASE.includes('__API_BASE_URL__'));
         
         // Use fallback data for testing
         console.log('Using fallback user data for display');
