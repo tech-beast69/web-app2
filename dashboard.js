@@ -571,9 +571,8 @@ function initLinksBrowser() {
         }, 1500); // Wait for user details to be fetched first
     }
     
-    // Load initial links immediately
-    console.log('Loading initial links...');
-    loadLinks();
+    // Don't auto-load links - wait for user to search
+    console.log('Links browser ready. Use search or "Show All Links" to view content.');
 }
 
 // Load user information for links browser
@@ -727,7 +726,7 @@ function displayLinks(links) {
             <div class="links-placeholder">
                 <i class="fas fa-search"></i>
                 <p>No links found</p>
-                <p class="hint">Try a different search query or click "Show All Links"</p>
+                <p class="hint">Use the search bar above or click "Show All Links" to browse</p>
             </div>
         `;
         return;
