@@ -360,636 +360,460 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
-// Search state management
+
+// ============================================
+// TELEGRAM LINKS BROWSER FUNCTIONALITY
+// ============================================
+
+let currentUserId = null;
+let currentUserBalance = 0;
+let currentPage = 0;
+let linksPerPage = 20;
+let totalLinks = 0;
 let currentSearchQuery = '';
-let currentPage = 1;
-let hasMoreResults = false;
-let currentSessionId = null; // Track search session for progressive loading
-let isSearching = false; // Track if endless search is active
-let stopSearchRequested = false; // Track if user wants to stop
-// CAPTCHA verification removed - using Docker Chrome for direct search
-// No CAPTCHA needed when using Docker Chrome container
+let allLinks = [];
 
-async function showCaptchaModal(challenge) {
-    return new Promise((resolve) => {
-        // Create modal HTML
-        const modal = document.createElement('div');
-        modal.className = 'captcha-modal';
-        modal.innerHTML = `
-            <div class="captcha-modal-content">
-                <div class="captcha-modal-header">
-                    <h3><i class="fas fa-shield-alt"></i> Security Verification</h3>
-                    <p>Please solve this simple math problem to continue:</p>
-                </div>
-                <div class="captcha-modal-body">
-                    <div class="captcha-question">${challenge}</div>
-                    <input type="text" id="captchaAnswer" placeholder="Enter your answer" autocomplete="off">
-                    <div class="captcha-buttons">
-                        <button id="captchaSubmit" class="captcha-submit-btn">
-                            <i class="fas fa-check"></i> Verify
-                        </button>
-                        <button id="captchaCancel" class="captcha-cancel-btn">
-                            <i class="fas fa-times"></i> Cancel
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // Focus on input
-        setTimeout(() => {
-            document.getElementById('captchaAnswer').focus();
-        }, 100);
-        
-        // Handle submit
-        document.getElementById('captchaSubmit').onclick = async () => {
-            const answer = document.getElementById('captchaAnswer').value.trim();
-            if (!answer) {
-                showTokenMessage('⚠️ Please enter an answer', 'warning');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`${API_BASE}/api/captcha/verify`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        session_id: captchaSessionId,
-                        answer: answer
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.verified) {
-                    showTokenMessage('✅ CAPTCHA verified successfully!', 'success');
-                    modal.remove();
-                    resolve(true);
-                } else {
-                    showTokenMessage('❌ Incorrect answer. Please try again.', 'error');
-                    document.getElementById('captchaAnswer').value = '';
-                    document.getElementById('captchaAnswer').focus();
-                }
-            } catch (error) {
-                console.error('Error verifying CAPTCHA:', error);
-                showTokenMessage('❌ Error verifying CAPTCHA. Please try again.', 'error');
-            }
-        };
-        
-        // Handle cancel
-        document.getElementById('captchaCancel').onclick = () => {
-            modal.remove();
-            resolve(false);
-        };
-        
-        // Handle Enter key
-        document.getElementById('captchaAnswer').onkeypress = (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('captchaSubmit').click();
-            }
-        };
-        
-        // Handle Escape key
-        document.onkeydown = (e) => {
-            if (e.key === 'Escape') {
-                document.getElementById('captchaCancel').click();
-            }
-        };
-    });
-}
-
-async function showRecaptchaModal(siteKey) {
-    return new Promise((resolve) => {
-        // Load Google reCAPTCHA script if not already loaded
-        if (!window.grecaptcha) {
-            const script = document.createElement('script');
-            script.src = `https://www.google.com/recaptcha/api.js`;
-            script.async = true;
-            script.defer = true;
-            document.head.appendChild(script);
-            
-            // Wait for script to load
-            script.onload = () => showModal();
+// Initialize links browser
+function initLinksBrowser() {
+    const userIdInput = document.getElementById('userIdInput');
+    const loadUserBtn = document.getElementById('loadUserBtn');
+    const searchInput = document.getElementById('linkSearchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const showAllBtn = document.getElementById('showAllBtn');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const prevPageBtn = document.getElementById('prevPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
+    
+    // Load user button click
+    loadUserBtn.addEventListener('click', () => {
+        const userId = userIdInput.value.trim();
+        if (userId) {
+            loadUser(userId);
         } else {
-            showModal();
-        }
-        
-        function showModal() {
-            // Create modal HTML
-            const modal = document.createElement('div');
-            modal.className = 'captcha-modal';
-            modal.innerHTML = `
-                <div class="captcha-modal-content">
-                    <div class="captcha-modal-header">
-                        <h3><i class="fas fa-shield-alt"></i> Security Verification</h3>
-                        <p>Please complete the reCAPTCHA to continue:</p>
-                    </div>
-                    <div class="captcha-modal-body">
-                        <div id="recaptcha-container"></div>
-                        <div class="captcha-buttons">
-                            <button id="recaptchaCancel" class="captcha-cancel-btn">
-                                <i class="fas fa-times"></i> Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            
-            // Render reCAPTCHA
-            setTimeout(() => {
-                if (window.grecaptcha) {
-                    window.grecaptcha.render('recaptcha-container', {
-                        'sitekey': siteKey,
-                        'callback': (token) => {
-                            // Verify the token
-                            verifyRecaptchaToken(token).then(success => {
-                                modal.remove();
-                                resolve(success);
-                            });
-                        },
-                        'expired-callback': () => {
-                            showTokenMessage('⚠️ reCAPTCHA expired. Please try again.', 'warning');
-                        },
-                        'error-callback': () => {
-                            showTokenMessage('❌ reCAPTCHA error. Please try again.', 'error');
-                        }
-                    });
-                } else {
-                    showTokenMessage('❌ Failed to load reCAPTCHA. Please try again.', 'error');
-                    modal.remove();
-                    resolve(false);
-                }
-            }, 100);
-            
-            // Handle cancel
-            document.getElementById('recaptchaCancel').onclick = () => {
-                modal.remove();
-                resolve(false);
-            };
+            showNotification('Please enter a valid User ID', 'error');
         }
     });
+    
+    // Enter key in user ID input
+    userIdInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            loadUserBtn.click();
+        }
+    });
+    
+    // Search button click
+    searchBtn.addEventListener('click', () => {
+        if (!currentUserId) {
+            showNotification('Please load your User ID first', 'warning');
+            return;
+        }
+        performSearch();
+    });
+    
+    // Enter key in search input
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            searchBtn.click();
+        }
+    });
+    
+    // Input event for clear button visibility
+    searchInput.addEventListener('input', (e) => {
+        if (e.target.value.trim()) {
+            clearSearchBtn.style.display = 'block';
+        } else {
+            clearSearchBtn.style.display = 'none';
+        }
+    });
+    
+    // Clear search button
+    clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        clearSearchBtn.style.display = 'none';
+        currentSearchQuery = '';
+    });
+    
+    // Show all links button
+    showAllBtn.addEventListener('click', () => {
+        if (!currentUserId) {
+            showNotification('Please load your User ID first', 'warning');
+            return;
+        }
+        currentSearchQuery = '';
+        searchInput.value = '';
+        clearSearchBtn.style.display = 'none';
+        currentPage = 0;
+        loadLinks();
+    });
+    
+    // Pagination buttons
+    prevPageBtn.addEventListener('click', () => {
+        if (currentPage > 0) {
+            currentPage--;
+            loadLinks();
+        }
+    });
+    
+    nextPageBtn.addEventListener('click', () => {
+        const maxPage = Math.ceil(totalLinks / linksPerPage) - 1;
+        if (currentPage < maxPage) {
+            currentPage++;
+            loadLinks();
+        }
+    });
+    
+    // Pre-load user from Telegram Web App if available
+    if (telegramUser && telegramUser.id) {
+        userIdInput.value = telegramUser.id;
+        loadUser(telegramUser.id);
+    }
 }
 
-async function verifyRecaptchaToken(token) {
+// Load user information
+async function loadUser(userId) {
     try {
-        const response = await fetch(`${API_BASE}/api/captcha/verify`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                type: 'recaptcha',
-                token: token,
-                user_id: telegramUser.id
-            })
-        });
+        showLoading('Loading user information...');
         
+        const response = await fetch(`${API_BASE}/api/user/${userId}/info`);
         const data = await response.json();
         
-        if (data.verified) {
-            showTokenMessage('✅ Google reCAPTCHA verified successfully!', 'success');
-            return true;
-        } else {
-            showTokenMessage('❌ Google reCAPTCHA verification failed. Please try again.', 'error');
-            return false;
+        if (data.error) {
+            showNotification('Error loading user: ' + data.error, 'error');
+            hideLoading();
+            return;
         }
+        
+        currentUserId = userId;
+        currentUserBalance = data.token_balance || 0;
+        
+        // Show user info
+        document.getElementById('userTokenBalance').textContent = currentUserBalance;
+        document.getElementById('userTokenInfo').style.display = 'block';
+        
+        showNotification('User loaded successfully!', 'success');
+        hideLoading();
+        
     } catch (error) {
-        console.error('Error verifying reCAPTCHA:', error);
-        showTokenMessage('❌ Error verifying reCAPTCHA. Please try again.', 'error');
-        return false;
+        console.error('Error loading user:', error);
+        showNotification('Failed to load user information', 'error');
+        hideLoading();
     }
 }
 
-// Search Telegram Groups with pagination and endless auto-loading
-async function searchTelegramGroups(loadMore = false, autoLoad = false) {
-    const searchInput = document.getElementById('searchInput');
-    const searchQuery = searchInput.value.trim();
-    
-    if (!searchQuery && !loadMore) {
-        showTokenMessage('⚠️ Please enter a search query', 'warning');
-        return;
-    }
-    
-    // Check if Telegram user is available
-    if (!telegramUser) {
-        showTokenMessage('⚠️ Please access this dashboard through Telegram Mini App to use search functionality', 'error');
-        return;
-    }
-    
-    // CAPTCHA verification removed - using Docker Chrome for direct search
-    // No manual verification needed
-    
-    // If this is a new search, reset pagination and session
-    if (!loadMore) {
-        currentSearchQuery = searchQuery;
-        currentPage = 1;
-        currentSessionId = null; // Reset session for new search
-        isSearching = true;
-        stopSearchRequested = false;
-    } else {
-        currentPage++;
-    }
-    
-    const resultsDiv = document.getElementById('searchResults');
-    const loaderDiv = document.getElementById('searchLoader');
-    const searchBtn = document.getElementById('searchBtn');
-    
-    // Update loader text for endless search
-    if (autoLoad) {
-        loaderDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Auto-loading more results...';
-    } else {
-        loaderDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
-    }
-    
-    // Show loader and disable button
-    loaderDiv.style.display = 'block';
-    if (!loadMore) {
-        resultsDiv.innerHTML = '';
-        updateStopButton(true); // Show stop button for new searches
-    }
-    searchBtn.disabled = true;
-    
+// Perform search
+async function performSearch() {
+    const searchInput = document.getElementById('linkSearchInput');
+    currentSearchQuery = searchInput.value.trim();
+    currentPage = 0;
+    await loadLinks();
+}
+
+// Load links from API
+async function loadLinks() {
     try {
-        debugLog('Searching for:', currentSearchQuery, 'Page:', currentPage, 'Session:', currentSessionId);
+        showLoading('Loading links...');
         
-        // Build request URL with session support (no CAPTCHA needed with Docker Chrome)
-        const userId = telegramUser.id;
-        let url = `${API_BASE}/api/search-telegram-groups?q=${encodeURIComponent(currentSearchQuery)}&page=${currentPage}&per_page=20&user_id=${userId}`;
+        const offset = currentPage * linksPerPage;
+        let url = `${API_BASE}/api/links/search?limit=${linksPerPage}&offset=${offset}`;
         
-        // Add session ID if continuing a search
-        if (currentSessionId) {
-            url += `&session_id=${encodeURIComponent(currentSessionId)}`;
+        if (currentSearchQuery) {
+            url += `&q=${encodeURIComponent(currentSearchQuery)}`;
         }
         
         const response = await fetch(url);
         const data = await response.json();
         
-        loaderDiv.style.display = 'none';
-        searchBtn.disabled = false;
-        
-        // Store session ID for subsequent requests
-        if (data.session_id) {
-            currentSessionId = data.session_id;
-            debugLog('Session ID:', currentSessionId);
-        }
-        
-        // Handle session expired
-        if (response.status === 410 || data.session_expired) {
-            showTokenMessage('⏱️ Search session expired. Please start a new search.', 'warning');
-            // Reset and allow new search
-            currentSessionId = null;
-            currentPage = 1;
-            displayNoResults();
+        if (!data.success) {
+            showNotification('Error loading links: ' + data.error, 'error');
+            hideLoading();
             return;
         }
         
-        // Handle insufficient tokens
-        if (response.status === 402 || data.insufficient_tokens) {
-            showInsufficientTokensMessage(data);
-            return;
-        }
+        allLinks = data.links || [];
+        totalLinks = data.total || 0;
         
-        // Docker Chrome handles all searches - no CAPTCHA needed
-        
-        // Handle authentication required
-        if (response.status === 401 || data.requires_auth) {
-            showTokenMessage('🔐 Authentication required. Please access via Telegram Mini App.', 'error');
-            return;
-        }
-        
-        // Handle no results found (404)
-        if (response.status === 404 || (data.results && data.results.length === 0)) {
-            if (!loadMore) {
-                displayNoResults();
-                if (data.tokens_refunded) {
-                    showTokenMessage('🔍 No search results found. Search engines may be temporarily unavailable. Tokens refunded. Try different keywords.', 'warning');
-                } else {
-                    showTokenMessage('🔍 No more results found.', 'warning');
-                }
-            } else {
-                showTokenMessage('✅ No more results available.', 'info');
-            }
-            return;
-        }
-        
-        // Handle other errors
-        if (!response.ok) {
-            throw new Error(data.error || 'Search failed');
-        }
-        
-        // Show success message for new searches
-        if (!loadMore && currentPage === 1) {
-            if (data.is_admin) {
-                showTokenMessage(`✅ Endless web search started! Searching across multiple search engines with proxy protection. Click "Stop" when done. (Admin - Free)`, 'success');
-            } else if (data.tokens_deducted) {
-                showTokenMessage(`✅ Endless web search started! 10 tokens deducted. Searching continuously across engines. Click "Stop" when done.`, 'success');
-                // Refresh user token balance
-                if (telegramUser) {
-                    fetchUserDetails(telegramUser.id);
-                }
-            } else {
-                showTokenMessage(`✅ Endless web search started! Finding comprehensive web results. Click "Stop" when satisfied.`, 'success');
-            }
-        } else if (loadMore && data.count > 0 && !autoLoad) {
-            // Only show message for manual load more, not auto-load
-            showTokenMessage(`✅ Loaded ${data.count} more web results! Total: ${data.total_unique_found}`, 'info');
-        }
-        
-        if (data.results && data.results.length > 0) {
-            console.log('Search response:', data);
-            console.log('Has more results:', data.has_more);
-            displaySearchResults(data.results, loadMore);
-            hasMoreResults = data.has_more;
-            updateLoadMoreButton(data);
-            
-            // Truly endless search - ALWAYS continue until user stops (ignore has_more flag)
-            if (isSearching && !stopSearchRequested) {
-                // Wait 1.5 seconds before auto-loading next batch (reduced from 2s for faster results)
-                setTimeout(() => {
-                    if (isSearching && !stopSearchRequested) {
-                        console.log('Auto-loading more results... Current count:', data.total_unique_found);
-                        searchTelegramGroups(true, true);
-                    }
-                }, 1500);
-            } else if (stopSearchRequested) {
-                isSearching = false;
-                showTokenMessage(`🛑 Search stopped by user. Found ${data.total_unique_found} unique groups total.`, 'info');
-                updateStopButton(false);
-            }
-        } else if (data.results && data.results.length === 0 && loadMore && isSearching && !stopSearchRequested) {
-            // Even if no results in this batch, keep trying (may find more in next batch)
-            console.log('No results in this batch, but continuing search...');
-            setTimeout(() => {
-                if (isSearching && !stopSearchRequested) {
-                    searchTelegramGroups(true, true);
-                }
-            }, 2000);
-        } else {
-            if (!loadMore) {
-                displayNoResults();
-            }
-            isSearching = false;
-            updateStopButton(false);
-        }
+        displayLinks(allLinks);
+        updatePagination();
+        hideLoading();
         
     } catch (error) {
-        console.error('Error searching:', error);
-        loaderDiv.style.display = 'none';
-        searchBtn.disabled = false;
-        isSearching = false;
-        stopSearchRequested = false;
-        updateStopButton(false);
-        displaySearchError(error.message);
+        console.error('Error loading links:', error);
+        showNotification('Failed to load links', 'error');
+        hideLoading();
     }
 }
 
-// Stop the endless search
-function stopSearch() {
-    stopSearchRequested = true;
-    isSearching = false;
-    showTokenMessage('🛑 Stopping search...', 'info');
-    updateStopButton(false);
+// Display links in the container
+function displayLinks(links) {
+    const container = document.getElementById('linksContainer');
+    
+    if (!links || links.length === 0) {
+        container.innerHTML = `
+            <div class="links-placeholder">
+                <i class="fas fa-search"></i>
+                <p>No links found</p>
+                <p class="hint">Try a different search query or click "Show All Links"</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    links.forEach((link, index) => {
+        const linkCard = createLinkCard(link, index);
+        container.appendChild(linkCard);
+    });
 }
 
-// Update the stop button visibility
-function updateStopButton(show) {
-    let stopBtn = document.getElementById('stopSearchBtn');
-    if (show) {
-        if (!stopBtn) {
-            stopBtn = document.createElement('button');
-            stopBtn.id = 'stopSearchBtn';
-            stopBtn.className = 'stop-search-btn';
-            stopBtn.innerHTML = '<i class="fas fa-stop-circle"></i> Stop Search';
-            stopBtn.onclick = stopSearch;
+// Create a link card element
+function createLinkCard(linkData, index) {
+    const card = document.createElement('div');
+    card.className = 'link-card';
+    card.dataset.index = index;
+    
+    const title = linkData.title || 'Untitled';
+    const description = linkData.description || 'No description available';
+    const url = linkData.link || '#';
+    
+    card.innerHTML = `
+        <div class="link-card-header">
+            <div class="link-icon">
+                <i class="fab fa-telegram"></i>
+            </div>
+            <div class="link-info">
+                <h3 class="link-title">${escapeHtml(title)}</h3>
+                <p class="link-description">${escapeHtml(description)}</p>
+            </div>
+        </div>
+        <div class="link-preview-container" id="preview-${index}" style="display: none;">
+            <div class="link-preview-loading">
+                <i class="fas fa-spinner fa-spin"></i> Loading preview...
+            </div>
+        </div>
+        <div class="link-card-footer">
+            <div class="link-url">
+                <i class="fas fa-link"></i>
+                <span>${escapeHtml(url.substring(0, 50))}${url.length > 50 ? '...' : ''}</span>
+            </div>
+            <div class="link-actions">
+                <button class="btn-preview" data-url="${escapeHtml(url)}" data-index="${index}">
+                    <i class="fas fa-eye"></i> Preview
+                </button>
+                <button class="btn-access" data-url="${escapeHtml(url)}" data-title="${escapeHtml(title)}">
+                    <i class="fas fa-external-link-alt"></i> Access (10 tokens)
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Add event listeners
+    const previewBtn = card.querySelector('.btn-preview');
+    const accessBtn = card.querySelector('.btn-access');
+    
+    previewBtn.addEventListener('click', () => togglePreview(url, index));
+    accessBtn.addEventListener('click', () => accessLink(url, title));
+    
+    return card;
+}
+
+// Toggle link preview
+async function togglePreview(url, index) {
+    const previewContainer = document.getElementById(`preview-${index}`);
+    
+    if (previewContainer.style.display === 'none') {
+        previewContainer.style.display = 'block';
+        
+        // Check if already loaded
+        if (!previewContainer.dataset.loaded) {
+            await loadPreview(url, index);
+        }
+    } else {
+        previewContainer.style.display = 'none';
+    }
+}
+
+// Load preview for a link
+async function loadPreview(url, index) {
+    const previewContainer = document.getElementById(`preview-${index}`);
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/links/preview?url=${encodeURIComponent(url)}`);
+        const data = await response.json();
+        
+        if (data.success && data.preview) {
+            const preview = data.preview;
+            let previewHTML = '<div class="link-preview">';
             
-            const searchBtn = document.getElementById('searchBtn');
-            searchBtn.parentNode.insertBefore(stopBtn, searchBtn.nextSibling);
-        }
-        stopBtn.style.display = 'inline-block';
-    } else {
-        if (stopBtn) {
-            stopBtn.style.display = 'none';
-        }
-    }
-}
-
-// Update or create "Load More" button
-function updateLoadMoreButton(data) {
-    const resultsDiv = document.getElementById('searchResults');
-    let loadMoreContainer = document.getElementById('loadMoreContainer');
-    
-    // Remove existing container if present
-    if (loadMoreContainer) {
-        loadMoreContainer.remove();
-    }
-    
-    // Show endless search status
-    console.log('updateLoadMoreButton called with has_more:', data.has_more);
-    loadMoreContainer = document.createElement('div');
-    loadMoreContainer.id = 'loadMoreContainer';
-    loadMoreContainer.className = 'load-more-btn endless-search-status';
-    const totalFound = data.total_unique_found || data.count;
-    
-    if (isSearching && !stopSearchRequested) {
-        loadMoreContainer.innerHTML = `
-            <div class="endless-search-indicator">
-                <i class="fas fa-search"></i> <strong>Finding Real Groups...</strong>
-            </div>
-            <div class="results-info">
-                <i class="fas fa-check-circle"></i> <strong>${totalFound}</strong> real groups found
-                <br><small>🌐 Searching web sources continuously - Click stop when satisfied</small>
-            </div>
-            <button onclick="stopSearch()" class="stop-button">
-                <i class="fas fa-stop-circle"></i> Stop Search
-            </button>
-        `;
-    } else {
-        loadMoreContainer.innerHTML = `
-            <button onclick="searchTelegramGroups(true)" class="load-more-button">
-                <i class="fas fa-sync-alt"></i> Find More Groups
-            </button>
-            <div class="results-info">
-                <i class="fas fa-check-circle"></i> ${totalFound} groups found
-                <br><small>Click to search for more real groups</small>
-            </div>
-        `;
-    }
-    
-    resultsDiv.appendChild(loadMoreContainer);
-    console.log('Load More / Status indicator added');
-}
-
-// Display search results
-function displaySearchResults(results, append = false) {
-    const resultsDiv = document.getElementById('searchResults');
-    
-    // If not appending, clear existing results
-    if (!append) {
-        resultsDiv.innerHTML = '';
-    } else {
-        // Remove old load more button if it exists
-        const oldLoadMore = document.getElementById('loadMoreContainer');
-        if (oldLoadMore) {
-            oldLoadMore.remove();
-        }
-        // Remove old counter if it exists
-        const oldCounter = document.getElementById('resultsCounter');
-        if (oldCounter) {
-            oldCounter.remove();
-        }
-    }
-    
-    // Add results counter at the top (for new searches or update for appended)
-    let counter = document.getElementById('resultsCounter');
-    const currentDisplayCount = resultsDiv.querySelectorAll('.search-result-card').length + results.length;
-    
-    if (!counter) {
-        counter = document.createElement('div');
-        counter.id = 'resultsCounter';
-        counter.className = 'results-counter';
-        resultsDiv.insertBefore(counter, resultsDiv.firstChild);
-    }
-    
-    counter.innerHTML = `
-        <i class="fas fa-list"></i> 
-        <strong>${currentDisplayCount}</strong> results displayed
-    `;
-    
-    results.forEach((result, index) => {
-        const resultCard = document.createElement('div');
-        resultCard.className = 'search-result-card';
-        if (!append) {
-            resultCard.style.animationDelay = `${index * 0.05}s`; // Reduced delay for faster display
-        }
-        
-        resultCard.innerHTML = `
-            <div class="search-result-title">
-                <i class="fas fa-globe"></i>
-                ${escapeHtml(result.title)}
-            </div>
-            <a href="${escapeHtml(result.link)}" target="_blank" class="search-result-link">
-                <i class="fas fa-external-link-alt"></i> ${escapeHtml(result.link)}
-            </a>
-            <div class="search-result-snippet">
-                ${escapeHtml(result.snippet || 'No description available')}
-            </div>
-        `;
-        
-        resultsDiv.appendChild(resultCard);
-    });
-}
-
-// Display no results message
-function displayNoResults() {
-    const resultsDiv = document.getElementById('searchResults');
-    resultsDiv.innerHTML = `
-        <div class="search-no-results">
-            <i class="fas fa-search"></i>
-            <p>No results found. Try a different search term.</p>
-        </div>
-    `;
-}
-
-// Display search error
-function displaySearchError(errorMessage) {
-    const resultsDiv = document.getElementById('searchResults');
-    resultsDiv.innerHTML = `
-        <div class="search-error">
-            <i class="fas fa-exclamation-triangle"></i>
-            <p><strong>Error:</strong> ${escapeHtml(errorMessage)}</p>
-            <p>Please try again later.</p>
-        </div>
-    `;
-}
-
-// Show token-related messages
-function showTokenMessage(message, type = 'info') {
-    // Remove existing message if any
-    const existing = document.querySelector('.token-message');
-    if (existing) existing.remove();
-    
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `token-message token-message-${type}`;
-    messageDiv.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-        <span>${message}</span>
-        <button onclick="this.parentElement.remove()" class="close-btn">&times;</button>
-    `;
-    
-    const searchSection = document.querySelector('.search-section');
-    const searchContainer = document.querySelector('.search-container');
-    searchContainer.insertBefore(messageDiv, searchContainer.firstChild);
-    
-    // Auto-remove after 8 seconds
-    setTimeout(() => {
-        if (messageDiv.parentElement) {
-            messageDiv.style.opacity = '0';
-            setTimeout(() => messageDiv.remove(), 300);
-        }
-    }, 8000);
-}
-
-// Show insufficient tokens message
-function showInsufficientTokensMessage(data) {
-    const message = `
-        <div style="text-align: left;">
-            <strong>❌ Insufficient Tokens</strong><br><br>
-            💰 Current Balance: <strong>${data.current_balance || 0} tokens</strong><br>
-            🔍 Required for Search: <strong>${data.required_tokens || 10} tokens</strong><br>
-            📉 You need <strong>${(data.required_tokens || 10) - (data.current_balance || 0)} more tokens</strong><br><br>
-            <strong>💡 How to get more tokens:</strong><br>
-            • Contact admin to purchase tokens<br>
-            • Earn weekly free tokens<br>
-            • Upgrade to premium membership<br><br>
-            📞 <strong>Contact admin for token purchases</strong>
-        </div>
-    `;
-    
-    showTokenMessage(message, 'error');
-}
-
-// Scroll to top button functionality
-function initScrollToTop() {
-    // Create scroll-to-top button
-    const scrollBtn = document.createElement('button');
-    scrollBtn.id = 'scrollToTopBtn';
-    scrollBtn.className = 'scroll-to-top';
-    scrollBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-    scrollBtn.onclick = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-    document.body.appendChild(scrollBtn);
-    
-    // Show/hide button based on scroll position
-    window.addEventListener('scroll', () => {
-        if (window.pageYOffset > 300) {
-            scrollBtn.classList.add('visible');
-        } else {
-            scrollBtn.classList.remove('visible');
-        }
-    });
-}
-
-// Initialize scroll to top on page load
-document.addEventListener('DOMContentLoaded', initScrollToTop);
-
-// Escape HTML to prevent XSS
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Allow Enter key to trigger search
-document.addEventListener('DOMContentLoaded', () => {
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                searchTelegramGroups();
+            if (preview.image) {
+                previewHTML += `
+                    <div class="preview-image">
+                        <img src="${escapeHtml(preview.image)}" alt="Preview" onerror="this.parentElement.style.display='none'">
+                    </div>
+                `;
             }
-        });
+            
+            previewHTML += `
+                <div class="preview-content">
+                    <h4>${escapeHtml(preview.title || 'No title')}</h4>
+                    <p>${escapeHtml(preview.description || 'No description available')}</p>
+                </div>
+            </div>
+            `;
+            
+            previewContainer.innerHTML = previewHTML;
+            previewContainer.dataset.loaded = 'true';
+        } else {
+            previewContainer.innerHTML = `
+                <div class="link-preview-error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Preview not available</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading preview:', error);
+        previewContainer.innerHTML = `
+            <div class="link-preview-error">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Failed to load preview</p>
+            </div>
+        `;
     }
+}
+
+// Access a link (deduct tokens and open)
+async function accessLink(url, title) {
+    if (!currentUserId) {
+        showNotification('Please load your User ID first', 'warning');
+        return;
+    }
+    
+    if (currentUserBalance < 10) {
+        showNotification('Insufficient tokens! You need 10 tokens to access a link.', 'error');
+        return;
+    }
+    
+    try {
+        showLoading('Processing...');
+        
+        const response = await fetch(`${API_BASE}/api/links/access`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user_id: currentUserId,
+                link: url
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            currentUserBalance = data.remaining_balance;
+            document.getElementById('userTokenBalance').textContent = currentUserBalance;
+            
+            showNotification(
+                `Link accessed! ${data.tokens_deducted} tokens deducted. Remaining: ${data.remaining_balance}`,
+                'success'
+            );
+            
+            // Open the link
+            window.open(url, '_blank');
+        } else {
+            showNotification('Error: ' + data.error, 'error');
+        }
+        
+        hideLoading();
+        
+    } catch (error) {
+        console.error('Error accessing link:', error);
+        showNotification('Failed to access link', 'error');
+        hideLoading();
+    }
+}
+
+// Update pagination controls
+function updatePagination() {
+    const maxPage = Math.ceil(totalLinks / linksPerPage) - 1;
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    const pageInfo = document.getElementById('pageInfo');
+    const paginationContainer = document.getElementById('paginationContainer');
+    
+    if (totalLinks > 0) {
+        paginationContainer.style.display = 'flex';
+        
+        prevBtn.disabled = currentPage === 0;
+        nextBtn.disabled = currentPage >= maxPage;
+        
+        pageInfo.textContent = `Page ${currentPage + 1} of ${maxPage + 1} (${totalLinks} links)`;
+    } else {
+        paginationContainer.style.display = 'none';
+    }
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    // Remove existing notification
+    const existing = document.querySelector('.notification');
+    if (existing) {
+        existing.remove();
+    }
+    
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    const icon = {
+        'success': 'fa-check-circle',
+        'error': 'fa-exclamation-circle',
+        'warning': 'fa-exclamation-triangle',
+        'info': 'fa-info-circle'
+    }[type] || 'fa-info-circle';
+    
+    notification.innerHTML = `
+        <i class="fas ${icon}"></i>
+        <span>${escapeHtml(message)}</span>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
+}
+
+// Show loading overlay
+function showLoading(message = 'Loading...') {
+    let overlay = document.getElementById('loadingOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'loadingOverlay';
+        overlay.className = 'loading-overlay';
+        document.body.appendChild(overlay);
+    }
+    
+    overlay.innerHTML = `
+        <div class="loading-content">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>${escapeHtml(message)}</p>
+        </div>
+    `;
+    overlay.style.display = 'flex';
+}
+
+// Hide loading overlay
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+}
+
+// Initialize links browser when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    initLinksBrowser();
 });
