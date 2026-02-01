@@ -1022,7 +1022,13 @@ function updatePagination() {
         prevBtn.disabled = currentPage === 0;
         nextBtn.disabled = currentPage >= maxPage;
         
-        pageInfo.textContent = `Page ${currentPage + 1} of ${maxPage + 1} (${totalLinks} links)`;
+        // Better formatted pagination info
+        pageInfo.innerHTML = `
+            <div class="pagination-info">
+                <div class="page-number">Page ${currentPage + 1} / ${maxPage + 1}</div>
+                <div class="total-links">${totalLinks.toLocaleString()} total links</div>
+            </div>
+        `;
     } else {
         paginationContainer.style.display = 'none';
     }
