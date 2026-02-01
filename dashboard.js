@@ -9,9 +9,11 @@ let telegramUser = null;
 
 // Initialize Telegram Web App
 function initTelegramWebApp() {
+    console.log('=== Initializing Telegram Web App ===');
     try {
         if (window.Telegram && window.Telegram.WebApp) {
             const tg = window.Telegram.WebApp;
+            console.log('Telegram WebApp object found:', tg);
             
             // Expand to full height
             tg.expand();
@@ -19,7 +21,7 @@ function initTelegramWebApp() {
             // Get user data
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 telegramUser = tg.initDataUnsafe.user;
-                console.log('Telegram user detected:', telegramUser);
+                console.log('✅ Telegram user detected:', telegramUser);
                 
                 // Display user info in header
                 displayTelegramUserInfo(telegramUser);
@@ -27,36 +29,67 @@ function initTelegramWebApp() {
                 // Send user access data to backend
                 trackMiniAppAccess(telegramUser, tg.initData);
             } else {
-                console.log('No Telegram user data available - running in web browser');
+                console.log('⚠️ No Telegram user data available - running in web browser');
+                console.log('initDataUnsafe:', tg.initDataUnsafe);
+                
+                // For testing: Create a mock user when not in Telegram
+                createMockUserForTesting();
             }
             
             // Set theme based on Telegram theme
             if (tg.themeParams.bg_color) {
                 document.body.style.background = tg.themeParams.bg_color;
             }
+        } else {
+            console.log('⚠️ Telegram WebApp not available - running in regular browser');
+            // For testing: Create a mock user
+            createMockUserForTesting();
         }
     } catch (error) {
-        console.log('Not running in Telegram Mini App:', error);
+        console.error('❌ Error in initTelegramWebApp:', error);
+        // For testing: Create a mock user on error
+        createMockUserForTesting();
     }
+}
+
+// Create a mock user for testing outside Telegram
+function createMockUserForTesting() {
+    console.log('Creating mock user for testing...');
+    telegramUser = {
+        id: 7054339190,
+        first_name: 'Raw Queen',
+        username: 'RawQueen',
+        language_code: 'en'
+    };
+    console.log('Mock user created:', telegramUser);
+    displayTelegramUserInfo(telegramUser);
 }
 
 // Display Telegram user info
 function displayTelegramUserInfo(user) {
+    console.log('=== displayTelegramUserInfo called ===');
+    console.log('User data:', user);
+    
     const header = document.querySelector('header');
+    console.log('Header element:', header);
     
     if (!header) {
-        console.error('Header element not found');
+        console.error('❌ Header element not found!');
         return;
     }
     
-    // Create user info container if it doesn't exist
-    let userInfo = document.getElementById('telegramUserInfo');
-    if (!userInfo) {
-        userInfo = document.createElement('div');
-        userInfo.id = 'telegramUserInfo';
-        userInfo.className = 'user-info';
-        header.appendChild(userInfo);
+    // Remove any existing user info to prevent duplicates
+    const existingUserInfo = document.getElementById('telegramUserInfo');
+    if (existingUserInfo) {
+        console.log('Removing existing user info');
+        existingUserInfo.remove();
     }
+    
+    // Create user info container
+    const userInfo = document.createElement('div');
+    userInfo.id = 'telegramUserInfo';
+    userInfo.className = 'user-info active'; // Add 'active' class immediately
+    console.log('Created user info element with classes:', userInfo.className);
     
     // Build user info HTML with loading state
     let infoHTML = `
@@ -73,9 +106,10 @@ function displayTelegramUserInfo(user) {
     infoHTML += `<div class="user-id">ID: ${user.id}</div>`;
     
     userInfo.innerHTML = infoHTML;
-    userInfo.classList.add('active');
+    header.appendChild(userInfo);
     
-    console.log('User info displayed in header:', user);
+    console.log('✅ User info appended to header');
+    console.log('User info display style:', window.getComputedStyle(userInfo).display);
     
     // Fetch detailed user info from backend
     fetchUserDetails(user.id);
@@ -83,41 +117,50 @@ function displayTelegramUserInfo(user) {
 
 // Fetch user details including token balance and premium status
 async function fetchUserDetails(userId) {
+    console.log('=== Fetching user details for ID:', userId);
     try {
-        const response = await fetch(`${API_BASE}/api/user/${userId}/info`);
+        const url = `${API_BASE}/api/user/${userId}/info`;
+        console.log('Fetching from:', url);
+        
+        const response = await fetch(url);
         const data = await response.json();
         
-        console.log('User details fetched:', data);
+        console.log('✅ User details fetched:', data);
         
         // Update the display with actual data
         updateUserInfoDisplay(data);
         
     } catch (error) {
-        console.error('Error fetching user details:', error);
+        console.error('❌ Error fetching user details:', error);
         // Remove loading indicator on error
         const loadingEl = document.querySelector('.premium-status-loading');
         if (loadingEl) {
-            loadingEl.remove();
+            loadingEl.innerHTML = '<span style="color: #ef4444;">⚠️ Failed to load</span>';
         }
     }
 }
 
 // Update user info display with fetched data
 function updateUserInfoDisplay(userData) {
+    console.log('=== Updating user info display ===');
+    console.log('User data received:', userData);
+    
     const userInfo = document.getElementById('telegramUserInfo');
     if (!userInfo) {
-        console.warn('telegramUserInfo element not found');
+        console.error('❌ telegramUserInfo element not found!');
         return;
     }
     
-    console.log('Updating user info display with:', userData);
+    console.log('Found user info element');
     
     // Find the loading element and replace it with actual info
     const loadingEl = userInfo.querySelector('.premium-status-loading');
+    console.log('Loading element:', loadingEl);
     
     // Remove any existing user-details to prevent duplicates
     const existingDetails = userInfo.querySelector('.user-details');
     if (existingDetails) {
+        console.log('Removing existing user-details');
         existingDetails.remove();
     }
     
@@ -127,7 +170,7 @@ function updateUserInfoDisplay(userData) {
     
     // Add admin badge if user is admin
     if (userData.is_admin) {
-        console.log('User is admin, adding admin badge');
+        console.log('✅ User is admin - adding admin badge');
         const adminBadge = document.createElement('div');
         adminBadge.className = 'admin-badge';
         adminBadge.innerHTML = `
@@ -135,11 +178,13 @@ function updateUserInfoDisplay(userData) {
             <span>Admin</span>
         `;
         infoContainer.appendChild(adminBadge);
+    } else {
+        console.log('User is not admin');
     }
     
     // Add premium badge if user is premium
     if (userData.is_premium) {
-        console.log('User is premium, adding premium badge');
+        console.log('✅ User is premium - adding premium badge');
         const premiumBadge = document.createElement('div');
         premiumBadge.className = 'premium-badge';
         premiumBadge.innerHTML = `
@@ -147,6 +192,8 @@ function updateUserInfoDisplay(userData) {
             <span>Premium</span>
         `;
         infoContainer.appendChild(premiumBadge);
+    } else {
+        console.log('User is not premium');
     }
     
     // Add token balance
@@ -159,15 +206,18 @@ function updateUserInfoDisplay(userData) {
     `;
     infoContainer.appendChild(tokenBalance);
     
+    console.log('Created info container with', infoContainer.children.length, 'children');
+    
     // Replace loading with actual info
     if (loadingEl) {
+        console.log('Replacing loading element with user details');
         loadingEl.replaceWith(infoContainer);
     } else {
-        // If no loading element, append to userInfo
+        console.log('No loading element found, appending to userInfo');
         userInfo.appendChild(infoContainer);
     }
     
-    console.log('User info display updated successfully');
+    console.log('✅ User info display updated successfully');
 }
 
 // Track Mini App access
