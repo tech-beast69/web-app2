@@ -375,31 +375,12 @@ let allLinks = [];
 
 // Initialize links browser
 function initLinksBrowser() {
-    const userIdInput = document.getElementById('userIdInput');
-    const loadUserBtn = document.getElementById('loadUserBtn');
     const searchInput = document.getElementById('linkSearchInput');
     const searchBtn = document.getElementById('searchBtn');
     const showAllBtn = document.getElementById('showAllBtn');
     const clearSearchBtn = document.getElementById('clearSearchBtn');
     const prevPageBtn = document.getElementById('prevPageBtn');
     const nextPageBtn = document.getElementById('nextPageBtn');
-    
-    // Load user button click
-    loadUserBtn.addEventListener('click', () => {
-        const userId = userIdInput.value.trim();
-        if (userId) {
-            loadUser(userId);
-        } else {
-            showNotification('Please enter a valid User ID', 'error');
-        }
-    });
-    
-    // Enter key in user ID input
-    userIdInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            loadUserBtn.click();
-        }
-    });
     
     // Search button click
     searchBtn.addEventListener('click', () => {
@@ -462,41 +443,43 @@ function initLinksBrowser() {
         }
     });
     
-    // Pre-load user from Telegram Web App if available
+    // Auto-load user from Telegram Web App if available
     if (telegramUser && telegramUser.id) {
-        userIdInput.value = telegramUser.id;
-        loadUser(telegramUser.id);
+        setTimeout(() => {
+            loadUserForLinks(telegramUser.id);
+        }, 1500); // Wait for user details to be fetched first
     }
 }
 
-// Load user information
-async function loadUser(userId) {
+// Load user information for links browser
+async function loadUserForLinks(userId) {
     try {
-        showLoading('Loading user information...');
+        currentUserId = userId;
         
+        // Fetch token balance
         const response = await fetch(`${API_BASE}/api/user/${userId}/info`);
         const data = await response.json();
         
         if (data.error) {
-            showNotification('Error loading user: ' + data.error, 'error');
-            hideLoading();
+            console.error('Error loading user tokens:', data.error);
             return;
         }
         
-        currentUserId = userId;
         currentUserBalance = data.token_balance || 0;
         
-        // Show user info
+        // Show token info and hide notice
         document.getElementById('userTokenBalance').textContent = currentUserBalance;
         document.getElementById('userTokenInfo').style.display = 'block';
         
-        showNotification('User loaded successfully!', 'success');
-        hideLoading();
+        const notice = document.getElementById('linksSearchNotice');
+        if (notice) {
+            notice.style.display = 'none';
+        }
+        
+        console.log(`Links browser ready for user ${userId} with ${currentUserBalance} tokens`);
         
     } catch (error) {
-        console.error('Error loading user:', error);
-        showNotification('Failed to load user information', 'error');
-        hideLoading();
+        console.error('Error loading user for links:', error);
     }
 }
 
