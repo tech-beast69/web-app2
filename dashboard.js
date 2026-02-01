@@ -687,7 +687,8 @@ async function loadLinks() {
         let url = `${API_BASE}/api/links/search?limit=${linksPerPage}&offset=${offset}`;
         
         if (currentSearchQuery) {
-            url += `&q=${encodeURIComponent(currentSearchQuery)}`;
+            // Send lowercase query for case-insensitive search
+            url += `&q=${encodeURIComponent(currentSearchQuery.toLowerCase())}`;
         }
         
         // Include user_id to filter reported links
@@ -742,6 +743,9 @@ async function loadLinks() {
         displayLinks(allLinks);
         updatePagination();
         hideLoading();
+        
+        // Restore scroll position if saved
+        restoreScrollPosition();
         
     } catch (error) {
         console.error('❌ Error loading links:', error);
@@ -805,16 +809,32 @@ function displayLinks(links) {
 function highlightSearchTerms(text, query) {
     if (!query || !text) return escapeHtml(text);
     
+    // Split query into terms and make case-insensitive
     const searchTerms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
     let highlightedText = escapeHtml(text);
     
-    // Highlight each search term
+    // Highlight each search term (case-insensitive matching)
     searchTerms.forEach(term => {
         const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');
         highlightedText = highlightedText.replace(regex, '<mark>$1</mark>');
     });
     
     return highlightedText;
+}
+
+// Restore scroll position after page load/refresh
+function restoreScrollPosition() {
+    const savedPosition = sessionStorage.getItem('dashboardScrollPosition');
+    if (savedPosition) {
+        // Use setTimeout to ensure DOM is fully rendered
+        setTimeout(() => {
+            window.scrollTo({
+                top: parseInt(savedPosition, 10),
+                behavior: 'smooth'
+            });
+            console.log('✅ Restored scroll position:', savedPosition);
+        }, 100);
+    }
 }
 
 // Helper to escape regex special characters
@@ -1032,6 +1052,10 @@ function extractCleanDescription(desc) {
 
 // Access a link (deduct tokens and open)
 async function accessLink(url, title) {
+    // Save scroll position before opening link
+    const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+    sessionStorage.setItem('dashboardScrollPosition', scrollPosition.toString());
+    
     // Auto-load user if Telegram user is available but currentUserId not set
     if (!currentUserId && telegramUser && telegramUser.id) {
         await loadUserForLinks(telegramUser.id);
