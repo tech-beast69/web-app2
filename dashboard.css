@@ -22,7 +22,7 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: var(--dark);
-    padding: 10px;
+    padding: 2px;
     min-height: 100vh;
 }
 
@@ -920,6 +920,25 @@ footer p {
     margin-bottom: 12px;
 }
 
+.link-profile-pic {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.profile-letter {
+    color: white;
+    font-size: 1.5em;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
 .link-icon {
     font-size: 2em;
     color: #0088cc;
@@ -928,14 +947,27 @@ footer p {
 
 .link-info {
     flex: 1;
+    min-width: 0;
 }
 
 .link-title {
     font-size: 1.1em;
     font-weight: 700;
     color: var(--dark);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.link-type {
+    font-size: 0.85em;
+    color: var(--gray);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .link-description {
@@ -963,6 +995,18 @@ footer p {
     display: flex;
     gap: 12px;
     align-items: flex-start;
+}
+
+.preview-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.preview-desc {
+    color: var(--gray);
+    line-height: 1.4;
+    font-size: 0.85em;
+    margin: 0;
 }
 
 .preview-image {
@@ -1294,12 +1338,25 @@ footer p {
         gap: 10px;
     }
     
+    .link-profile-pic {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .profile-letter {
+        font-size: 1.2em;
+    }
+    
     .link-icon {
         font-size: 1.5em;
     }
     
     .link-title {
         font-size: 1em;
+    }
+    
+    .link-type {
+        font-size: 0.8em;
     }
     
     .link-description {
