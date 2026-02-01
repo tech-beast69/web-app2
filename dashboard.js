@@ -582,6 +582,12 @@ function initLinksBrowser() {
         }
     });
     
+    // Submit link button
+    const submitLinkBtn = document.getElementById('submitLinkBtn');
+    if (submitLinkBtn) {
+        submitLinkBtn.addEventListener('click', submitNewLink);
+    }
+    
     // Auto-load user from Telegram Web App if available
     if (telegramUser && telegramUser.id) {
         setTimeout(() => {
@@ -630,9 +636,16 @@ async function loadUserForLinks(userId) {
         
         console.log(`Links browser ready for user ${userId} with ${currentUserBalance} tokens`);
         
-        // Load reported links if user is admin
+        // Show submit link form for all users
+        const submitSection = document.getElementById('submitLinkSection');
+        if (submitSection) {
+            submitSection.style.display = 'block';
+        }
+        
+        // Load admin sections if user is admin
         if (data.is_admin) {
             await loadReportedLinks(userId);
+            await loadPendingLinks(userId);
         }
         
     } catch (error) {
@@ -1215,6 +1228,296 @@ function hideLoading() {
         document.querySelectorAll('.loading-overlay').forEach(el => {
             el.remove();
         });
+    }
+}
+
+// Submit new link
+async function submitNewLink() {
+    if (!currentUserId) {
+        showNotification('Please load user first', 'warning');
+        return;
+    }
+    
+    const nameInput = document.getElementById('linkNameInput');
+    const urlInput = document.getElementById('linkUrlInput');
+    const descInput = document.getElementById('linkDescInput');
+    
+    const name = nameInput.value.trim();
+    const url = urlInput.value.trim();
+    const description = descInput.value.trim();
+    
+    // Validation
+    if (!name) {
+        showNotification('Please enter a group/channel name', 'warning');
+        nameInput.focus();
+        return;
+    }
+    
+    if (!url) {
+        showNotification('Please enter an invite link', 'warning');
+        urlInput.focus();
+        return;
+    }
+    
+    // Validate URL format
+    if (!url.startsWith('https://t.me/') && !url.startsWith('http://t.me/')) {
+        showNotification('Please enter a valid Telegram link (must start with https://t.me/)', 'warning');
+        urlInput.focus();
+        return;
+    }
+    
+    showLoading('Submitting link...');
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/links/submit`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                user_id: currentUserId,
+                name: name,
+                link: url,
+                description: description
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Submit response:', data);
+        
+        if (data.success) {
+            showNotification(data.message || 'Link submitted successfully! Waiting for admin approval.', 'success');
+            
+            // Clear form
+            nameInput.value = '';
+            urlInput.value = '';
+            descInput.value = '';
+        } else {
+            showNotification('Error: ' + (data.error || 'Failed to submit link'), 'error');
+        }
+        
+        hideLoading();
+        
+    } catch (error) {
+        console.error('Error submitting link:', error);
+        showNotification('Failed to submit link: ' + error.message, 'error');
+        hideLoading();
+    }
+}
+
+// Load pending links for admin
+async function loadPendingLinks(adminId) {
+    try {
+        const response = await fetch(`${API_BASE}/api/links/pending?admin_id=${adminId}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Pending links response:', data);
+        
+        if (data.success) {
+            const pendingSection = document.getElementById('pendingLinksSection');
+            const container = document.getElementById('pendingLinksContainer');
+            
+            if (data.pending_links && data.pending_links.length > 0) {
+                pendingSection.style.display = 'block';
+                displayPendingLinks(data.pending_links);
+            } else {
+                pendingSection.style.display = 'block';
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #6b7280;">
+                        <i class="fas fa-check-circle" style="font-size: 2em; color: #7c3aed;"></i>
+                        <p>No pending links! All submissions have been reviewed.</p>
+                    </div>
+                `;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading pending links:', error);
+    }
+}
+
+// Display pending links
+function displayPendingLinks(pendingLinks) {
+    const container = document.getElementById('pendingLinksContainer');
+    
+    if (!container) {
+        console.error('pendingLinksContainer element not found');
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    pendingLinks.forEach((submission, index) => {
+        const card = document.createElement('div');
+        card.className = 'pending-card';
+        
+        const submitDate = new Date(submission.submitted_at).toLocaleString();
+        
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                <div style="flex: 1;">
+                    <h4 style="margin: 0 0 5px 0; color: #1f2937;">${escapeHtml(submission.name || 'Untitled')}</h4>
+                    <span class="pending-badge">
+                        <i class="fas fa-hourglass-half"></i> Pending Review
+                    </span>
+                </div>
+            </div>
+            <p style="margin: 10px 0; color: #6b7280; word-break: break-all;">
+                <i class="fas fa-link"></i> ${escapeHtml(submission.link)}
+            </p>
+            ${submission.description ? `
+                <p style="margin: 10px 0; color: #4b5563;">
+                    <i class="fas fa-comment"></i> ${escapeHtml(submission.description)}
+                </p>
+            ` : ''}
+            <div class="pending-info">
+                <i class="fas fa-user"></i> Submitted by: User ${submission.submitted_by}
+                <br>
+                <i class="fas fa-clock"></i> Submitted on: ${submitDate}
+            </div>
+            <div class="approval-actions">
+                <button class="btn-open-pending">
+                    <i class="fas fa-external-link-alt"></i> Open Link
+                </button>
+                <button class="btn-approve">
+                    <i class="fas fa-check"></i> Approve & Add
+                </button>
+                <button class="btn-reject">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+            </div>
+        `;
+        
+        // Add event listeners
+        const openBtn = card.querySelector('.btn-open-pending');
+        const approveBtn = card.querySelector('.btn-approve');
+        const rejectBtn = card.querySelector('.btn-reject');
+        
+        openBtn.addEventListener('click', () => {
+            window.open(submission.link, '_blank');
+        });
+        
+        approveBtn.addEventListener('click', () => {
+            approvePendingLink(submission.link, submission.name, submission.description);
+        });
+        
+        rejectBtn.addEventListener('click', () => {
+            rejectPendingLink(submission.link);
+        });
+        
+        container.appendChild(card);
+    });
+}
+
+// Approve pending link
+async function approvePendingLink(linkUrl, linkName, linkDescription) {
+    if (!currentUserId) {
+        showNotification('User ID not found', 'error');
+        return;
+    }
+    
+    if (!confirm(`Approve this link and add it to the database?\n\n"${linkName}"\n\nThis will make it visible to all users.`)) {
+        return;
+    }
+    
+    showLoading('Approving link...');
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/links/approve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                admin_id: currentUserId,
+                link: linkUrl,
+                name: linkName,
+                description: linkDescription
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Approve response:', data);
+        
+        if (data.success) {
+            showNotification(data.message || 'Link approved and added to database!', 'success');
+            
+            // Reload pending links
+            await loadPendingLinks(currentUserId);
+            
+            // Reload main links to show the new one
+            await performSearch();
+        } else {
+            showNotification('Error: ' + (data.error || 'Failed to approve link'), 'error');
+        }
+        
+        hideLoading();
+        
+    } catch (error) {
+        console.error('Error approving link:', error);
+        showNotification('Failed to approve link: ' + error.message, 'error');
+        hideLoading();
+    }
+}
+
+// Reject pending link
+async function rejectPendingLink(linkUrl) {
+    if (!currentUserId) {
+        showNotification('User ID not found', 'error');
+        return;
+    }
+    
+    if (!confirm('Reject this link submission?\n\nThis will remove it from the pending list.')) {
+        return;
+    }
+    
+    showLoading('Rejecting link...');
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/links/reject`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                admin_id: currentUserId,
+                link: linkUrl
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Reject response:', data);
+        
+        if (data.success) {
+            showNotification(data.message || 'Link rejected and removed from pending list.', 'success');
+            
+            // Reload pending links
+            await loadPendingLinks(currentUserId);
+        } else {
+            showNotification('Error: ' + (data.error || 'Failed to reject link'), 'error');
+        }
+        
+        hideLoading();
+        
+    } catch (error) {
+        console.error('Error rejecting link:', error);
+        showNotification('Failed to reject link: ' + error.message, 'error');
+        hideLoading();
     }
 }
 
