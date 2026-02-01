@@ -898,6 +898,89 @@ footer p {
     opacity: 0.8;
 }
 
+/* Reported Links Section */
+.reported-section {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border: 2px solid #fca5a5;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 30px;
+}
+
+.reported-section h3 {
+    color: #dc2626;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.reported-card {
+    background: white;
+    border: 2px solid #fca5a5;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.reported-badge {
+    background: #dc2626;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.reported-info {
+    margin: 10px 0;
+    color: var(--gray);
+    font-size: 0.9em;
+}
+
+.verify-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-verify-working {
+    background: var(--success);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-verify-working:hover {
+    background: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.btn-verify-broken {
+    background: #dc2626;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-verify-broken:hover {
+    background: #b91c1c;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+}
+
 /* Link Card */
 .link-card {
     background: white;
@@ -1078,6 +1161,35 @@ footer p {
 .link-actions {
     display: flex;
     gap: 10px;
+}
+
+.btn-report {
+    padding: 14px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+}
+
+.btn-report:hover {
+    background: #fecaca;
+    border-color: #f87171;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.2);
+}
+
+.btn-report:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .btn-preview, .btn-access {
