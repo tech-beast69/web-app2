@@ -1,6 +1,6 @@
 // Dashboard JavaScript - Real-time updates
-// API configuration - Try HTTPS first, fallback to HTTP
-let API_BASE = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+// API configuration - Will be replaced by GitHub Actions with secret value
+let API_BASE = '__API_BASE_URL__'; // This will be replaced during deployment
 const REFRESH_INTERVAL = window.DASHBOARDCONFIG?.REFRESH_INTERVAL || 30000; // 30 seconds
 const DEBUG = window.DASHBOARDCONFIG?.DEBUG || false;
 
