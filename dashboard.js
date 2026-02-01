@@ -1286,6 +1286,9 @@ function displayReportedLinks(reportedLinks) {
                 <i class="fas fa-clock"></i> Reported on: ${reportDate}
             </div>
             <div class="verify-actions">
+                <button class="btn-open-link" data-link="${escapeHtml(report.link)}">
+                    <i class="fas fa-external-link-alt"></i> Open Link
+                </button>
                 <button class="btn-verify-working" data-link="${escapeHtml(report.link)}" data-status="working">
                     <i class="fas fa-check"></i> Link is Working
                 </button>
@@ -1296,8 +1299,13 @@ function displayReportedLinks(reportedLinks) {
         `;
         
         // Add event listeners to buttons
+        const openBtn = card.querySelector('.btn-open-link');
         const workingBtn = card.querySelector('.btn-verify-working');
         const brokenBtn = card.querySelector('.btn-verify-broken');
+        
+        openBtn.addEventListener('click', () => {
+            window.open(report.link, '_blank');
+        });
         
         workingBtn.addEventListener('click', () => {
             verifyLink(report.link, 'working');
