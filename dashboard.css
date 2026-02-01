@@ -632,6 +632,64 @@ footer p {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
 
+/* Notice for users */
+.links-notice {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-left: 4px solid var(--info);
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.links-notice i {
+    font-size: 1.5em;
+    color: var(--info);
+}
+
+.links-notice p {
+    margin: 0;
+    color: var(--dark);
+    font-weight: 500;
+}
+
+/* Token Info Display */
+.user-token-info-display {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 2px solid #fbbf24;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+}
+
+.token-info-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.token-icon {
+    font-size: 2.5em;
+    color: #f59e0b;
+}
+
+.token-details p {
+    margin: 5px 0;
+    color: var(--dark);
+}
+
+.token-details strong {
+    color: #92400e;
+}
+
+.token-cost-info {
+    font-size: 0.9em;
+    opacity: 0.85;
+}
+
 /* User Info Card */
 .user-info-card {
     background: white;
