@@ -20,8 +20,14 @@ jobs:
         
       - name: Replace API_BASE with secret
         run: |
+          echo "🔍 Before replacement:"
+          grep "API_BASE" bot/github_upload/dashboard.js | head -5
+          
           # Replace __API_BASE_URL__ placeholder with actual secret value
           sed -i "s|__API_BASE_URL__|${{ secrets.API_BASE }}|g" bot/github_upload/dashboard.js
+          
+          echo "✅ After replacement:"
+          grep "API_BASE" bot/github_upload/dashboard.js | head -5
           echo "✅ API_BASE replaced with secret value"
           
       - name: Setup Pages
