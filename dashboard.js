@@ -1151,8 +1151,19 @@ async function reportLink(url, title) {
         if (data.success) {
             showNotification(data.message || 'Link reported successfully. Thank you for helping us maintain quality!', 'success');
             
-            // Reload links to hide the reported one
-            await performSearch();
+            // Immediately remove the reported link from the displayed list
+            allLinks = allLinks.filter(link => link.link !== url);
+            totalLinks = Math.max(0, totalLinks - 1);
+            
+            // Update the display
+            displayLinks(allLinks);
+            updatePagination();
+            
+            // If the current page is now empty and it's not the first page, go back one page
+            if (allLinks.length === 0 && currentPage > 0) {
+                currentPage--;
+                await loadLinks();
+            }
         } else {
             showNotification('Error: ' + (data.error || 'Failed to report link'), 'error');
         }
