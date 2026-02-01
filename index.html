@@ -167,24 +167,21 @@
         <section class="links-section">
             <h2><i class="fas fa-link"></i> Telegram Links Browser</h2>
             
-            <!-- User Info & Token Balance -->
-            <div class="user-info-card">
-                <div class="user-info-content">
-                    <div class="user-avatar">
-                        <i class="fas fa-user-circle"></i>
+            <!-- Notice for non-Telegram users -->
+            <div id="linksSearchNotice" class="links-notice">
+                <i class="fas fa-info-circle"></i>
+                <p>User info will be loaded from Telegram Web App or the header above.</p>
+            </div>
+            
+            <!-- Token Balance Display -->
+            <div id="userTokenInfo" class="user-token-info-display" style="display: none;">
+                <div class="token-info-content">
+                    <div class="token-icon">
+                        <i class="fas fa-coins"></i>
                     </div>
-                    <div class="user-details">
-                        <div class="user-id-input">
-                            <label for="userIdInput">User ID:</label>
-                            <input type="number" id="userIdInput" placeholder="Enter your Telegram User ID">
-                            <button id="loadUserBtn" class="btn-primary">
-                                <i class="fas fa-check"></i> Load
-                            </button>
-                        </div>
-                        <div id="userTokenInfo" class="user-token-info" style="display: none;">
-                            <p><strong>Token Balance:</strong> <span id="userTokenBalance">0</span> tokens</p>
-                            <p class="token-cost-info"><i class="fas fa-info-circle"></i> Each link costs 10 tokens</p>
-                        </div>
+                    <div class="token-details">
+                        <p><strong>Your Token Balance:</strong> <span id="userTokenBalance">0</span> tokens</p>
+                        <p class="token-cost-info"><i class="fas fa-info-circle"></i> Each link costs 10 tokens to access</p>
                     </div>
                 </div>
             </div>
