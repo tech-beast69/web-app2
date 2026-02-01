@@ -12,13 +12,7 @@ let apiHealthy = false;
 async function checkApiHealth() {
     console.log('🔍 Checking API health...');
     try {
-        const response = await fetch(`${API_BASE}/api/status`, {
-            method: 'GET',
-            mode: 'cors',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
+        const response = await fetch(`${API_BASE}/api/status`);
         
         if (response.ok) {
             console.log('✅ API is healthy and reachable');
@@ -181,13 +175,7 @@ async function fetchUserDetails(userId) {
         const url = `${API_BASE}/api/user/${userId}/info`;
         console.log('Fetching from:', url);
         
-        const response = await fetch(url, {
-            method: 'GET',
-            mode: 'cors',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
+        const response = await fetch(url);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -201,12 +189,6 @@ async function fetchUserDetails(userId) {
         
     } catch (error) {
         console.error('❌ Error fetching user details:', error);
-        
-        // Show error in a more helpful way
-        if (error.message.includes('CORS') || error.message.includes('NetworkError')) {
-            console.error('🚫 CORS/Network Error: Cannot reach API from this domain');
-            showNotification('Cannot connect to API - CORS issue', 'error');
-        }
         
         // Use fallback data for testing
         console.log('Using fallback user data for display');
@@ -339,6 +321,13 @@ function debugLog(message, data) {
 }
 
 debugLog('Dashboard initialized', { API_BASE, REFRESH_INTERVAL });
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 // Format numbers with commas
 function formatNumber(num) {
@@ -696,13 +685,7 @@ async function loadLinks() {
         
         console.log('Fetching links from:', url);
         
-        const response = await fetch(url, {
-            method: 'GET',
-            mode: 'cors',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
+        const response = await fetch(url);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -729,17 +712,7 @@ async function loadLinks() {
         
     } catch (error) {
         console.error('❌ Error loading links:', error);
-        
-        let errorMsg = 'Failed to load links';
-        if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
-            errorMsg = '🚫 Cannot connect to API - CORS error. Check browser console.';
-            console.error('💡 To fix CORS: The API server must add these headers:');
-            console.error('   Access-Control-Allow-Origin: ' + window.location.origin);
-            console.error('   Access-Control-Allow-Methods: GET, POST, OPTIONS');
-            console.error('   Access-Control-Allow-Headers: Content-Type, Accept');
-        }
-        
-        showNotification(errorMsg, 'error');
+        showNotification('Failed to load links: ' + error.message, 'error');
         displayLinks([]);
         hideLoading();
     }
