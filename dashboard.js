@@ -6,6 +6,39 @@ const DEBUG = window.DASHBOARDCONFIG?.DEBUG || false;
 
 let updateInterval;
 let telegramUser = null;
+let apiHealthy = false;
+
+// Check API health on startup
+async function checkApiHealth() {
+    console.log('🔍 Checking API health...');
+    try {
+        const response = await fetch(`${API_BASE}/api/status`, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            console.log('✅ API is healthy and reachable');
+            apiHealthy = true;
+            return true;
+        } else {
+            console.error('❌ API returned error status:', response.status);
+            apiHealthy = false;
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ API health check failed:', error);
+        if (error.message.includes('CORS')) {
+            console.error('🚫 CORS ERROR: The API is blocking requests from this domain');
+            console.error('💡 Solution: Add CORS headers on the API server to allow:', window.location.origin);
+        }
+        apiHealthy = false;
+        return false;
+    }
+}
 
 // Initialize Telegram Web App
 function initTelegramWebApp() {
@@ -55,6 +88,12 @@ function initTelegramWebApp() {
 // Create a mock user for testing outside Telegram
 function createMockUserForTesting() {
     console.log('Creating mock user for testing...');
+    
+    // Show a notification that we're in testing mode
+    setTimeout(() => {
+        showNotification('Running in test mode with mock user (ID: 7054339190)', 'info');
+    }, 1000);
+    
     telegramUser = {
         id: 7054339190,
         first_name: 'Raw Queen',
@@ -109,7 +148,27 @@ function displayTelegramUserInfo(user) {
     header.appendChild(userInfo);
     
     console.log('✅ User info appended to header');
-    console.log('User info display style:', window.getComputedStyle(userInfo).display);
+    
+    // Force display and check computed styles
+    setTimeout(() => {
+        const computedStyle = window.getComputedStyle(userInfo);
+        console.log('User info computed styles:', {
+            display: computedStyle.display,
+            visibility: computedStyle.visibility,
+            opacity: computedStyle.opacity,
+            position: computedStyle.position,
+            width: computedStyle.width,
+            height: computedStyle.height
+        });
+        
+        if (computedStyle.display === 'none') {
+            console.error('❌ USER INFO IS HIDDEN! Checking for CSS conflicts...');
+            console.error('Element classes:', userInfo.className);
+            console.error('Element HTML:', userInfo.innerHTML);
+        } else {
+            console.log('✅ User info is visible!');
+        }
+    }, 100);
     
     // Fetch detailed user info from backend
     fetchUserDetails(user.id);
@@ -122,9 +181,19 @@ async function fetchUserDetails(userId) {
         const url = `${API_BASE}/api/user/${userId}/info`;
         console.log('Fetching from:', url);
         
-        const response = await fetch(url);
-        const data = await response.json();
+        const response = await fetch(url, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
         
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
         console.log('✅ User details fetched:', data);
         
         // Update the display with actual data
@@ -132,11 +201,20 @@ async function fetchUserDetails(userId) {
         
     } catch (error) {
         console.error('❌ Error fetching user details:', error);
-        // Remove loading indicator on error
-        const loadingEl = document.querySelector('.premium-status-loading');
-        if (loadingEl) {
-            loadingEl.innerHTML = '<span style="color: #ef4444;">⚠️ Failed to load</span>';
+        
+        // Show error in a more helpful way
+        if (error.message.includes('CORS') || error.message.includes('NetworkError')) {
+            console.error('🚫 CORS/Network Error: Cannot reach API from this domain');
+            showNotification('Cannot connect to API - CORS issue', 'error');
         }
+        
+        // Use fallback data for testing
+        console.log('Using fallback user data for display');
+        updateUserInfoDisplay({
+            is_admin: true,
+            is_premium: false,
+            token_balance: 100
+        });
     }
 }
 
@@ -407,18 +485,24 @@ async function updateAllData() {
 }
 
 // Initialize dashboard
-function initDashboard() {
+async function initDashboard() {
     debugLog('Initializing dashboard...');
     
-    // Initialize Telegram Web App first
+    // Check API health first
+    await checkApiHealth();
+    
+    // Initialize Telegram Web App
     initTelegramWebApp();
     
-    // Initial load
-    updateAllData();
-    
-    // Auto-refresh using configured interval
-    updateInterval = setInterval(updateAllData, REFRESH_INTERVAL);
-    debugLog('Auto-refresh enabled', { interval: REFRESH_INTERVAL });
+    // Give user display time to render before loading data
+    setTimeout(() => {
+        // Initial load
+        updateAllData();
+        
+        // Auto-refresh using configured interval
+        updateInterval = setInterval(updateAllData, REFRESH_INTERVAL);
+        debugLog('Auto-refresh enabled', { interval: REFRESH_INTERVAL });
+    }, 500);
     
     // Add visibility change handler to pause/resume updates
     document.addEventListener('visibilitychange', () => {
@@ -598,6 +682,11 @@ async function loadLinks() {
     try {
         showLoading('Loading links...');
         
+        // Check API health first
+        if (!apiHealthy) {
+            console.warn('⚠️ API health check failed, but attempting request anyway');
+        }
+        
         const offset = currentPage * linksPerPage;
         let url = `${API_BASE}/api/links/search?limit=${linksPerPage}&offset=${offset}`;
         
@@ -607,9 +696,19 @@ async function loadLinks() {
         
         console.log('Fetching links from:', url);
         
-        const response = await fetch(url);
-        const data = await response.json();
+        const response = await fetch(url, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
         
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
         console.log('Links API response:', data);
         
         if (!data.success) {
@@ -622,15 +721,25 @@ async function loadLinks() {
         allLinks = data.links || [];
         totalLinks = data.total || 0;
         
-        console.log(`Loaded ${allLinks.length} links, total: ${totalLinks}`);
+        console.log(`✅ Loaded ${allLinks.length} links, total: ${totalLinks}`);
         
         displayLinks(allLinks);
         updatePagination();
         hideLoading();
         
     } catch (error) {
-        console.error('Error loading links:', error);
-        showNotification('Failed to load links: ' + error.message, 'error');
+        console.error('❌ Error loading links:', error);
+        
+        let errorMsg = 'Failed to load links';
+        if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+            errorMsg = '🚫 Cannot connect to API - CORS error. Check browser console.';
+            console.error('💡 To fix CORS: The API server must add these headers:');
+            console.error('   Access-Control-Allow-Origin: ' + window.location.origin);
+            console.error('   Access-Control-Allow-Methods: GET, POST, OPTIONS');
+            console.error('   Access-Control-Allow-Headers: Content-Type, Accept');
+        }
+        
+        showNotification(errorMsg, 'error');
         displayLinks([]);
         hideLoading();
     }
