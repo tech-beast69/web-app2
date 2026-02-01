@@ -630,6 +630,11 @@ async function loadUserForLinks(userId) {
         
         console.log(`Links browser ready for user ${userId} with ${currentUserBalance} tokens`);
         
+        // Load reported links if user is admin
+        if (data.is_admin) {
+            await loadReportedLinks(userId);
+        }
+        
     } catch (error) {
         console.error('Error loading user for links:', error);
         // Still set user ID to allow searching
@@ -670,6 +675,11 @@ async function loadLinks() {
         
         if (currentSearchQuery) {
             url += `&q=${encodeURIComponent(currentSearchQuery)}`;
+        }
+        
+        // Include user_id to filter reported links
+        if (currentUserId) {
+            url += `&user_id=${currentUserId}`;
         }
         
         console.log('Fetching links from:', url);
@@ -886,6 +896,9 @@ function createLinkCard(linkData, index) {
                 <button class="btn-access" data-url="${escapeHtml(url)}" data-title="${escapeHtml(title)}">
                     <i class="fas fa-external-link-alt"></i> Access (10 tokens)
                 </button>
+                <button class="btn-report" data-url="${escapeHtml(url)}" data-title="${escapeHtml(title)}">
+                    <i class="fas fa-flag"></i> Report
+                </button>
             </div>
         </div>
     `;
@@ -893,6 +906,9 @@ function createLinkCard(linkData, index) {
     // Add event listeners
     const accessBtn = card.querySelector('.btn-access');
     accessBtn.addEventListener('click', () => accessLink(url, title));
+    
+    const reportBtn = card.querySelector('.btn-report');
+    reportBtn.addEventListener('click', () => reportLink(url, title));
     
     // If no photo URL, try to fetch from backend in the background (non-blocking)
     if (!photoUrl) {
@@ -1043,6 +1059,58 @@ async function accessLink(url, title) {
     }
 }
 
+// Report a link
+async function reportLink(url, title) {
+    if (!currentUserId) {
+        showNotification('Please load user first', 'warning');
+        return;
+    }
+    
+    // Confirm the report
+    if (!confirm(`Are you sure you want to report this link?\n\n"${title}"\n\nReported links will be hidden from all users and reviewed by admins.`)) {
+        return;
+    }
+    
+    showLoading('Reporting link...');
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/links/report`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                user_id: currentUserId,
+                link: url,
+                title: title
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Report response:', data);
+        
+        if (data.success) {
+            showNotification(data.message || 'Link reported successfully. Thank you for helping us maintain quality!', 'success');
+            
+            // Reload links to hide the reported one
+            await performSearch();
+        } else {
+            showNotification('Error: ' + (data.error || 'Failed to report link'), 'error');
+        }
+        
+        hideLoading();
+        
+    } catch (error) {
+        console.error('Error reporting link:', error);
+        showNotification('Failed to report link: ' + error.message, 'error');
+        hideLoading();
+    }
+}
+
 // Update pagination controls
 function updatePagination() {
     const maxPage = Math.ceil(totalLinks / linksPerPage) - 1;
@@ -1147,6 +1215,161 @@ function hideLoading() {
         document.querySelectorAll('.loading-overlay').forEach(el => {
             el.remove();
         });
+    }
+}
+
+// Load reported links for admin
+async function loadReportedLinks(adminId) {
+    try {
+        const response = await fetch(`${API_BASE}/api/links/reported?admin_id=${adminId}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Reported links response:', data);
+        
+        if (data.success) {
+            const reportedSection = document.getElementById('reportedLinksSection');
+            const container = document.getElementById('reportedLinksContainer');
+            
+            if (data.reported_links && data.reported_links.length > 0) {
+                reportedSection.style.display = 'block';
+                displayReportedLinks(data.reported_links);
+            } else {
+                reportedSection.style.display = 'block';
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #6b7280;">
+                        <i class="fas fa-check-circle" style="font-size: 2em; color: #10b981;"></i>
+                        <p>No reported links! All links are in good shape.</p>
+                    </div>
+                `;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading reported links:', error);
+    }
+}
+
+// Display reported links
+function displayReportedLinks(reportedLinks) {
+    const container = document.getElementById('reportedLinksContainer');
+    
+    if (!container) {
+        console.error('reportedLinksContainer element not found');
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    reportedLinks.forEach((report, index) => {
+        const card = document.createElement('div');
+        card.className = 'reported-card';
+        
+        const reportDate = new Date(report.reported_at).toLocaleString();
+        const reportCount = report.report_count || report.reporters.length;
+        
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                <div style="flex: 1;">
+                    <h4 style="margin: 0 0 5px 0; color: #1f2937;">${escapeHtml(report.title || 'Untitled Link')}</h4>
+                    <span class="reported-badge">
+                        <i class="fas fa-flag"></i> Reported ${reportCount} time${reportCount > 1 ? 's' : ''}
+                    </span>
+                </div>
+            </div>
+            <p style="margin: 10px 0; color: #6b7280; word-break: break-all;">
+                <i class="fas fa-link"></i> ${escapeHtml(report.link)}
+            </p>
+            <div class="reported-info">
+                <i class="fas fa-clock"></i> Reported on: ${reportDate}
+            </div>
+            <div class="verify-actions">
+                <button class="btn-verify-working" data-link="${escapeHtml(report.link)}" data-status="working">
+                    <i class="fas fa-check"></i> Link is Working
+                </button>
+                <button class="btn-verify-broken" data-link="${escapeHtml(report.link)}" data-status="broken">
+                    <i class="fas fa-times"></i> Link is Broken (Refund & Remove)
+                </button>
+            </div>
+        `;
+        
+        // Add event listeners to buttons
+        const workingBtn = card.querySelector('.btn-verify-working');
+        const brokenBtn = card.querySelector('.btn-verify-broken');
+        
+        workingBtn.addEventListener('click', () => {
+            verifyLink(report.link, 'working');
+        });
+        
+        brokenBtn.addEventListener('click', () => {
+            verifyLink(report.link, 'broken');
+        });
+        
+        container.appendChild(card);
+    });
+}
+
+// Verify a reported link (admin action)
+// Made global so it can be called from dynamically created elements
+window.verifyLink = async function(linkUrl, status) {
+    if (!currentUserId) {
+        showNotification('User ID not found', 'error');
+        return;
+    }
+    
+    const statusText = status === 'working' ? 'working' : 'broken';
+    const confirmMsg = status === 'working' 
+        ? `Mark this link as working?\n\nThe report will be removed and the link will be shown to users again.`
+        : `Mark this link as broken?\n\nThis will:\n- Refund 10 tokens to all reporters\n- Remove the link from the database\n- Cannot be undone`;
+    
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+    
+    showLoading(`Verifying link as ${statusText}...`);
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/links/verify`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                admin_id: currentUserId,
+                link: linkUrl,
+                status: status
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Verify response:', data);
+        
+        if (data.success) {
+            showNotification(data.message, 'success');
+            
+            // Reload reported links
+            await loadReportedLinks(currentUserId);
+            
+            // Reload main links to update the list
+            if (status === 'working') {
+                await performSearch();
+            }
+        } else {
+            showNotification('Error: ' + (data.error || 'Failed to verify link'), 'error');
+        }
+        
+        hideLoading();
+        
+    } catch (error) {
+        console.error('Error verifying link:', error);
+        showNotification('Failed to verify link: ' + error.message, 'error');
+        hideLoading();
     }
 }
 
