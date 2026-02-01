@@ -78,6 +78,15 @@ header .subtitle {
     gap: 8px;
 }
 
+.telegram-badge {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: 500;
+    opacity: 0.9;
+}
+
 .premium-badge {
     background: linear-gradient(135deg, #ffd700, #ffed4e);
     color: #1e293b;
