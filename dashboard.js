@@ -718,17 +718,56 @@ function createLinkCard(linkData, index) {
     card.className = 'link-card';
     card.dataset.index = index;
     
-    const title = linkData.title || 'Untitled';
+    // Extract proper title and username
+    let title = linkData.title || 'Untitled';
     const description = linkData.description || 'No description available';
     const url = linkData.link || '#';
     
-    // Extract username or get generic info
-    const username = linkData.username_display || extractUsername(url);
-    const displayType = description.includes('channel') ? 'Channel' : 
-                       description.includes('group') ? 'Group' : 'Telegram';
+    // Get username from username_display or extract from URL/title
+    let username = linkData.username_display || null;
     
-    // Create profile picture placeholder with first letter
-    const firstLetter = (title.charAt(0) || 'T').toUpperCase();
+    // If title starts with @ or is a username, extract it properly
+    if (title.startsWith('@')) {
+        username = title.substring(1);
+        // Try to get a better title from description or URL
+        if (description && !description.includes('Type:')) {
+            title = description.split('|')[0].trim();
+        } else {
+            title = username; // Keep as is if no better option
+        }
+    } else if (title.toLowerCase().includes('group') || title.toLowerCase().includes('channel')) {
+        // Extract username from title if it contains "Group" or "Channel"
+        const usernameMatch = title.match(/@(\w+)/);
+        if (usernameMatch) {
+            username = usernameMatch[1];
+            // Clean title by removing username and extra spaces
+            title = title.replace(/@\w+/g, '').replace(/Group|Channel/gi, '').trim();
+        }
+    }
+    
+    // If no username yet, try to extract from URL
+    if (!username) {
+        username = extractUsername(url);
+    }
+    
+    // Determine type
+    const descLower = description.toLowerCase();
+    let displayType = 'Telegram';
+    if (descLower.includes('channel') || title.toLowerCase().includes('channel')) {
+        displayType = 'Channel';
+    } else if (descLower.includes('group') || title.toLowerCase().includes('group')) {
+        displayType = 'Group';
+    }
+    
+    // Create profile picture with first letter of the actual title
+    let firstLetter = 'T';
+    if (title && title.length > 0) {
+        // Get first non-special character
+        const cleanTitle = title.replace(/[@+\s]/g, '');
+        if (cleanTitle.length > 0) {
+            firstLetter = cleanTitle.charAt(0).toUpperCase();
+        }
+    }
     
     card.innerHTML = `
         <div class="link-card-header">
