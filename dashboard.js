@@ -564,6 +564,10 @@ function initLinksBrowser() {
             loadUserForLinks(telegramUser.id);
         }, 1500); // Wait for user details to be fetched first
     }
+    
+    // Load initial links immediately
+    console.log('Loading initial links...');
+    loadLinks();
 }
 
 // Load user information for links browser
