@@ -6,33 +6,6 @@ const DEBUG = window.DASHBOARDCONFIG?.DEBUG || false;
 
 let updateInterval;
 let telegramUser = null;
-let apiHealthy = false;
-
-// Check API health on startup
-async function checkApiHealth() {
-    console.log('🔍 Checking API health...');
-    try {
-        const response = await fetch(`${API_BASE}/api/status`);
-        
-        if (response.ok) {
-            console.log('✅ API is healthy and reachable');
-            apiHealthy = true;
-            return true;
-        } else {
-            console.error('❌ API returned error status:', response.status);
-            apiHealthy = false;
-            return false;
-        }
-    } catch (error) {
-        console.error('❌ API health check failed:', error);
-        if (error.message.includes('CORS')) {
-            console.error('🚫 CORS ERROR: The API is blocking requests from this domain');
-            console.error('💡 Solution: Add CORS headers on the API server to allow:', window.location.origin);
-        }
-        apiHealthy = false;
-        return false;
-    }
-}
 
 // Initialize Telegram Web App
 function initTelegramWebApp() {
@@ -465,7 +438,7 @@ function updateLastUpdateTime() {
 async function updateAllData() {
     await Promise.all([
         updateStatus(),
-        updateUsers(),
+        updateUsers(),  
         updateMedia(),
         updateGroups(),
         updateFeedback()
@@ -474,24 +447,18 @@ async function updateAllData() {
 }
 
 // Initialize dashboard
-async function initDashboard() {
+function initDashboard() {
     debugLog('Initializing dashboard...');
     
-    // Check API health first
-    await checkApiHealth();
-    
-    // Initialize Telegram Web App
+    // Initialize Telegram Web App first
     initTelegramWebApp();
     
-    // Give user display time to render before loading data
-    setTimeout(() => {
-        // Initial load
-        updateAllData();
-        
-        // Auto-refresh using configured interval
-        updateInterval = setInterval(updateAllData, REFRESH_INTERVAL);
-        debugLog('Auto-refresh enabled', { interval: REFRESH_INTERVAL });
-    }, 500);
+    // Initial load
+    updateAllData();
+    
+    // Auto-refresh using configured interval
+    updateInterval = setInterval(updateAllData, REFRESH_INTERVAL);
+    debugLog('Auto-refresh enabled', { interval: REFRESH_INTERVAL });
     
     // Add visibility change handler to pause/resume updates
     document.addEventListener('visibilitychange', () => {
@@ -670,11 +637,6 @@ async function performSearch() {
 async function loadLinks() {
     try {
         showLoading('Loading links...');
-        
-        // Check API health first
-        if (!apiHealthy) {
-            console.warn('⚠️ API health check failed, but attempting request anyway');
-        }
         
         const offset = currentPage * linksPerPage;
         let url = `${API_BASE}/api/links/search?limit=${linksPerPage}&offset=${offset}`;
