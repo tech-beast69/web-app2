@@ -981,6 +981,23 @@ footer p {
     box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
 }
 
+.btn-open-link {
+    background: #3b82f6;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-open-link:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
 /* Link Card */
 .link-card {
     background: white;
