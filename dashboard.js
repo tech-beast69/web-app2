@@ -722,6 +722,10 @@ function createLinkCard(linkData, index) {
     const description = linkData.description || 'No description available';
     const url = linkData.link || '#';
     
+    // Extract type info if available
+    const typeInfo = linkData.description && linkData.description.includes('Type:') ? 
+        linkData.description : '';
+    
     card.innerHTML = `
         <div class="link-card-header">
             <div class="link-icon">
@@ -732,20 +736,20 @@ function createLinkCard(linkData, index) {
                 <p class="link-description">${escapeHtml(description)}</p>
             </div>
         </div>
-        <div class="link-preview-container" id="preview-${index}" style="display: none;">
-            <div class="link-preview-loading">
-                <i class="fas fa-spinner fa-spin"></i> Loading preview...
+        <div class="link-preview-container" id="preview-${index}">
+            <div class="link-preview">
+                <div class="preview-content">
+                    <h4>${escapeHtml(title)}</h4>
+                    <p>${escapeHtml(typeInfo || description)}</p>
+                </div>
             </div>
         </div>
         <div class="link-card-footer">
             <div class="link-url">
                 <i class="fas fa-link"></i>
-                <span>${escapeHtml(url.substring(0, 50))}${url.length > 50 ? '...' : ''}</span>
+                <span>${escapeHtml(url.substring(0, 60))}${url.length > 60 ? '...' : ''}</span>
             </div>
             <div class="link-actions">
-                <button class="btn-preview" data-url="${escapeHtml(url)}" data-index="${index}">
-                    <i class="fas fa-eye"></i> Preview
-                </button>
                 <button class="btn-access" data-url="${escapeHtml(url)}" data-title="${escapeHtml(title)}">
                     <i class="fas fa-external-link-alt"></i> Access (10 tokens)
                 </button>
@@ -754,78 +758,10 @@ function createLinkCard(linkData, index) {
     `;
     
     // Add event listeners
-    const previewBtn = card.querySelector('.btn-preview');
     const accessBtn = card.querySelector('.btn-access');
-    
-    previewBtn.addEventListener('click', () => togglePreview(url, index));
     accessBtn.addEventListener('click', () => accessLink(url, title));
     
     return card;
-}
-
-// Toggle link preview
-async function togglePreview(url, index) {
-    const previewContainer = document.getElementById(`preview-${index}`);
-    
-    if (previewContainer.style.display === 'none') {
-        previewContainer.style.display = 'block';
-        
-        // Check if already loaded
-        if (!previewContainer.dataset.loaded) {
-            await loadPreview(url, index);
-        }
-    } else {
-        previewContainer.style.display = 'none';
-    }
-}
-
-// Load preview for a link
-async function loadPreview(url, index) {
-    const previewContainer = document.getElementById(`preview-${index}`);
-    
-    try {
-        const response = await fetch(`${API_BASE}/api/links/preview?url=${encodeURIComponent(url)}`);
-        const data = await response.json();
-        
-        if (data.success && data.preview) {
-            const preview = data.preview;
-            let previewHTML = '<div class="link-preview">';
-            
-            if (preview.image) {
-                previewHTML += `
-                    <div class="preview-image">
-                        <img src="${escapeHtml(preview.image)}" alt="Preview" onerror="this.parentElement.style.display='none'">
-                    </div>
-                `;
-            }
-            
-            previewHTML += `
-                <div class="preview-content">
-                    <h4>${escapeHtml(preview.title || 'No title')}</h4>
-                    <p>${escapeHtml(preview.description || 'No description available')}</p>
-                </div>
-            </div>
-            `;
-            
-            previewContainer.innerHTML = previewHTML;
-            previewContainer.dataset.loaded = 'true';
-        } else {
-            previewContainer.innerHTML = `
-                <div class="link-preview-error">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Preview not available</p>
-                </div>
-            `;
-        }
-    } catch (error) {
-        console.error('Error loading preview:', error);
-        previewContainer.innerHTML = `
-            <div class="link-preview-error">
-                <i class="fas fa-exclamation-triangle"></i>
-                <p>Failed to load preview</p>
-            </div>
-        `;
-    }
 }
 
 // Access a link (deduct tokens and open)
