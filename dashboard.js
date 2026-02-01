@@ -722,33 +722,32 @@ function createLinkCard(linkData, index) {
     const description = linkData.description || 'No description available';
     const url = linkData.link || '#';
     
-    // Extract type info if available
-    const typeInfo = linkData.description && linkData.description.includes('Type:') ? 
-        linkData.description : '';
+    // Extract username or get generic info
+    const username = linkData.username_display || extractUsername(url);
+    const displayType = description.includes('channel') ? 'Channel' : 
+                       description.includes('group') ? 'Group' : 'Telegram';
+    
+    // Create profile picture placeholder with first letter
+    const firstLetter = (title.charAt(0) || 'T').toUpperCase();
     
     card.innerHTML = `
         <div class="link-card-header">
-            <div class="link-icon">
-                <i class="fab fa-telegram"></i>
+            <div class="link-profile-pic">
+                <div class="profile-letter">${firstLetter}</div>
             </div>
             <div class="link-info">
                 <h3 class="link-title">${escapeHtml(title)}</h3>
-                <p class="link-description">${escapeHtml(description)}</p>
+                <p class="link-type">${displayType}${username ? ' • @' + escapeHtml(username) : ''}</p>
             </div>
         </div>
         <div class="link-preview-container" id="preview-${index}">
             <div class="link-preview">
                 <div class="preview-content">
-                    <h4>${escapeHtml(title)}</h4>
-                    <p>${escapeHtml(typeInfo || description)}</p>
+                    <p class="preview-desc">${escapeHtml(extractCleanDescription(description))}</p>
                 </div>
             </div>
         </div>
         <div class="link-card-footer">
-            <div class="link-url">
-                <i class="fas fa-link"></i>
-                <span>${escapeHtml(url.substring(0, 60))}${url.length > 60 ? '...' : ''}</span>
-            </div>
             <div class="link-actions">
                 <button class="btn-access" data-url="${escapeHtml(url)}" data-title="${escapeHtml(title)}">
                     <i class="fas fa-external-link-alt"></i> Access (10 tokens)
@@ -762,6 +761,30 @@ function createLinkCard(linkData, index) {
     accessBtn.addEventListener('click', () => accessLink(url, title));
     
     return card;
+}
+
+// Extract username from URL
+function extractUsername(url) {
+    const match = url.match(/@([a-zA-Z0-9_]+)/);
+    if (match) return match[1];
+    
+    const tmeMatch = url.match(/t\.me\/([a-zA-Z0-9_]+)/);
+    if (tmeMatch && !tmeMatch[1].startsWith('+')) return tmeMatch[1];
+    
+    return null;
+}
+
+// Extract clean description without technical details
+function extractCleanDescription(desc) {
+    if (!desc) return 'Community submitted channel/group';
+    
+    // Remove technical type information
+    if (desc.includes('Type:')) {
+        return 'Community submitted channel/group';
+    }
+    
+    // Return the description but limit length
+    return desc.length > 100 ? desc.substring(0, 100) + '...' : desc;
 }
 
 // Access a link (deduct tokens and open)
@@ -784,6 +807,9 @@ async function accessLink(url, title) {
     try {
         showLoading('Processing...');
         
+        console.log('Accessing link for user:', currentUserId);
+        console.log('Current balance before:', currentUserBalance);
+        
         const response = await fetch(`${API_BASE}/api/links/access`, {
             method: 'POST',
             headers: {
@@ -795,39 +821,52 @@ async function accessLink(url, title) {
             })
         });
         
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
+        console.log('Access response:', data);
         
         if (data.success) {
-            currentUserBalance = data.remaining_balance;
+            // Update balance from server response
+            const newBalance = data.remaining_balance;
+            currentUserBalance = newBalance;
+            
+            console.log('New balance after deduction:', newBalance);
             
             // Update token balance in links section
             const linksTokenEl = document.getElementById('userTokenBalance');
             if (linksTokenEl) {
-                linksTokenEl.textContent = currentUserBalance;
+                linksTokenEl.textContent = newBalance;
+                console.log('Updated links token display:', newBalance);
             }
             
             // Update token balance in header if it exists
             const headerTokenCount = document.querySelector('.token-count');
             if (headerTokenCount) {
-                headerTokenCount.textContent = currentUserBalance;
+                headerTokenCount.textContent = newBalance;
+                console.log('Updated header token display:', newBalance);
             }
             
-            showNotification(
-                `Link accessed! ${data.tokens_deducted} tokens deducted. Remaining: ${data.remaining_balance}`,
-                'success'
-            );
+            // Show success message
+            const message = data.tokens_deducted === 0 ? 
+                `Admin access - No tokens deducted` :
+                `${data.tokens_deducted} tokens deducted. Remaining: ${newBalance}`;
+            
+            showNotification(message, 'success');
             
             // Open the link
             window.open(url, '_blank');
         } else {
-            showNotification('Error: ' + data.error, 'error');
+            showNotification('Error: ' + (data.error || 'Failed to access link'), 'error');
         }
         
         hideLoading();
         
     } catch (error) {
         console.error('Error accessing link:', error);
-        showNotification('Failed to access link', 'error');
+        showNotification('Failed to access link: ' + error.message, 'error');
         hideLoading();
     }
 }
