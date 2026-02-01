@@ -903,8 +903,8 @@ footer p {
     background: white;
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 15px;
-    margin-bottom: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
     transition: all 0.3s ease;
 }
 
@@ -922,8 +922,8 @@ footer p {
 
 .link-profile-pic {
     flex-shrink: 0;
-    width: 48px;
-    height: 48px;
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     display: flex !important;
@@ -945,7 +945,7 @@ footer p {
 
 .profile-letter {
     color: white;
-    font-size: 1.5em;
+    font-size: 1.8em;
     font-weight: 700;
     text-transform: uppercase;
     display: block;
@@ -965,7 +965,7 @@ footer p {
 }
 
 .link-title {
-    font-size: 1.1em;
+    font-size: 1.25em;
     font-weight: 700;
     color: var(--dark);
     margin-bottom: 4px;
@@ -976,7 +976,7 @@ footer p {
 }
 
 .link-type {
-    font-size: 0.85em;
+    font-size: 0.95em;
     color: var(--gray);
     margin: 0;
     overflow: hidden;
@@ -1088,16 +1088,16 @@ footer p {
 }
 
 .btn-preview, .btn-access {
-    padding: 8px 14px;
+    padding: 12px 20px;
     border: none;
     border-radius: 6px;
-    font-size: 0.85em;
+    font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
 }
 
 .btn-preview {
@@ -1132,6 +1132,26 @@ footer p {
     padding: 20px;
     background: white;
     border-radius: 10px;
+}
+
+.pagination-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 180px;
+}
+
+.pagination-info .page-number {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.pagination-info .total-links {
+    font-size: 0.9rem;
+    color: var(--gray);
+    font-weight: 500;
 }
 
 .pagination-container button:disabled {
