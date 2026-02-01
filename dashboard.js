@@ -44,6 +44,11 @@ function initTelegramWebApp() {
 function displayTelegramUserInfo(user) {
     const header = document.querySelector('header');
     
+    if (!header) {
+        console.error('Header element not found');
+        return;
+    }
+    
     // Create user info container if it doesn't exist
     let userInfo = document.getElementById('telegramUserInfo');
     if (!userInfo) {
@@ -62,13 +67,15 @@ function displayTelegramUserInfo(user) {
         </div>
     `;
     
-    // Show loading for premium status
+    // Show loading for premium/admin status
     infoHTML += `<div class="premium-status-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>`;
     
     infoHTML += `<div class="user-id">ID: ${user.id}</div>`;
     
     userInfo.innerHTML = infoHTML;
     userInfo.classList.add('active');
+    
+    console.log('User info displayed in header:', user);
     
     // Fetch detailed user info from backend
     fetchUserDetails(user.id);
@@ -523,10 +530,17 @@ async function loadUserForLinks(userId) {
 
 // Perform search
 async function performSearch() {
-    const searchInput = document.getElementById('linkSearchInput');
-    currentSearchQuery = searchInput.value.trim();
-    currentPage = 0;
-    await loadLinks();
+    try {
+        const searchInput = document.getElementById('linkSearchInput');
+        currentSearchQuery = searchInput.value.trim();
+        currentPage = 0;
+        console.log('Performing search with query:', currentSearchQuery);
+        await loadLinks();
+    } catch (error) {
+        console.error('Error in performSearch:', error);
+        hideLoading();
+        showNotification('Search failed: ' + error.message, 'error');
+    }
 }
 
 // Load links from API
@@ -541,11 +555,16 @@ async function loadLinks() {
             url += `&q=${encodeURIComponent(currentSearchQuery)}`;
         }
         
+        console.log('Fetching links from:', url);
+        
         const response = await fetch(url);
         const data = await response.json();
         
+        console.log('Links API response:', data);
+        
         if (!data.success) {
-            showNotification('Error loading links: ' + data.error, 'error');
+            showNotification('Error loading links: ' + (data.error || 'Unknown error'), 'error');
+            displayLinks([]);
             hideLoading();
             return;
         }
@@ -553,13 +572,16 @@ async function loadLinks() {
         allLinks = data.links || [];
         totalLinks = data.total || 0;
         
+        console.log(`Loaded ${allLinks.length} links, total: ${totalLinks}`);
+        
         displayLinks(allLinks);
         updatePagination();
         hideLoading();
         
     } catch (error) {
         console.error('Error loading links:', error);
-        showNotification('Failed to load links', 'error');
+        showNotification('Failed to load links: ' + error.message, 'error');
+        displayLinks([]);
         hideLoading();
     }
 }
@@ -567,6 +589,13 @@ async function loadLinks() {
 // Display links in the container
 function displayLinks(links) {
     const container = document.getElementById('linksContainer');
+    
+    if (!container) {
+        console.error('linksContainer element not found');
+        return;
+    }
+    
+    console.log('Displaying links:', links.length);
     
     if (!links || links.length === 0) {
         container.innerHTML = `
@@ -585,6 +614,8 @@ function displayLinks(links) {
         const linkCard = createLinkCard(link, index);
         container.appendChild(linkCard);
     });
+    
+    console.log(`Successfully displayed ${links.length} link cards`);
 }
 
 // Create a link card element
@@ -825,6 +856,7 @@ function showNotification(message, type = 'info') {
 
 // Show loading overlay
 function showLoading(message = 'Loading...') {
+    console.log('Showing loading overlay:', message);
     let overlay = document.getElementById('loadingOverlay');
     if (!overlay) {
         overlay = document.createElement('div');
@@ -844,13 +876,60 @@ function showLoading(message = 'Loading...') {
 
 // Hide loading overlay
 function hideLoading() {
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) {
-        overlay.style.display = 'none';
+    console.log('Hiding loading overlay');
+    try {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            // Immediately hide it
+            overlay.style.display = 'none';
+            overlay.style.visibility = 'hidden';
+            overlay.style.opacity = '0';
+            
+            // Remove from DOM after a short delay
+            setTimeout(() => {
+                const checkOverlay = document.getElementById('loadingOverlay');
+                if (checkOverlay && checkOverlay.style.display === 'none') {
+                    checkOverlay.remove();
+                    console.log('Loading overlay removed from DOM');
+                }
+            }, 100);
+        }
+    } catch (error) {
+        console.error('Error hiding loading overlay:', error);
+        // Force remove all loading overlays
+        document.querySelectorAll('.loading-overlay').forEach(el => {
+            el.remove();
+        });
     }
 }
 
 // Initialize links browser when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    initLinksBrowser();
+    console.log('DOM loaded, initializing links browser');
+    try {
+        initLinksBrowser();
+        console.log('Links browser initialized successfully');
+    } catch (error) {
+        console.error('Error initializing links browser:', error);
+    }
+    
+    // Ensure no stuck loading overlays
+    setTimeout(() => {
+        const stuckOverlay = document.getElementById('loadingOverlay');
+        if (stuckOverlay && stuckOverlay.style.display !== 'none') {
+            console.warn('Found stuck loading overlay, removing it');
+            stuckOverlay.remove();
+        }
+    }, 5000);
+});
+
+// Global error handler to ensure loading overlay is always hidden on errors
+window.addEventListener('error', (event) => {
+    console.error('Global error caught:', event.error);
+    hideLoading();
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('Unhandled promise rejection:', event.reason);
+    hideLoading();
 });
