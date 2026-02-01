@@ -768,12 +768,30 @@ function createLinkCard(linkData, index) {
     card.dataset.index = index;
     
     // Extract proper title and username
-    let title = linkData.title || 'Untitled';
+    let title = linkData.title || linkData.name || 'Untitled';
     const description = linkData.description || 'No description available';
     const url = linkData.link || '#';
     
     // Get username from username_display field
-    let username = linkData.username_display || null;
+    let username = linkData.username_display || linkData.username || null;
+    
+    // Check if title is an invite code (starts with + or is alphanumeric hash)
+    const isInviteCode = title.startsWith('+') || (title.length > 15 && /^[a-zA-Z0-9_-]+$/.test(title));
+    
+    // If title is invite code, try to use username or extract from URL
+    if (isInviteCode) {
+        if (username) {
+            title = username;
+        } else {
+            username = extractUsername(url);
+            if (username) {
+                title = username;
+            } else {
+                // Last resort: make invite code more readable
+                title = 'Invite Link';
+            }
+        }
+    }
     
     // If title starts with @, it's a username - extract it
     if (title.startsWith('@')) {
