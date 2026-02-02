@@ -1530,6 +1530,15 @@ async function approvePendingLink(linkUrl, linkName, linkDescription) {
         if (data.success) {
             showNotification(data.message || 'Link approved and added to database!', 'success');
             
+            // Update the groups counter immediately
+            const totalGroupsEl = document.getElementById('totalGroups');
+            if (totalGroupsEl) {
+                const currentCount = parseInt(totalGroupsEl.textContent.replace(/,/g, '')) || 0;
+                const newCount = currentCount + 1;
+                totalGroupsEl.textContent = formatNumber(newCount);
+                console.log(`Updated groups counter: ${currentCount} -> ${newCount}`);
+            }
+            
             // Reload pending links
             await loadPendingLinks(currentUserId);
             
@@ -1747,6 +1756,15 @@ window.verifyLink = async function(linkUrl, status) {
             // Reload main links to update the list
             if (status === 'working') {
                 await performSearch();
+            } else if (status === 'broken') {
+                // Link was removed - update the groups counter immediately
+                const totalGroupsEl = document.getElementById('totalGroups');
+                if (totalGroupsEl) {
+                    const currentCount = parseInt(totalGroupsEl.textContent.replace(/,/g, '')) || 0;
+                    const newCount = Math.max(0, currentCount - 1);
+                    totalGroupsEl.textContent = formatNumber(newCount);
+                    console.log(`Updated groups counter: ${currentCount} -> ${newCount}`);
+                }
             }
         } else {
             showNotification('Error: ' + (data.error || 'Failed to verify link'), 'error');
