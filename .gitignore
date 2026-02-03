@@ -1,6 +1,7 @@
 # .gitignore for Telegram Bot Dashboard
 
 # Personal configuration
+config.js
 config.local.js
 .env
 .env.local
