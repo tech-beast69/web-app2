@@ -25,11 +25,8 @@ const API_CACHE = {
 };
 const CACHE_TTL = 10000; // 10 seconds cache TTL
 
-// Check if we're on localhost and use HTTP
-if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    API_BASE = 'http://localhost:3027';
-    console.log('Running locally - using HTTP API:', API_BASE);
-}
+// Don't override API_BASE - always use the one from config.js
+console.log('✅ Using API endpoint from config.js:', API_BASE);
 
 let updateInterval;
 let telegramUser = null;
