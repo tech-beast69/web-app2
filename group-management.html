@@ -741,9 +741,19 @@
                 const url = userId ? 
                     `${API_BASE_URL}/api/groups/managed?user_id=${userId}` : 
                     `${API_BASE_URL}/api/groups/managed`;
+                
+                console.log('Fetching groups from:', url);
+                console.log('User ID:', userId);
                     
                 const response = await fetch(url);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('Received data:', data);
 
                 const loadingSection = document.getElementById('loadingSection');
                 const groupsSection = document.getElementById('groupsSection');
@@ -800,10 +810,18 @@
                 }
             } catch (error) {
                 console.error('Error loading groups:', error);
-                document.getElementById('loadingSection').innerHTML = `
+                console.error('Error details:', error.message, error.stack);
+                
+                const loadingSection = document.getElementById('loadingSection');
+                loadingSection.style.display = 'block';
+                loadingSection.innerHTML = `
                     <div class="error-message">
                         <i class="fas fa-exclamation-triangle"></i>
-                        Failed to load groups. Please try again later.
+                        Failed to load groups: ${error.message}
+                        <br><br>
+                        <button class="btn-primary" onclick="loadGroups()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
                     </div>
                 `;
             }
