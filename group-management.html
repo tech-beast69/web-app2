@@ -767,7 +767,7 @@
                 console.log('=== API Request Debug ===');
                 console.log('API Base URL:', API_BASE_URL);
                 console.log('Full URL:', url);
-                console.log('User ID:', userId);
+                console.log('User ID:', userId);    
                 console.log('Current location:', window.location.href);
                 console.log('Protocol:', window.location.protocol);
                     
@@ -856,10 +856,9 @@
                             <p style="margin: 15px 0;">Cannot connect to the API server.</p>
                             <p style="margin: 15px 0; font-size: 0.9em; opacity: 0.9;">
                                 <strong>Possible causes:</strong><br>
-                                • Server is not running (start with: py web_dashboard.py)<br>
+                                • Server is not running<br>
                                 • Mixed content error (HTTPS page calling HTTP API)<br>
-                                • CORS/Network restrictions<br>
-                                • Server URL: ${API_BASE_URL}
+                                • CORS/Network restrictions
                             </p>
                             <button class="btn-primary" onclick="loadGroups()" style="margin-top: 20px; padding: 12px 24px; background: white; color: #ff6b6b; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
                                 <i class="fas fa-redo"></i> Retry
@@ -871,8 +870,7 @@
                         <div class="error-message" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; padding: 30px; border-radius: 15px; text-align: center;">
                             <i class="fas fa-exclamation-triangle" style="font-size: 3em; margin-bottom: 15px;"></i>
                             <h3>Failed to load groups</h3>
-                            <p style="margin: 15px 0;">HTTP error! status: ${error.message}</p>
-                            <p style="margin: 15px 0; font-size: 0.9em; opacity: 0.9;">API: ${API_BASE_URL}</p>
+                            <p style="margin: 15px 0;">Server connection error</p>
                             <button class="btn-primary" onclick="loadGroups()" style="margin-top: 20px; padding: 12px 24px; background: white; color: #ff6b6b; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
                                 <i class="fas fa-redo"></i> Retry
                             </button>
@@ -888,19 +886,44 @@
         async function openGroupSettings(groupId) {
             currentGroupId = groupId;
             
+            console.log('=== Opening Group Settings ===');
+            console.log('Group ID:', groupId);
+            console.log('Type:', typeof groupId);
+            console.log('API URL:', `${API_BASE_URL}/api/group/${groupId}/config`);
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/group/${groupId}/config`);
+                
+                console.log('Response status:', response.status);
+                console.log('Response OK:', response.ok);
+                
+                // Check if the HTTP response was successful
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Response error:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('Response data:', data);
 
                 if (data.success) {
                     currentGroupConfig = data.config;
                     populateGroupSettings(data.config);
                     document.getElementById('groupModal').classList.add('active');
                     document.getElementById('modalGroupTitle').textContent = data.config.group_title;
+                } else {
+                    // Handle API returning success: false
+                    const errorMsg = data.error || 'Unknown error';
+                    console.error('API error:', errorMsg);
+                    alert(`Failed to load group settings: ${errorMsg}`);
                 }
             } catch (error) {
-                console.error('Error loading group config:', error);
-                alert('Failed to load group settings');
+                console.error('=== Error Loading Group Config ===');
+                console.error('Error:', error);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
+                alert(`Failed to load group settings: ${error.message}`);
             }
         }
 
