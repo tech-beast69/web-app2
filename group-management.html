@@ -717,11 +717,12 @@
         // Configuration
         // Use the server URL for API calls (where Flask is running)
         // If running on the actual server domain, use same origin; otherwise use hardcoded server URL
+        // Prefer HTTPS to avoid mixed-content errors when the page is served over HTTPS
         const API_BASE_URL = (window.location.hostname === 'localhost' || 
                                window.location.hostname === '127.0.0.1' || 
                                window.location.hostname === 'us36.glacierhosting.org')
             ? window.location.origin
-            : 'http://us36.glacierhosting.org:3027';
+            : 'https://us36.glacierhosting.org:3027';
         
         console.log('DEBUG - Hostname:', window.location.hostname);
         console.log('DEBUG - Origin:', window.location.origin);
