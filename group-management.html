@@ -652,6 +652,15 @@
                     <button class="tab" onclick="switchTab('welcome')">
                         <i class="fas fa-door-open"></i> Welcome
                     </button>
+                    <button class="tab" onclick="switchTab('cleanservice')">
+                        <i class="fas fa-broom"></i> Clean Service
+                    </button>
+                    <button class="tab" onclick="switchTab('cleanmsg')">
+                        <i class="fas fa-comment-slash"></i> Clean Messages
+                    </button>
+                    <button class="tab" onclick="switchTab('disabled')">
+                        <i class="fas fa-slash"></i> Disabled Commands
+                    </button>
                     <button class="tab" onclick="switchTab('filters')">
                         <i class="fas fa-filter"></i> Filters
                     </button>
@@ -710,6 +719,178 @@
                                 <input type="checkbox" id="deleteServiceMessages" onchange="updateSetting('delete_service_messages', this.checked)">
                                 <span class="toggle-slider"></span>
                             </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clean Service Tab -->
+                <div id="cleanserviceTab" class="tab-content">
+                    <div class="settings-section">
+                        <h3><i class="fas fa-broom"></i> Clean Service Settings</h3>
+                        <p style="color: #666;">Match MissRose/Rose cleanservice types. Toggle which service messages to auto-delete.</p>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Enable Cleanservice</div>
+                                <div class="setting-description">Enable or disable the cleanservice feature entirely</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="csEnabled" onchange="updateCleanService('enabled', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Join</div>
+                                <div class="setting-description">Auto-delete "user joined" notifications</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="csJoin" onchange="updateCleanService('join', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Leave</div>
+                                <div class="setting-description">Auto-delete "user left" notifications</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="csLeave" onchange="updateCleanService('leave', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Pin</div>
+                                <div class="setting-description">Auto-delete pinned message notifications</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="csPin" onchange="updateCleanService('pin', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Photo</div>
+                                <div class="setting-description">Auto-delete chat photo change notifications</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="csPhoto" onchange="updateCleanService('photo', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Title</div>
+                                <div class="setting-description">Auto-delete chat title change notifications</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="csTitle" onchange="updateCleanService('title', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Videochat</div>
+                                <div class="setting-description">Auto-delete video chat start/end/member notifications</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="csVideochat" onchange="updateCleanService('videochat', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Other</div>
+                                <div class="setting-description">Auto-delete miscellaneous service messages (payments, webapp, etc.)</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="csOther" onchange="updateCleanService('other', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clean Messages Tab -->
+                <div id="cleanmsgTab" class="tab-content">
+                    <div class="settings-section">
+                        <h3><i class="fas fa-comment-slash"></i> Clean Message Settings</h3>
+                        <p style="color: #666;">Automatically delete Rose's own messages of certain types (action/filter/note)</p>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Enable Clean Messages</div>
+                                <div class="setting-description">Enable or disable cleanmsg (delete bot messages)</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="cmEnabled" onchange="updateCleanMessage('enabled', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Action Messages</div>
+                                <div class="setting-description">Delete action messages (ban/mute/kick etc.)</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="cmAction" onchange="updateCleanMessage('action', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Filter Replies</div>
+                                <div class="setting-description">Delete filter reply messages</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="cmFilter" onchange="updateCleanMessage('filter', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Note Replies</div>
+                                <div class="setting-description">Delete note reply messages</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="cmNote" onchange="updateCleanMessage('note', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Disabled Commands Tab -->
+                <div id="disabledTab" class="tab-content">
+                    <div class="settings-section">
+                        <h3><i class="fas fa-slash"></i> Disabled Commands</h3>
+                        <p style="color: #666;">Prevent specific bot commands from working in this group</p>
+                        
+                        <ul id="disabledCommandsList" class="filter-list"></ul>
+
+                        <div class="add-form">
+                            <h4>Disable a Command</h4>
+                            <div class="form-group">
+                                <label class="form-label">Command Name (without /)</label>
+                                <input type="text" id="disableCommandInput" class="input-field" placeholder="e.g., help, start, settings">
+                                <p style="color: #666; font-size: 0.85em; margin-top: 5px;">
+                                    Common commands: help, start, settings, info, rules, ban, kick, warn, mute
+                                </p>
+                            </div>
+                            <button class="btn-primary" onclick="disableCommand()">
+                                <i class="fas fa-ban"></i> Disable Command
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1021,7 +1202,7 @@
 
                 if (data.success) {
                     currentGroupConfig = data.config;
-                    populateGroupSettings(data.config);
+                    await populateGroupSettings(data.config);
                     document.getElementById('groupModal').classList.add('active');
                     document.getElementById('modalGroupTitle').textContent = data.config.group_title;
                 } else {
@@ -1040,7 +1221,7 @@
         }
 
         // Populate group settings in modal
-        function populateGroupSettings(config) {
+        async function populateGroupSettings(config) {
             // General settings
             document.getElementById('welcomeEnabled').checked = config.settings?.welcome_enabled || false;
             document.getElementById('goodbyeEnabled').checked = config.settings?.goodbye_enabled || false;
@@ -1064,6 +1245,15 @@
             // Bans and warns
             updateBansDisplay(config.bans || {});
             updateWarnsDisplay(config.warns?.users || {});
+
+            // Load clean service settings
+            await loadCleanServiceSettings();
+
+            // Load clean message (cleanmsg) settings
+            await loadCleanMessageSettings();
+
+            // Load disabled commands
+            await loadDisabledCommands();
         }
 
         // Update filters display
@@ -1133,6 +1323,216 @@
                     </div>
                 </li>
             `).join('');
+        }
+
+        // Load and display clean service settings
+        async function loadCleanServiceSettings() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/cleanservice`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const settings = data.clean_service || {};
+                    document.getElementById('csEnabled').checked = settings.enabled || settings.all || false;
+                    document.getElementById('csJoin').checked = settings.join || settings.clean_join || false;
+                    document.getElementById('csLeave').checked = settings.leave || settings.clean_leave || false;
+                    document.getElementById('csPin').checked = settings.pin || settings.clean_pinned || false;
+                    document.getElementById('csPhoto').checked = settings.photo || false;
+                    document.getElementById('csTitle').checked = settings.title || false;
+                    document.getElementById('csVideochat').checked = settings.videochat || false;
+                    document.getElementById('csOther').checked = settings.other || false;
+                }
+            } catch (error) {
+                console.error('Error loading clean service settings:', error);
+            }
+        }
+
+        // Load and display clean message (cleanmsg) settings
+        async function loadCleanMessageSettings() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/cleanmessage`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const settings = data.clean_message || {};
+                    document.getElementById('cmEnabled').checked = settings.enabled || settings.all || false;
+                    document.getElementById('cmAction').checked = settings.action || false;
+                    document.getElementById('cmFilter').checked = settings.filter || false;
+                    document.getElementById('cmNote').checked = settings.note || false;
+                }
+            } catch (error) {
+                console.error('Error loading clean message settings:', error);
+            }
+        }
+
+        // Update single clean service setting
+        async function updateCleanService(key, value) {
+            try {
+                // Get all current settings first
+                const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/cleanservice`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    showNotification('Failed to get current settings', 'error');
+                    return;
+                }
+                
+                // Update the specific setting
+                const cleanService = data.clean_service;
+                cleanService[key] = value;
+                
+                // Send update
+                const updateResponse = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/cleanservice`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        admin_id: userId || '123456789',
+                        clean_service: cleanService
+                    })
+                });
+
+                const result = await updateResponse.json();
+                
+                if (result.success) {
+                    showNotification('Clean service setting updated', 'success');
+                } else {
+                    showNotification('Failed to update: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error updating clean service:', error);
+                showNotification('Failed to update clean service', 'error');
+            }
+        }
+
+        // Update single clean message setting
+        async function updateCleanMessage(key, value) {
+            try {
+                // Get current settings first
+                const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/cleanmessage`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    showNotification('Failed to get current cleanmessage settings', 'error');
+                    return;
+                }
+
+                const cleanmsg = data.clean_message || {};
+                cleanmsg[key] = value;
+
+                const updateResponse = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/cleanmessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ admin_id: userId || '123456789', clean_message: cleanmsg })
+                });
+
+                const result = await updateResponse.json();
+                if (result.success) {
+                    showNotification('Clean message setting updated', 'success');
+                } else {
+                    showNotification('Failed to update: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error updating clean message:', error);
+                showNotification('Failed to update clean message', 'error');
+            }
+        }
+
+        // Load and display disabled commands
+        async function loadDisabledCommands() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/disabled-commands`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateDisabledCommandsDisplay(data.disabled_commands || []);
+                }
+            } catch (error) {
+                console.error('Error loading disabled commands:', error);
+            }
+        }
+
+        // Update disabled commands display
+        function updateDisabledCommandsDisplay(commands) {
+            const list = document.getElementById('disabledCommandsList');
+            
+            if (commands.length === 0) {
+                list.innerHTML = '<li style="padding: 20px; text-align: center; color: #666;">No commands disabled</li>';
+                return;
+            }
+
+            list.innerHTML = commands.map(cmd => `
+                <li class="filter-item">
+                    <div>
+                        <div class="filter-trigger">/${escapeHtml(cmd)}</div>
+                        <div class="filter-response">This command is disabled in this group</div>
+                    </div>
+                    <button class="delete-btn" onclick="enableCommand('${escapeHtml(cmd)}')">
+                        <i class="fas fa-check"></i> Enable
+                    </button>
+                </li>
+            `).join('');
+        }
+
+        // Disable a command
+        async function disableCommand() {
+            const input = document.getElementById('disableCommandInput');
+            const command = input.value.trim().toLowerCase().replace('/', '');
+
+            if (!command) {
+                alert('Please enter a command name');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/disabled-commands`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        admin_id: userId || '123456789',
+                        command: command
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    input.value = '';
+                    await loadDisabledCommands();
+                    showNotification('Command disabled successfully', 'success');
+                } else {
+                    showNotification('Failed to disable command: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error disabling command:', error);
+                showNotification('Failed to disable command', 'error');
+            }
+        }
+
+        // Enable a command
+        async function enableCommand(command) {
+            if (!confirm(`Enable command "/${command}"?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/disabled-commands/${encodeURIComponent(command)}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        admin_id: userId || '123456789'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    await loadDisabledCommands();
+                    showNotification('Command enabled successfully', 'success');
+                } else {
+                    showNotification('Failed to enable command: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error enabling command:', error);
+                showNotification('Failed to enable command', 'error');
+            }
         }
 
         // Update warns display
