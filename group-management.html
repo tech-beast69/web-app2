@@ -876,7 +876,16 @@
                     <div class="settings-section">
                         <h3><i class="fas fa-slash"></i> Disabled Commands</h3>
                         <p style="color: #666;">Prevent specific bot commands from working in this group</p>
-                        
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0;">
+                            <div>
+                                <div style="font-weight:600;">Disable all commands for normal users</div>
+                                <div style="color:#666;font-size:0.9em;">When enabled, only admins can use bot commands in this group</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="disableAllCommandsToggle" onchange="toggleDisableUserCommands(this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
                         <ul id="disabledCommandsList" class="filter-list"></ul>
 
                         <div class="add-form">
@@ -1445,9 +1454,38 @@
                 
                 if (data.success) {
                     updateDisabledCommandsDisplay(data.disabled_commands || []);
+                    // Update toggle for disabling all commands
+                    const toggle = document.getElementById('disableAllCommandsToggle');
+                    if (toggle) toggle.checked = !!data.disable_user_commands;
                 }
             } catch (error) {
                 console.error('Error loading disabled commands:', error);
+            }
+        }
+
+        // Toggle disable-all-commands flag
+        async function toggleDisableUserCommands(enabled) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/disable-user-commands`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ admin_id: userId || '123456789', enabled: !!enabled })
+                });
+
+                const data = await response.json();
+                if (!data.success) {
+                    showNotification('Failed to update setting: ' + (data.error || 'Unknown error'), 'error');
+                    // Revert toggle
+                    const toggle = document.getElementById('disableAllCommandsToggle');
+                    if (toggle) toggle.checked = !enabled;
+                } else {
+                    showNotification('Setting updated', 'success');
+                }
+            } catch (err) {
+                console.error('Error toggling disable-user-commands:', err);
+                showNotification('Failed to update setting', 'error');
+                const toggle = document.getElementById('disableAllCommandsToggle');
+                if (toggle) toggle.checked = !enabled;
             }
         }
 
@@ -1513,12 +1551,13 @@
             if (!confirm(`Enable command "/${command}"?`)) return;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/disabled-commands/${encodeURIComponent(command)}`, {
+                // Some environments drop bodies for DELETE requests; include admin_id in query string as fallback
+                const url = `${API_BASE_URL}/api/group/${currentGroupId}/disabled-commands/${encodeURIComponent(command)}?admin_id=${encodeURIComponent(userId || '123456789')}`;
+                const response = await fetch(url, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        admin_id: userId || '123456789'
-                    })
+                    // Keep body for servers that accept it
+                    body: JSON.stringify({ admin_id: userId || '123456789' })
                 });
 
                 const data = await response.json();
