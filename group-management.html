@@ -155,7 +155,9 @@
             max-width: 900px;
             width: 90%;
             max-height: 90vh;
-            overflow-y: auto;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             animation: slideIn 0.3s ease;
         }
@@ -174,16 +176,21 @@
         .modal-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 25px;
+            padding: 20px 25px;
             border-radius: 20px 20px 0 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
 
         .modal-header h2 {
             margin: 0;
-            font-size: 1.8em;
+            font-size: 1.6em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: calc(100% - 60px);
         }
 
         .close-modal {
@@ -199,6 +206,7 @@
             align-items: center;
             justify-content: center;
             transition: all 0.3s ease;
+            flex-shrink: 0;
         }
 
         .close-modal:hover {
@@ -207,7 +215,9 @@
         }
 
         .modal-body {
-            padding: 30px;
+            padding: 25px;
+            overflow-y: auto;
+            flex: 1;
         }
 
         .settings-section {
@@ -220,32 +230,41 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            font-size: 1.2em;
         }
 
         .setting-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
+            padding: 18px;
             background: #f8f9fa;
             border-radius: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             transition: all 0.3s ease;
         }
 
         .setting-item:hover {
             background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .setting-info {
+            flex: 1;
+            padding-right: 15px;
         }
 
         .setting-label {
             font-weight: 600;
             color: #333;
+            font-size: 1em;
         }
 
         .setting-description {
             font-size: 0.85em;
             color: #666;
             margin-top: 5px;
+            line-height: 1.4;
         }
 
         .toggle-switch {
@@ -419,13 +438,15 @@
 
         .tabs {
             display: flex;
-            gap: 10px;
+            gap: 5px;
             border-bottom: 2px solid #e9ecef;
             margin-bottom: 20px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .tab {
-            padding: 12px 24px;
+            padding: 12px 20px;
             background: none;
             border: none;
             border-bottom: 3px solid transparent;
@@ -433,15 +454,23 @@
             font-weight: 600;
             color: #666;
             transition: all 0.3s ease;
+            white-space: nowrap;
+            font-size: 0.95em;
         }
 
         .tab:hover {
             color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
         }
 
         .tab.active {
             color: #667eea;
             border-bottom-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .tab i {
+            margin-right: 5px;
         }
 
         .tab-content {
@@ -470,21 +499,53 @@
         }
 
         .error-message {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            color: #856404;
-            padding: 15px;
-            border-radius: 8px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            border: none;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
             margin: 15px 0;
+            box-shadow: 0 4px 15px rgba(238, 90, 111, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideInDown 0.3s ease;
+        }
+
+        .error-message::before {
+            content: '⚠️';
+            font-size: 1.2em;
         }
 
         .success-message {
-            background: #d4edda;
-            border: 1px solid #28a745;
-            color: #155724;
-            padding: 15px;
-            border-radius: 8px;
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            border: none;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
             margin: 15px 0;
+            box-shadow: 0 4px 15px rgba(86, 171, 47, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideInDown 0.3s ease;
+        }
+
+        .success-message::before {
+            content: '✓';
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        @keyframes slideInDown {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .empty-state {
@@ -497,6 +558,57 @@
             font-size: 4em;
             margin-bottom: 15px;
             opacity: 0.3;
+        }
+
+        /* Mobile responsive styles */
+        @media (max-width: 768px) {
+            .groups-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                width: 95%;
+                max-height: 95vh;
+            }
+
+            .modal-header h2 {
+                font-size: 1.3em;
+            }
+
+            .modal-body {
+                padding: 20px;
+            }
+
+            .setting-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .setting-info {
+                padding-right: 0;
+            }
+
+            .tabs {
+                gap: 2px;
+            }
+
+            .tab {
+                padding: 10px 15px;
+                font-size: 0.85em;
+            }
+
+            .tab i {
+                display: none;
+            }
+
+            .group-stats {
+                gap: 10px;
+            }
+
+            .stat-value {
+                font-size: 1.5em;
+            }
         }
     </style>
 </head>
@@ -557,7 +669,7 @@
                         <h3><i class="fas fa-sliders-h"></i> General Settings</h3>
                         
                         <div class="setting-item">
-                            <div>
+                            <div class="setting-info">
                                 <div class="setting-label">Welcome Messages</div>
                                 <div class="setting-description">Send welcome messages to new members</div>
                             </div>
@@ -568,7 +680,7 @@
                         </div>
 
                         <div class="setting-item">
-                            <div>
+                            <div class="setting-info">
                                 <div class="setting-label">Goodbye Messages</div>
                                 <div class="setting-description">Send goodbye messages when members leave</div>
                             </div>
@@ -579,7 +691,7 @@
                         </div>
 
                         <div class="setting-item">
-                            <div>
+                            <div class="setting-info">
                                 <div class="setting-label">Anti-Flood</div>
                                 <div class="setting-description">Prevent spam by limiting message frequency</div>
                             </div>
@@ -590,7 +702,7 @@
                         </div>
 
                         <div class="setting-item">
-                            <div>
+                            <div class="setting-info">
                                 <div class="setting-label">Delete Service Messages</div>
                                 <div class="setting-description">Automatically delete join/leave notifications</div>
                             </div>
@@ -897,11 +1009,11 @@
                 console.log('Response status:', response.status);
                 console.log('Response OK:', response.ok);
                 
-                // Check if the HTTP response was successful
+                // Check if the response was successful
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('Response error:', errorText);
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`Server error (${response.status})`);
                 }
                 
                 const data = await response.json();
