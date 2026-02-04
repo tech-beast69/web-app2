@@ -716,9 +716,17 @@
     <script>
         // Configuration
         // Use the server URL for API calls (where Flask is running)
-        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        // If running on the actual server domain, use same origin; otherwise use hardcoded server URL
+        const API_BASE_URL = (window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1' || 
+                               window.location.hostname === 'us36.glacierhosting.org')
             ? window.location.origin
             : 'http://us36.glacierhosting.org:3027';
+        
+        console.log('DEBUG - Hostname:', window.location.hostname);
+        console.log('DEBUG - Origin:', window.location.origin);
+        console.log('DEBUG - API_BASE_URL:', API_BASE_URL);
+        
         let currentGroupId = null;
         let currentGroupConfig = null;
         let userId = null;
@@ -745,8 +753,12 @@
                     `${API_BASE_URL}/api/groups/managed?user_id=${userId}` : 
                     `${API_BASE_URL}/api/groups/managed`;
                 
-                console.log('Fetching groups from:', url);
+                console.log('=== API Request Debug ===');
+                console.log('API Base URL:', API_BASE_URL);
+                console.log('Full URL:', url);
                 console.log('User ID:', userId);
+                console.log('Current location:', window.location.href);
+                console.log('Protocol:', window.location.protocol);
                     
                 const response = await fetch(url);
                 console.log('Response status:', response.status);
@@ -812,21 +824,52 @@
                     }
                 }
             } catch (error) {
-                console.error('Error loading groups:', error);
-                console.error('Error details:', error.message, error.stack);
+                console.error('=== Error Details ===');
+                console.error('Error type:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
+                console.error('API Base URL:', API_BASE_URL);
+                
+                // Check if this is a network/CORS error
+                const isNetworkError = error instanceof TypeError && error.message.includes('Failed to fetch');
                 
                 const loadingSection = document.getElementById('loadingSection');
                 loadingSection.style.display = 'block';
-                loadingSection.innerHTML = `
-                    <div class="error-message">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Failed to load groups: ${error.message}
-                        <br><br>
-                        <button class="btn-primary" onclick="loadGroups()">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>
-                `;
+                
+                let errorHtml = '';
+                if (isNetworkError) {
+                    errorHtml = `
+                        <div class="error-message" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; padding: 30px; border-radius: 15px; text-align: center;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 3em; margin-bottom: 15px;"></i>
+                            <h3>Connection Failed</h3>
+                            <p style="margin: 15px 0;">Cannot connect to the API server.</p>
+                            <p style="margin: 15px 0; font-size: 0.9em; opacity: 0.9;">
+                                <strong>Possible causes:</strong><br>
+                                • Server is not running (start with: py web_dashboard.py)<br>
+                                • Mixed content error (HTTPS page calling HTTP API)<br>
+                                • CORS/Network restrictions<br>
+                                • Server URL: ${API_BASE_URL}
+                            </p>
+                            <button class="btn-primary" onclick="loadGroups()" style="margin-top: 20px; padding: 12px 24px; background: white; color: #ff6b6b; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                <i class="fas fa-redo"></i> Retry
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    errorHtml = `
+                        <div class="error-message" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; padding: 30px; border-radius: 15px; text-align: center;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 3em; margin-bottom: 15px;"></i>
+                            <h3>Failed to load groups</h3>
+                            <p style="margin: 15px 0;">HTTP error! status: ${error.message}</p>
+                            <p style="margin: 15px 0; font-size: 0.9em; opacity: 0.9;">API: ${API_BASE_URL}</p>
+                            <button class="btn-primary" onclick="loadGroups()" style="margin-top: 20px; padding: 12px 24px; background: white; color: #ff6b6b; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                <i class="fas fa-redo"></i> Retry
+                            </button>
+                        </div>
+                    `;
+                }
+                
+                loadingSection.innerHTML = errorHtml;
             }
         }
 
