@@ -19,8 +19,12 @@ if (window.location.hostname.endsWith('.github.io')) {
     // Running on GitHub Pages - use your bot server URL
     DASHBOARDCONFIG.APIURL = 'http://us36.glacierhosting.org:3027';
     console.log('GitHub Pages detected - using remote API:', DASHBOARDCONFIG.APIURL);
+} else if (window.location.hostname === 'us36.glacierhosting.org') {
+    // Running on the actual server - use same origin
+    DASHBOARDCONFIG.APIURL = window.location.origin;
+    console.log('Server domain detected - using same origin:', DASHBOARDCONFIG.APIURL);
 } else if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    // Running on remote server
+    // Running on some other remote server
     DASHBOARDCONFIG.APIURL = 'http://us36.glacierhosting.org:3027';
     console.log('Remote server detected - using HTTP API:', DASHBOARDCONFIG.APIURL);
 }
