@@ -1809,3 +1809,54 @@ window.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection:', event.reason);
     hideLoading();
 });
+
+// Load locks for a specific group (returns the locks object)
+async function loadLocksSettingsForGroup(groupId) {
+    try {
+        const response = await fetch(`${API_BASE}/api/group/${groupId}/locks`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const data = await response.json();
+        if (data.success) return data.locks || {};
+        console.warn('Failed to load locks:', data.error);
+        return {};
+    } catch (err) {
+        console.error('Error loading locks for group', groupId, err);
+        return {};
+    }
+}
+
+// Update locks for a group (merges single-key change)
+window.updateLockForGroup = async function(groupId, key, value, adminId) {
+    try {
+        // Fetch current locks
+        const getResp = await fetch(`${API_BASE}/api/group/${groupId}/locks`);
+        const getData = await getResp.json();
+        if (!getData.success) {
+            throw new Error(getData.error || 'Failed to get locks');
+        }
+
+        const locks = getData.locks || {};
+        locks[key] = !!value;
+
+        // Include admin_id as query fallback
+        const url = `${API_BASE}/api/group/${groupId}/locks?admin_id=${encodeURIComponent(adminId || currentUserId || '0')}`;
+
+        const updateResp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: adminId || currentUserId || '0', locks: locks })
+        });
+
+        const result = await updateResp.json();
+        if (result.success) {
+            console.log(`Lock ${key} updated for group ${groupId}:`, locks[key]);
+            return true;
+        } else {
+            console.warn('Failed to update lock:', result.error);
+            return false;
+        }
+    } catch (err) {
+        console.error('Error updating lock for group', groupId, err);
+        return false;
+    }
+}
