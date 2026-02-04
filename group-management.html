@@ -646,28 +646,31 @@
             </div>
             <div class="modal-body">
                 <div class="tabs">
-                    <button class="tab active" onclick="switchTab('general')">
+                    <button class="tab active" onclick="switchTab('general', event)">
                         <i class="fas fa-cog"></i> General
                     </button>
-                    <button class="tab" onclick="switchTab('welcome')">
+                    <button class="tab" onclick="switchTab('welcome', event)">
                         <i class="fas fa-door-open"></i> Welcome
                     </button>
-                    <button class="tab" onclick="switchTab('cleanservice')">
+                    <button class="tab" onclick="switchTab('cleanservice', event)">
                         <i class="fas fa-broom"></i> Clean Service
                     </button>
-                    <button class="tab" onclick="switchTab('cleanmsg')">
+                    <button class="tab" onclick="switchTab('cleanmsg', event)">
                         <i class="fas fa-comment-slash"></i> Clean Messages
                     </button>
-                    <button class="tab" onclick="switchTab('disabled')">
+                    <button class="tab" onclick="switchTab('locks', event)">
+                        <i class="fas fa-lock"></i> Locks
+                    </button>
+                    <button class="tab" onclick="switchTab('disabled', event)">
                         <i class="fas fa-slash"></i> Disabled Commands
                     </button>
-                    <button class="tab" onclick="switchTab('filters')">
+                    <button class="tab" onclick="switchTab('filters', event)">
                         <i class="fas fa-filter"></i> Filters
                     </button>
-                    <button class="tab" onclick="switchTab('moderation')">
+                    <button class="tab" onclick="switchTab('moderation', event)">
                         <i class="fas fa-shield-alt"></i> Moderation
                     </button>
-                    <button class="tab" onclick="switchTab('bans')">
+                    <button class="tab" onclick="switchTab('bans', event)">
                         <i class="fas fa-ban"></i> Bans & Warns
                     </button>
                 </div>
@@ -868,6 +871,169 @@
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Locks Tab -->
+                <div id="locksTab" class="tab-content">
+                    <div class="settings-section">
+                        <h3><i class="fas fa-lock"></i> Locks</h3>
+                        <p style="color:#666;">Enable or disable various lock types for this group</p>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Messages</div>
+                                <div class="setting-description">Lock sending of text messages</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockMessages" onchange="updateLock('messages', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Media</div>
+                                <div class="setting-description">Lock photos, videos and other media</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockMedia" onchange="updateLock('media', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Stickers</div>
+                                <div class="setting-description">Lock stickers</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockStickers" onchange="updateLock('stickers', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">GIFs</div>
+                                <div class="setting-description">Lock GIFs</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockGifs" onchange="updateLock('gifs', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">URLs</div>
+                                <div class="setting-description">Lock links/URLs</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockUrl" onchange="updateLock('url', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Bots</div>
+                                <div class="setting-description">Prevent bots from posting</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockBots" onchange="updateLock('bots', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Forwards</div>
+                                <div class="setting-description">Lock forwarded messages</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockForward" onchange="updateLock('forward', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Games</div>
+                                <div class="setting-description">Lock game messages</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockGame" onchange="updateLock('game', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Inline</div>
+                                <div class="setting-description">Lock inline queries/results</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockInline" onchange="updateLock('inline', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Location</div>
+                                <div class="setting-description">Lock location messages</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockLocation" onchange="updateLock('location', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Polls</div>
+                                <div class="setting-description">Lock polls</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockPoll" onchange="updateLock('poll', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Invites</div>
+                                <div class="setting-description">Lock invite links</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockInvite" onchange="updateLock('invite', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Pin</div>
+                                <div class="setting-description">Lock pin/unpin actions</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockPin" onchange="updateLock('pin', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Info</div>
+                                <div class="setting-description">Lock chat info commands</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lockInfo" onchange="updateLock('info', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
                     </div>
                 </div>
 
@@ -1210,7 +1376,8 @@
                 console.log('Response data:', data);
 
                 if (data.success) {
-                    currentGroupConfig = data.config;
+                    console.error('Toggle disable-user-commands failed:', data.error);
+                    showNotification('Failed to update setting: ' + (data.error || 'Unknown error'), 'error');
                     await populateGroupSettings(data.config);
                     document.getElementById('groupModal').classList.add('active');
                     document.getElementById('modalGroupTitle').textContent = data.config.group_title;
@@ -1260,6 +1427,9 @@
 
             // Load clean message (cleanmsg) settings
             await loadCleanMessageSettings();
+
+            // Load locks settings
+            await loadLocksSettings();
 
             // Load disabled commands
             await loadDisabledCommands();
@@ -1405,6 +1575,7 @@
                 if (result.success) {
                     showNotification('Clean service setting updated', 'success');
                 } else {
+                    console.error('Clean service update failed:', result.error);
                     showNotification('Failed to update: ' + result.error, 'error');
                 }
             } catch (error) {
@@ -1438,12 +1609,88 @@
                 if (result.success) {
                     showNotification('Clean message setting updated', 'success');
                 } else {
+                    console.error('Clean message update failed:', result.error);
                     showNotification('Failed to update: ' + result.error, 'error');
                 }
             } catch (error) {
                 console.error('Error updating clean message:', error);
                 showNotification('Failed to update clean message', 'error');
             }
+        }
+
+        // Load and display lock settings
+        async function loadLocksSettings() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/locks`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const locks = data.locks || {};
+                    document.getElementById('lockMessages').checked = !!locks.messages;
+                    document.getElementById('lockMedia').checked = !!locks.media;
+                    document.getElementById('lockStickers').checked = !!locks.stickers;
+                    document.getElementById('lockGifs').checked = !!locks.gifs;
+                    document.getElementById('lockUrl').checked = !!locks.url;
+                    document.getElementById('lockBots').checked = !!locks.bots;
+                    document.getElementById('lockForward').checked = !!locks.forward;
+                    document.getElementById('lockGame').checked = !!locks.game;
+                    document.getElementById('lockInline').checked = !!locks.inline;
+                    document.getElementById('lockLocation').checked = !!locks.location;
+                    document.getElementById('lockPoll').checked = !!locks.poll;
+                    document.getElementById('lockInvite').checked = !!locks.invite;
+                    document.getElementById('lockPin').checked = !!locks.pin;
+                    document.getElementById('lockInfo').checked = !!locks.info;
+                }
+            } catch (error) {
+                console.error('Error loading locks settings:', error);
+            }
+        }
+
+        // Update a single lock setting
+        async function updateLock(key, value) {
+            try {
+                // Fetch current locks first
+                const getResp = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/locks`);
+                const getData = await getResp.json();
+                if (!getData.success) {
+                    showNotification('Failed to get current lock settings', 'error');
+                    // revert checkbox
+                    const el = document.getElementById('lock' + capitalizeFirstLetter(key));
+                    if (el) el.checked = !value;
+                    return;
+                }
+
+                const locks = getData.locks || {};
+                locks[key] = !!value;
+
+                // Include admin_id in query string as a fallback
+                const url = `${API_BASE_URL}/api/group/${currentGroupId}/locks?admin_id=${encodeURIComponent(userId || '123456789')}`;
+
+                const updateResp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ admin_id: userId || '123456789', locks: locks })
+                });
+
+                const result = await updateResp.json();
+                if (result.success) {
+                    showNotification('Lock updated', 'success');
+                } else {
+                    console.error('Update lock failed:', result.error);
+                    showNotification('Failed to update lock: ' + (result.error || 'Unknown error'), 'error');
+                    const el = document.getElementById('lock' + capitalizeFirstLetter(key));
+                    if (el) el.checked = !value;
+                }
+            } catch (error) {
+                console.error('Error updating lock:', error);
+                showNotification('Failed to update lock', 'error');
+                const el = document.getElementById('lock' + capitalizeFirstLetter(key));
+                if (el) el.checked = !value;
+            }
+        }
+
+        function capitalizeFirstLetter(s) {
+            return s.charAt(0).toUpperCase() + s.slice(1);
         }
 
         // Load and display disabled commands
@@ -1466,7 +1713,9 @@
         // Toggle disable-all-commands flag
         async function toggleDisableUserCommands(enabled) {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/disable-user-commands`, {
+                // Include admin_id in query string as a fallback for servers that drop POST bodies
+                const url = `${API_BASE_URL}/api/group/${currentGroupId}/disable-user-commands?admin_id=${encodeURIComponent(userId || '123456789')}`;
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ admin_id: userId || '123456789', enabled: !!enabled })
@@ -1522,7 +1771,9 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/disabled-commands`, {
+                // Include admin_id in query string as a fallback for environments that drop POST bodies
+                const url = `${API_BASE_URL}/api/group/${currentGroupId}/disabled-commands?admin_id=${encodeURIComponent(userId || '123456789')}`;
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1538,6 +1789,7 @@
                     await loadDisabledCommands();
                     showNotification('Command disabled successfully', 'success');
                 } else {
+                    console.error('Disable command failed:', data.error);
                     showNotification('Failed to disable command: ' + data.error, 'error');
                 }
             } catch (error) {
@@ -1566,6 +1818,7 @@
                     await loadDisabledCommands();
                     showNotification('Command enabled successfully', 'success');
                 } else {
+                    console.error('Enable command failed:', data.error);
                     showNotification('Failed to enable command: ' + data.error, 'error');
                 }
             } catch (error) {
@@ -1626,6 +1879,7 @@
                 if (data.success) {
                     showNotification('Setting updated successfully', 'success');
                 } else {
+                    console.error('Update setting failed:', data.error);
                     showNotification('Failed to update setting: ' + data.error, 'error');
                 }
             } catch (error) {
@@ -1670,6 +1924,7 @@
                 if (data1.success && data2.success) {
                     showNotification('Messages saved successfully', 'success');
                 } else {
+                    console.error('Save welcome/goodbye messages failed:', data1, data2);
                     showNotification('Failed to save messages', 'error');
                 }
             } catch (error) {
@@ -1709,6 +1964,7 @@
                     openGroupSettings(currentGroupId); // Reload settings
                     showNotification('Filter added successfully', 'success');
                 } else {
+                    console.error('Add filter failed:', data.error);
                     showNotification('Failed to add filter: ' + data.error, 'error');
                 }
             } catch (error) {
@@ -1788,18 +2044,30 @@
         }
 
         // Switch tab
-        function switchTab(tabName) {
+        function switchTab(tabName, evt) {
             // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
 
-            // Show selected tab
-            document.getElementById(tabName + 'Tab').classList.add('active');
-            event.target.closest('.tab').classList.add('active');
+            // Show selected tab content
+            const content = document.getElementById(tabName + 'Tab');
+            if (content) content.classList.add('active');
+
+            // Safely determine the clicked tab button and mark it active
+            try {
+                // Prefer currentTarget (the element the handler is bound to), then target, then legacy event.srcElement
+                const e = evt || (window.event || null);
+                let target = null;
+                if (e) target = e.currentTarget || e.target || e.srcElement || null;
+
+                // If target is an inner element, find the closest parent with class 'tab'
+                if (target && typeof target.closest === 'function') {
+                    const tabBtn = target.closest('.tab');
+                    if (tabBtn) tabBtn.classList.add('active');
+                }
+            } catch (e) {
+                // Ignore if we cannot determine the clicked tab button
+            }
         }
 
         // Close modal
