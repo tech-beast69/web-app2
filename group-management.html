@@ -715,14 +715,24 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         // Configuration
-        // Use the server URL for API calls (where Flask is running)
-        // If running on the actual server domain, use same origin; otherwise use hardcoded server URL
-        // Prefer HTTPS to avoid mixed-content errors when the page is served over HTTPS
-        const API_BASE_URL = (window.location.hostname === 'localhost' || 
-                               window.location.hostname === '127.0.0.1' || 
-                               window.location.hostname === 'us36.glacierhosting.org')
-            ? window.location.origin
-            : 'https://us36.glacierhosting.org:3027';
+        // Use shared dashboard config if available so index + groups use the same API
+        // Fallback to environment-based detection.
+        let API_BASE_URL = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) 
+            ? window.DASHBOARDCONFIG.APIURL 
+            : null;
+
+        if (!API_BASE_URL) {
+            // Prefer same origin when running on the server
+            if (window.location.hostname === 'localhost' || 
+                window.location.hostname === '127.0.0.1') {
+                API_BASE_URL = window.location.origin;
+            } else if (window.location.hostname === '1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org') {
+                API_BASE_URL = window.location.origin;
+            } else {
+                // Fallback to public dashboard API domain (same as index/dashboard.js)
+                API_BASE_URL = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+            }
+        }
         
         console.log('DEBUG - Hostname:', window.location.hostname);
         console.log('DEBUG - Origin:', window.location.origin);
