@@ -1396,7 +1396,14 @@
             console.log('API URL:', `${API_BASE_URL}/api/group/${groupId}/config`);
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/group/${groupId}/config`);
+                // Add cache buster to prevent browser caching
+                const cacheBuster = `?t=${Date.now()}`;
+                const response = await fetch(`${API_BASE_URL}/api/group/${groupId}/config${cacheBuster}`, {
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                });
 
                 console.log('Response status:', response.status);
                 console.log('Response OK:', response.ok);
@@ -2071,6 +2078,12 @@
                 
                 if (data.success) {
                     showNotification('Setting updated successfully', 'success');
+                    
+                    // Update local config with the persisted config returned by server
+                    if (data.config) {
+                        currentGroupConfig = data.config;
+                        console.log('✅ Updated local config with server response');
+                    }
                 } else {
                     console.error('Update setting failed:', data.error);
                     showNotification('Failed to update setting: ' + data.error, 'error');
