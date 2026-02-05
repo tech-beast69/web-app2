@@ -2430,10 +2430,34 @@ async function updateCleanService(key, value) {
         }
         
         const adminIdFromUrl = (new URLSearchParams(window.location.search)).get('admin_id');
-        const adminIdToSend = userId || currentUserId || adminIdFromUrl || '';
+        let adminIdToSend = userId || currentUserId || adminIdFromUrl || '';
+
+        // If we still don't have an admin id, try to derive from the loaded group config
+        if (!adminIdToSend && currentGroupConfig) {
+            let derived = null;
+            if (currentGroupConfig.owner_id) derived = currentGroupConfig.owner_id;
+            else if (currentGroupConfig.owner) derived = currentGroupConfig.owner;
+            else if (currentGroupConfig.ownerId) derived = currentGroupConfig.ownerId;
+
+            // Try admin lists (take first available)
+            if (!derived) {
+                const admins = currentGroupConfig.admin_ids || currentGroupConfig.group_admins || currentGroupConfig.admins;
+                if (admins) {
+                    if (Array.isArray(admins) && admins.length > 0) derived = admins[0];
+                    else if (typeof admins === 'string') derived = admins;
+                }
+            }
+
+            if (derived) {
+                adminIdToSend = String(derived);
+                console.log('Using derived admin id from group config for updateCleanService:', adminIdToSend);
+            }
+        }
 
         if (!adminIdToSend) {
             showNotification('You must be logged in via Telegram or provide admin_id in URL to change this setting', 'error');
+            const el = document.getElementById('cs' + capitalizeFirstLetter(key));
+            if (el) el.checked = !value;
             return;
         }
 
@@ -2453,10 +2477,14 @@ async function updateCleanService(key, value) {
         } else {
             console.error('Clean service update failed:', result.error);
             showNotification('Failed to update: ' + result.error, 'error');
+            const el = document.getElementById('cs' + capitalizeFirstLetter(key));
+            if (el) el.checked = !value;
         }
     } catch (error) {
         console.error('Error updating clean service:', error);
         showNotification('Failed to update clean service', 'error');
+        const el = document.getElementById('cs' + capitalizeFirstLetter(key));
+        if (el) el.checked = !value;
     }
 }
 
@@ -2474,10 +2502,31 @@ async function updateCleanMessage(key, value) {
         cleanmsg[key] = value;
 
         const adminIdFromUrl = (new URLSearchParams(window.location.search)).get('admin_id');
-        const adminIdToSend = userId || currentUserId || adminIdFromUrl || '';
+        let adminIdToSend = userId || currentUserId || adminIdFromUrl || '';
+
+        // If missing, try to derive from currentGroupConfig.owner/admin fields
+        if (!adminIdToSend && currentGroupConfig) {
+            let derived = null;
+            if (currentGroupConfig.owner_id) derived = currentGroupConfig.owner_id;
+            else if (currentGroupConfig.owner) derived = currentGroupConfig.owner;
+            else if (currentGroupConfig.ownerId) derived = currentGroupConfig.ownerId;
+
+            const admins = currentGroupConfig.admin_ids || currentGroupConfig.group_admins || currentGroupConfig.admins;
+            if (!derived && admins) {
+                if (Array.isArray(admins) && admins.length > 0) derived = admins[0];
+                else if (typeof admins === 'string') derived = admins;
+            }
+
+            if (derived) {
+                adminIdToSend = String(derived);
+                console.log('Using derived admin id from group config for updateCleanMessage:', adminIdToSend);
+            }
+        }
 
         if (!adminIdToSend) {
             showNotification('You must be logged in via Telegram or provide admin_id in URL to change this setting', 'error');
+            const el = document.getElementById('cm' + capitalizeFirstLetter(key));
+            if (el) el.checked = !value;
             return;
         }
 
@@ -2493,10 +2542,14 @@ async function updateCleanMessage(key, value) {
         } else {
             console.error('Clean message update failed:', result.error);
             showNotification('Failed to update: ' + result.error, 'error');
+            const el = document.getElementById('cm' + capitalizeFirstLetter(key));
+            if (el) el.checked = !value;
         }
     } catch (error) {
         console.error('Error updating clean message:', error);
         showNotification('Failed to update clean message', 'error');
+        const el = document.getElementById('cm' + capitalizeFirstLetter(key));
+        if (el) el.checked = !value;
     }
 }
 
