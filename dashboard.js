@@ -2235,7 +2235,8 @@ async function loadCleanServiceSettings() {
         
         if (data.success) {
             const settings = data.clean_service || {};
-            document.getElementById('csEnabled').checked = settings.enabled || settings.all || false;
+            // Prioritize 'enabled' over 'all' for backward compatibility
+            document.getElementById('csEnabled').checked = settings.enabled !== undefined ? settings.enabled : (settings.all || false);
             document.getElementById('csJoin').checked = settings.join || settings.clean_join || false;
             document.getElementById('csLeave').checked = settings.leave || settings.clean_leave || false;
             document.getElementById('csPin').checked = settings.pin || settings.clean_pinned || false;
@@ -2256,7 +2257,8 @@ async function loadCleanMessageSettings() {
 
         if (data.success) {
             const settings = data.clean_message || {};
-            document.getElementById('cmEnabled').checked = settings.enabled || settings.all || false;
+            // Prioritize 'enabled' over 'all' for backward compatibility
+            document.getElementById('cmEnabled').checked = settings.enabled !== undefined ? settings.enabled : (settings.all || false);
             document.getElementById('cmAction').checked = settings.action || false;
             document.getElementById('cmFilter').checked = settings.filter || false;
             document.getElementById('cmNote').checked = settings.note || false;
@@ -2429,6 +2431,11 @@ async function updateCleanService(key, value) {
             cleanService[key] = value;
         }
         
+        // For backward compatibility, also update 'all' when 'enabled' changes
+        if (key === 'enabled') {
+            cleanService.all = value;
+        }
+        
         const adminIdFromUrl = (new URLSearchParams(window.location.search)).get('admin_id');
         let adminIdToSend = userId || currentUserId || adminIdFromUrl || '';
 
@@ -2500,6 +2507,11 @@ async function updateCleanMessage(key, value) {
 
         const cleanmsg = data.clean_message || {};
         cleanmsg[key] = value;
+        
+        // For backward compatibility, also update 'all' when 'enabled' changes
+        if (key === 'enabled') {
+            cleanmsg.all = value;
+        }
 
         const adminIdFromUrl = (new URLSearchParams(window.location.search)).get('admin_id');
         let adminIdToSend = userId || currentUserId || adminIdFromUrl || '';
