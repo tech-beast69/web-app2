@@ -673,6 +673,9 @@
                     <button class="tab" onclick="switchTab('bans', event)">
                         <i class="fas fa-ban"></i> Bans & Warns
                     </button>
+                    <button class="tab" onclick="switchTab('federation', event)">
+                        <i class="fas fa-network-wired"></i> Federation
+                    </button>
                 </div>
 
                 <!-- General Settings Tab -->
@@ -1176,6 +1179,41 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Federation Tab -->
+                <div id="federationTab" class="tab-content">
+                    <div class="settings-section">
+                        <h3><i class="fas fa-network-wired"></i> Federation Info</h3>
+                        <div id="federationInfo">
+                            <div><strong>Name:</strong> <span id="fedName">—</span></div>
+                            <div><strong>ID:</strong> <span id="fedId">—</span></div>
+                            <div><strong>Owner:</strong> <span id="fedOwner">—</span></div>
+                            <div><strong>Groups in Federation:</strong> <span id="fedGroupsCount">0</span></div>
+                            <div><strong>Banned Users:</strong> <span id="fedBannedCount">0</span></div>
+                        </div>
+
+                        <h4 style="margin-top: 16px;">Member Groups</h4>
+                        <ul id="fedGroupsList" class="ban-list"></ul>
+
+                        <div style="margin-top: 12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                            <button class="btn-primary" onclick="refreshFederationInfo()"><i class="fas fa-sync"></i> Refresh</button>
+
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input id="newFedName" placeholder="New federation name" class="input-field" style="width:220px;" />
+                                <button class="btn-primary" onclick="createFederation()"><i class="fas fa-plus"></i> Create + Join</button>
+                            </div>
+
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input id="joinFedId" placeholder="Federation ID" class="input-field" style="width:160px;" />
+                                <button class="btn-primary" onclick="joinFederation()"><i class="fas fa-sign-in-alt"></i> Join</button>
+                            </div>
+
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <button class="btn-danger" onclick="leaveFederation()"><i class="fas fa-sign-out-alt"></i> Leave Federation</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1183,21 +1221,19 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         // Configuration
-        // Use shared dashboard config if available so index + groups use the same API
-        // Fallback to environment-based detection.
-        let API_BASE_URL = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) 
-            ? window.DASHBOARDCONFIG.APIURL 
-            : null;
+        // Prefer the globally set API base (from dashboard.js) then the configured value,
+        // otherwise fall back to environment-detection with a localhost default.
+        let API_BASE_URL = (window.API_BASE) || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || null;
 
         if (!API_BASE_URL) {
-            // Prefer same origin when running on the server
-            if (window.location.hostname === 'localhost' || 
-                window.location.hostname === '127.0.0.1') {
-                API_BASE_URL = window.location.origin;
-            } else if (window.location.hostname === '1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org') {
-                API_BASE_URL = window.location.origin;
+            // If running on developer machine, prefer the local dashboard server
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                API_BASE_URL = 'http://localhost:3027';
+            } else if (window.location.protocol === 'file:') {
+                // Opened as a local file - assume local dashboard server
+                API_BASE_URL = 'http://localhost:3027';
             } else {
-                // Fallback to public dashboard API domain (same as index/dashboard.js)
+                // Fallback to public dashboard API domain
                 API_BASE_URL = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
             }
         }
@@ -1433,6 +1469,9 @@
 
             // Load disabled commands
             await loadDisabledCommands();
+
+            // Load federation info (if any)
+            await loadFederationInfo();
         }
 
         // Update filters display
@@ -1643,6 +1682,142 @@
                 }
             } catch (error) {
                 console.error('Error loading locks settings:', error);
+            }
+        }
+
+        // Load and display federation info for the current group (if any)
+        async function loadFederationInfo() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/federation`);
+                if (!response.ok) {
+                    console.warn('Federation API returned non-OK status:', response.status);
+                    return;
+                }
+                const data = await response.json();
+                if (!data.success || !data.in_federation) {
+                    document.getElementById('fedName').textContent = 'Not in a federation';
+                    document.getElementById('fedId').textContent = '—';
+                    document.getElementById('fedOwner').textContent = '—';
+                    document.getElementById('fedGroupsCount').textContent = '0';
+                    document.getElementById('fedBannedCount').textContent = '0';
+                    document.getElementById('fedGroupsList').innerHTML = '';
+                    return;
+                }
+
+                const fed = data.federation || {};
+                document.getElementById('fedName').textContent = fed.fed_name || '—';
+                document.getElementById('fedId').textContent = fed.fed_id || '—';
+                document.getElementById('fedOwner').textContent = fed.owner_id || '—';
+                document.getElementById('fedGroupsCount').textContent = (fed.groups || []).length || 0;
+                document.getElementById('fedBannedCount').textContent = fed.banned_users_count || 0;
+
+                const groupsList = document.getElementById('fedGroupsList');
+                groupsList.innerHTML = '';
+                (fed.groups || []).forEach(gid => {
+                    const li = document.createElement('li');
+                    li.className = 'ban-item';
+                    li.innerHTML = `<div><strong>Group ID:</strong> ${escapeHtml(String(gid))}</div>`;
+                    groupsList.appendChild(li);
+                });
+
+            } catch (err) {
+                console.error('Error loading federation info:', err);
+            }
+        }
+
+        function refreshFederationInfo() {
+            if (!currentGroupId) return;
+            loadFederationInfo();
+            showNotification('Federation info refreshed', 'success');
+        }
+
+        // Create a new federation and join it
+        async function createFederation() {
+            const fedNameEl = document.getElementById('newFedName');
+            const name = fedNameEl ? fedNameEl.value.trim() : '';
+            if (!name) {
+                showNotification('Please provide a federation name', 'error');
+                return;
+            }
+            if (!currentGroupId) {
+                showNotification('No group selected', 'error');
+                return;
+            }
+
+            try {
+                const resp = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/federation/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ admin_id: userId || currentUserId, fed_name: name })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showNotification('Federation created and group joined', 'success');
+                    if (document.getElementById('joinFedId')) document.getElementById('joinFedId').value = data.fed_id || '';
+                    await loadFederationInfo();
+                } else {
+                    showNotification('Failed to create federation: ' + (data.error || 'Unknown'), 'error');
+                }
+            } catch (err) {
+                console.error('Error creating federation:', err);
+                showNotification('Error creating federation', 'error');
+            }
+        }
+
+        // Join an existing federation by ID
+        async function joinFederation() {
+            const fedIdEl = document.getElementById('joinFedId');
+            const fedId = fedIdEl ? fedIdEl.value.trim() : '';
+            if (!fedId) {
+                showNotification('Please provide a federation ID to join', 'error');
+                return;
+            }
+            if (!currentGroupId) {
+                showNotification('No group selected', 'error');
+                return;
+            }
+
+            try {
+                const resp = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/federation/join`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ admin_id: userId || currentUserId, fed_id: fedId })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showNotification('Group joined federation', 'success');
+                    await loadFederationInfo();
+                } else {
+                    showNotification('Failed to join federation: ' + (data.error || 'Unknown'), 'error');
+                }
+            } catch (err) {
+                console.error('Error joining federation:', err);
+                showNotification('Error joining federation', 'error');
+            }
+        }
+
+        // Leave current federation
+        async function leaveFederation() {
+            if (!currentGroupId) return showNotification('No group selected', 'error');
+
+            if (!confirm('Are you sure you want this group to leave its federation?')) return;
+
+            try {
+                const resp = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/federation/leave`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ admin_id: userId || currentUserId })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showNotification('Group left federation', 'success');
+                    await loadFederationInfo();
+                } else {
+                    showNotification('Failed to leave federation: ' + (data.error || 'Unknown'), 'error');
+                }
+            } catch (err) {
+                console.error('Error leaving federation:', err);
+                showNotification('Error leaving federation', 'error');
             }
         }
 
