@@ -1862,3 +1862,1046 @@ window.updateLockForGroup = async function(groupId, key, value, adminId) {
         return false;
     }
 }
+
+// ============================================================================
+// GROUP MANAGEMENT DASHBOARD JAVASCRIPT
+// ============================================================================
+
+// Group Management Dashboard JavaScript
+// Configuration
+// Prefer the globally set API base (from dashboard.js) then the configured value,
+// otherwise fall back to environment-detection with a localhost default.
+let API_BASE_URL = (window.API_BASE) || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || null;
+
+if (!API_BASE_URL) {
+    // If running on developer machine, prefer the local dashboard server
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        API_BASE_URL = 'http://localhost:3027';
+    } else if (window.location.protocol === 'file:') {
+        // Opened as a local file - assume local dashboard server
+        API_BASE_URL = 'http://localhost:3027';
+    } else {
+        // Fallback to public dashboard API domain
+        API_BASE_URL = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+    }
+}
+
+console.log('DEBUG - Hostname:', window.location.hostname);
+console.log('DEBUG - Origin:', window.location.origin);
+console.log('DEBUG - API_BASE_URL:', API_BASE_URL);
+
+let currentGroupId = null;
+let currentGroupConfig = null;
+let userId = null;
+let userName = null;
+
+// Initialize Telegram WebApp
+const tg = window.Telegram?.WebApp;
+if (tg) {
+    tg.ready();
+    tg.expand();
+    userId = tg.initDataUnsafe?.user?.id;
+    userName = tg.initDataUnsafe?.user?.username || tg.initDataUnsafe?.user?.first_name;
+    
+    // Show user info in header
+    if (userId) {
+        document.querySelector('.subtitle').textContent = `Logged in as: ${userName} (ID: ${userId})`;
+    }
+}
+
+// Load all groups (filtered by user if userId is available)
+async function loadGroups() {
+    try {
+        const cacheBuster = `_t=${Date.now()}`;
+        const separator = userId ? '&' : '?';
+        const url = userId ? 
+            `${API_BASE_URL}/api/groups/managed?user_id=${userId}&${cacheBuster}` : 
+            `${API_BASE_URL}/api/groups/managed?${cacheBuster}`;
+        
+        console.log('=== API Request Debug ===');
+        console.log('API Base URL:', API_BASE_URL);
+        console.log('Full URL:', url);
+        console.log('User ID:', userId);    
+        console.log('Current location:', window.location.href);
+        console.log('Protocol:', window.location.protocol);
+            
+        const response = await fetch(url);
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Received data:', data);
+
+        const loadingSection = document.getElementById('loadingSection');
+        const groupsSection = document.getElementById('groupsSection');
+        const emptyState = document.getElementById('emptyState');
+        const groupsGrid = document.getElementById('groupsGrid');
+
+        loadingSection.style.display = 'none';
+
+        if (data.success && data.groups.length > 0) {
+            groupsSection.style.display = 'block';
+            emptyState.style.display = 'none';
+            
+            groupsGrid.innerHTML = data.groups.map(group => `
+                <div class="group-card" onclick='openGroupSettings(${JSON.stringify(group.group_id)})'>
+                    <div class="group-header">
+                        <div>
+                            <h3 class="group-title">${escapeHtml(group.group_title)}</h3>
+                            <p class="group-id">ID: ${group.group_id}</p>
+                            ${group.is_owner ? '<p class="group-id" style="color: #ffd700;"><i class="fas fa-crown"></i> You are the owner</p>' : ''}
+                        </div>
+                        ${group.bot_is_admin ? '<span class="admin-badge"><i class="fas fa-shield-alt"></i> Admin</span>' : ''}
+                    </div>
+                    
+                    <div class="group-stats">
+                        <div class="stat-item">
+                            <span class="stat-value">${group.filters_count}</span>
+                            <span class="stat-label">Filters</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${group.warns_limit}</span>
+                            <span class="stat-label">Warn Limit</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${group.bans_count}</span>
+                            <span class="stat-label">Bans</span>
+                        </div>
+                    </div>
+
+                    <div class="group-actions">
+                        <button class="action-btn" onclick='event.stopPropagation(); openGroupSettings(${JSON.stringify(group.group_id)})'>
+                            <i class="fas fa-cog"></i> Manage
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            groupsSection.style.display = 'none';
+            emptyState.style.display = 'block';
+            
+            if (userId && data.filtered_by_user) {
+                document.querySelector('#emptyState h3').textContent = 'No Groups Found';
+                document.querySelector('#emptyState p').textContent = 'You are not the owner of any groups where the bot is admin. Add the bot to your groups to manage them here.';
+            }
+        }
+    } catch (error) {
+        console.error('=== Error Details ===');
+        console.error('Error type:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        console.error('API Base URL:', API_BASE_URL);
+        
+        // Check if this is a network/CORS error
+        const isNetworkError = error instanceof TypeError && error.message.includes('Failed to fetch');
+        
+        const loadingSection = document.getElementById('loadingSection');
+        loadingSection.style.display = 'block';
+        
+        let errorHtml = '';
+        if (isNetworkError) {
+            errorHtml = `
+                <div class="error-message" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; padding: 30px; border-radius: 15px; text-align: center;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3em; margin-bottom: 15px;"></i>
+                    <h3>Connection Failed</h3>
+                    <p style="margin: 15px 0;">Cannot connect to the API server.</p>
+                    <p style="margin: 15px 0; font-size: 0.9em; opacity: 0.9;">
+                        <strong>Possible causes:</strong><br>
+                        • Server is not running<br>
+                        • Mixed content error (HTTPS page calling HTTP API)<br>
+                        • CORS/Network restrictions
+                    </p>
+                    <button class="btn-primary" onclick="loadGroups()" style="margin-top: 20px; padding: 12px 24px; background: white; color: #ff6b6b; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-redo"></i> Retry
+                    </button>
+                </div>
+            `;
+        } else {
+            errorHtml = `
+                <div class="error-message" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; padding: 30px; border-radius: 15px; text-align: center;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3em; margin-bottom: 15px;"></i>
+                    <h3>Failed to load groups</h3>
+                    <p style="margin: 15px 0;">Server connection error</p>
+                    <button class="btn-primary" onclick="loadGroups()" style="margin-top: 20px; padding: 12px 24px; background: white; color: #ff6b6b; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-redo"></i> Retry
+                    </button>
+                </div>
+            `;
+        }
+        
+        loadingSection.innerHTML = errorHtml;
+    }
+}
+
+// Open group settings modal
+async function openGroupSettings(groupId) {
+    currentGroupId = groupId;
+
+    console.log('=== Opening Group Settings ===');
+    console.log('Group ID:', groupId);
+    console.log('Type:', typeof groupId);
+    console.log('API URL:', `${API_BASE_URL}/api/group/${groupId}/config`);
+
+    try {
+        // Add cache buster to prevent browser caching
+        const cacheBuster = `?_t=${Date.now()}`;
+        const response = await fetch(`${API_BASE_URL}/api/group/${groupId}/config${cacheBuster}`);
+
+        console.log('Response status:', response.status);
+        console.log('Response OK:', response.ok);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Response error:', errorText);
+            throw new Error(`Server error (${response.status})`);
+        }
+
+        const data = await response.json();
+        console.log('Response data:', data);
+
+        if (data.success) {
+            // Populate settings and open modal
+            await populateGroupSettings(data.config);
+            document.getElementById('groupModal').classList.add('active');
+            document.getElementById('modalGroupTitle').textContent = data.config.group_title || 'Group Settings';
+        } else {
+            const errorMsg = data.error || 'Unknown error';
+            console.error('API error:', errorMsg);
+            alert(`Failed to load group settings: ${errorMsg}`);
+        }
+    } catch (error) {
+        console.error('=== Error Loading Group Config ===');
+        console.error('Error:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        alert(`Failed to load group settings: ${error.message}`);
+    }
+}
+
+// Populate group settings in modal
+async function populateGroupSettings(config) {
+    // Keep a local reference for other functions
+    currentGroupConfig = config || {};
+    
+    // General settings
+    document.getElementById('welcomeEnabled').checked = config.settings?.welcome_enabled || false;
+    document.getElementById('goodbyeEnabled').checked = config.settings?.goodbye_enabled || false;
+    document.getElementById('antifloodEnabled').checked = config.settings?.antiflood_enabled || false;
+    document.getElementById('deleteServiceMessages').checked = config.settings?.delete_service_messages || false;
+
+    // Welcome messages
+    document.getElementById('welcomeMessage').value = config.welcome_message || '';
+    document.getElementById('goodbyeMessage').value = config.goodbye_message || '';
+
+    // Blocklist
+    document.getElementById('blocklistEnabled').checked = config.blocklist?.enabled || false;
+    updateBlocklistDisplay(config.blocklist?.words || []);
+
+    // Filters
+    updateFiltersDisplay(config.filters || {});
+
+    // Warns limit
+    document.getElementById('warnsLimit').value = config.warns?.limit || 3;
+
+    // Bans and warns
+    updateBansDisplay(config.bans || {});
+    updateWarnsDisplay(config.warns?.users || {});
+
+    // Load clean service settings
+    await loadCleanServiceSettings();
+
+    // Load clean message (cleanmsg) settings
+    await loadCleanMessageSettings();
+
+    // Load locks settings
+    await loadLocksSettings();
+
+    // Load disabled commands
+    await loadDisabledCommands();
+
+    // Load federation info (if any)
+    await loadFederationInfo();
+}
+
+// Helper Functions
+function updateFiltersDisplay(filters) {
+    const filtersList = document.getElementById('filtersList');
+    
+    if (Object.keys(filters).length === 0) {
+        filtersList.innerHTML = '<li class="empty-state" style="padding: 20px;"><p>No filters added yet</p></li>';
+        return;
+    }
+
+    filtersList.innerHTML = Object.entries(filters).map(([trigger, response]) => `
+        <li class="filter-item">
+            <div>
+                <div class="filter-trigger">${escapeHtml(trigger)}</div>
+                <div class="filter-response">${escapeHtml(response)}</div>
+            </div>
+            <button class="delete-btn" onclick='removeFilter(${JSON.stringify(trigger)})'>
+                <i class="fas fa-trash"></i>
+            </button>
+        </li>
+    `).join('');
+}
+
+function updateBlocklistDisplay(words) {
+    const blocklistItems = document.getElementById('blocklistItems');
+    
+    if (words.length === 0) {
+        blocklistItems.innerHTML = '<li class="empty-state" style="padding: 20px;"><p>No blocked words</p></li>';
+        return;
+    }
+
+    blocklistItems.innerHTML = words.map(word => `
+        <li class="blocklist-item">
+            <span>${escapeHtml(word)}</span>
+            <button class="delete-btn" onclick='removeBlocklistWord(${JSON.stringify(word)})'>
+                <i class="fas fa-trash"></i>
+            </button>
+        </li>
+    `).join('');
+}
+
+function updateBansDisplay(bans) {
+    const bansList = document.getElementById('bansList');
+    const noBans = document.getElementById('noBans');
+    
+    if (Object.keys(bans).length === 0) {
+        bansList.style.display = 'none';
+        noBans.style.display = 'block';
+        return;
+    }
+
+    noBans.style.display = 'none';
+    bansList.style.display = 'block';
+    bansList.innerHTML = Object.entries(bans).map(([userId, banInfo]) => `
+        <li class="ban-item">
+            <div>
+                <div><strong>User ID:</strong> ${userId}</div>
+                <div style="color: #666; margin-top: 5px;">
+                    <strong>Reason:</strong> ${escapeHtml(banInfo.reason || 'No reason')}
+                </div>
+                <div style="color: #999; font-size: 0.85em; margin-top: 3px;">
+                    Banned: ${new Date(banInfo.banned_at).toLocaleDateString()}
+                </div>
+            </div>
+        </li>
+    `).join('');
+}
+
+function updateWarnsDisplay(warns) {
+    const warnsList = document.getElementById('warnsList');
+    const noWarns = document.getElementById('noWarns');
+    
+    if (Object.keys(warns).length === 0) {
+        warnsList.style.display = 'none';
+        noWarns.style.display = 'block';
+        return;
+    }
+
+    noWarns.style.display = 'none';
+    warnsList.style.display = 'block';
+
+    const warnLimit = (currentGroupConfig && currentGroupConfig.warns && currentGroupConfig.warns.limit) ? currentGroupConfig.warns.limit : 3;
+
+    warnsList.innerHTML = Object.entries(warns).map(([userId, warnInfo]) => {
+        const lastReason = (warnInfo.reasons && warnInfo.reasons.length > 0) ? escapeHtml(warnInfo.reasons[warnInfo.reasons.length - 1].reason) : null;
+        return `
+        <li class="ban-item">
+            <div>
+                <div><strong>User ID:</strong> ${userId}</div>
+                <div style="color: #666; margin-top: 5px;">
+                    <strong>Warnings:</strong> ${warnInfo.count} / ${warnLimit}
+                </div>
+                ${lastReason ? `
+                    <div style="color: #999; font-size: 0.85em; margin-top: 5px;">
+                        Last reason: ${lastReason}
+                    </div>
+                ` : ''}
+            </div>
+        </li>
+    `}).join('');
+}
+
+// Load Settings Functions
+async function loadCleanServiceSettings() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/cleanservice?_t=${Date.now()}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const settings = data.clean_service || {};
+            document.getElementById('csEnabled').checked = settings.enabled || settings.all || false;
+            document.getElementById('csJoin').checked = settings.join || settings.clean_join || false;
+            document.getElementById('csLeave').checked = settings.leave || settings.clean_leave || false;
+            document.getElementById('csPin').checked = settings.pin || settings.clean_pinned || false;
+            document.getElementById('csPhoto').checked = settings.photo || false;
+            document.getElementById('csTitle').checked = settings.title || false;
+            document.getElementById('csVideochat').checked = settings.videochat || false;
+            document.getElementById('csOther').checked = settings.other || false;
+        }
+    } catch (error) {
+        console.error('Error loading clean service settings:', error);
+    }
+}
+
+async function loadCleanMessageSettings() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/cleanmessage?_t=${Date.now()}`);
+        const data = await response.json();
+
+        if (data.success) {
+            const settings = data.clean_message || {};
+            document.getElementById('cmEnabled').checked = settings.enabled || settings.all || false;
+            document.getElementById('cmAction').checked = settings.action || false;
+            document.getElementById('cmFilter').checked = settings.filter || false;
+            document.getElementById('cmNote').checked = settings.note || false;
+        }
+    } catch (error) {
+        console.error('Error loading clean message settings:', error);
+    }
+}
+
+async function loadLocksSettings() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/locks?_t=${Date.now()}`);
+        const data = await response.json();
+
+        if (data.success) {
+            const locks = data.locks || {};
+            document.getElementById('lockMessages').checked = !!locks.messages;
+            document.getElementById('lockMedia').checked = !!locks.media;
+            document.getElementById('lockStickers').checked = !!locks.stickers;
+            document.getElementById('lockGifs').checked = !!locks.gifs;
+            document.getElementById('lockUrl').checked = !!locks.url;
+            document.getElementById('lockBots').checked = !!locks.bots;
+            document.getElementById('lockForward').checked = !!locks.forward;
+            document.getElementById('lockGame').checked = !!locks.game;
+            document.getElementById('lockInline').checked = !!locks.inline;
+            document.getElementById('lockLocation').checked = !!locks.location;
+            document.getElementById('lockPoll').checked = !!locks.poll;
+            document.getElementById('lockInvite').checked = !!locks.invite;
+            document.getElementById('lockPin').checked = !!locks.pin;
+            document.getElementById('lockInfo').checked = !!locks.info;
+        }
+    } catch (error) {
+        console.error('Error loading locks settings:', error);
+    }
+}
+
+async function loadFederationInfo() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/federation?_t=${Date.now()}`);
+        if (!response.ok) {
+            console.warn('Federation API returned non-OK status:', response.status);
+            return;
+        }
+        const data = await response.json();
+        if (!data.success || !data.in_federation) {
+            document.getElementById('fedName').textContent = 'Not in a federation';
+            document.getElementById('fedId').textContent = '—';
+            document.getElementById('fedOwner').textContent = '—';
+            document.getElementById('fedGroupsCount').textContent = '0';
+            document.getElementById('fedBannedCount').textContent = '0';
+            document.getElementById('fedGroupsList').innerHTML = '';
+            return;
+        }
+
+        const fed = data.federation || {};
+        document.getElementById('fedName').textContent = fed.fed_name || '—';
+        document.getElementById('fedId').textContent = fed.fed_id || '—';
+        document.getElementById('fedOwner').textContent = fed.owner_id || '—';
+        document.getElementById('fedGroupsCount').textContent = (fed.groups || []).length || 0;
+        document.getElementById('fedBannedCount').textContent = fed.banned_users_count || 0;
+
+        const groupsList = document.getElementById('fedGroupsList');
+        groupsList.innerHTML = '';
+        (fed.groups || []).forEach(gid => {
+            const li = document.createElement('li');
+            li.className = 'ban-item';
+            li.innerHTML = `<div><strong>Group ID:</strong> ${escapeHtml(String(gid))}</div>`;
+            groupsList.appendChild(li);
+        });
+
+    } catch (err) {
+        console.error('Error loading federation info:', err);
+    }
+}
+
+async function loadDisabledCommands() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/disabled-commands?_t=${Date.now()}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            updateDisabledCommandsDisplay(data.disabled_commands || []);
+            const toggle = document.getElementById('disableAllCommandsToggle');
+            if (toggle) toggle.checked = !!data.disable_user_commands;
+        }
+    } catch (error) {
+        console.error('Error loading disabled commands:', error);
+    }
+}
+
+function updateDisabledCommandsDisplay(commands) {
+    const list = document.getElementById('disabledCommandsList');
+    
+    if (commands.length === 0) {
+        list.innerHTML = '<li style="padding: 20px; text-align: center; color: #666;">No commands disabled</li>';
+        return;
+    }
+
+    list.innerHTML = commands.map(cmd => `
+        <li class="filter-item">
+            <div>
+                <div class="filter-trigger">/${escapeHtml(cmd)}</div>
+                <div class="filter-response">This command is disabled in this group</div>
+            </div>
+            <button class="delete-btn" onclick='enableCommand(${JSON.stringify(cmd)})'>
+                <i class="fas fa-check"></i> Enable
+            </button>
+        </li>
+    `).join('');
+}
+
+// Update Settings Functions
+async function updateSetting(key, value) {
+    try {
+        const settings = {};
+        settings[key] = value;
+
+        const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/settings`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                admin_id: userId || '123456789',
+                settings: settings
+            })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Setting updated successfully', 'success');
+            
+            // Update local config with the persisted config returned by server
+            if (data.config) {
+                currentGroupConfig = data.config;
+                console.log('✅ Updated local config with server response');
+            }
+        } else {
+            console.error('Update setting failed:', data.error);
+            showNotification('Failed to update setting: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error updating setting:', error);
+        showNotification('Failed to update setting', 'error');
+    }
+}
+
+async function updateCleanService(key, value) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/cleanservice`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            showNot('Failed to get current settings', 'error');
+            return;
+        }
+        
+        const cleanService = data.clean_service || {};
+
+        const keyMap = {
+            'pin': ['pin', 'clean_pinned'],
+            'join': ['join', 'clean_join'],
+            'leave': ['leave', 'clean_leave']
+        };
+
+        if (keyMap[key]) {
+            keyMap[key].forEach(k => cleanService[k] = !!value);
+        } else {
+            cleanService[key] = value;
+        }
+        
+        const adminIdToSend = userId || '123456789';
+        const updateResponse = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/cleanservice`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: adminIdToSend,
+                clean_service: cleanService
+            })
+        });
+
+        const result = await updateResponse.json();
+        
+        if (result.success) {
+            showNotification('Clean service setting updated', 'success');
+        } else {
+            console.error('Clean service update failed:', result.error);
+            showNotification('Failed to update: ' + result.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error updating clean service:', error);
+        showNotification('Failed to update clean service', 'error');
+    }
+}
+
+async function updateCleanMessage(key, value) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/cleanmessage`);
+        const data = await response.json();
+
+        if (!data.success) {
+            showNotification('Failed to get current cleanmessage settings', 'error');
+            return;
+        }
+
+        const cleanmsg = data.clean_message || {};
+        cleanmsg[key] = value;
+
+        const updateResponse = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/cleanmessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: userId || '123456789', clean_message: cleanmsg })
+        });
+
+        const result = await updateResponse.json();
+        if (result.success) {
+            showNotification('Clean message setting updated', 'success');
+        } else {
+            console.error('Clean message update failed:', result.error);
+            showNotification('Failed to update: ' + result.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error updating clean message:', error);
+        showNotification('Failed to update clean message', 'error');
+    }
+}
+
+async function updateLock(key, value) {
+    try {
+        const getResp = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/locks`);
+        const getData = await getResp.json();
+        if (!getData.success) {
+            showNotification('Failed to get current lock settings', 'error');
+            const el = document.getElementById('lock' + capitalizeFirstLetter(key));
+            if (el) el.checked = !value;
+            return;
+        }
+
+        const locks = getData.locks || {};
+        locks[key] = !!value;
+
+        const url = `${API_BASE_URL}/api/group/${currentGroupId}/locks?admin_id=${encodeURIComponent(userId || '123456789')}`;
+
+        const updateResp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: userId || '123456789', locks: locks })
+        });
+
+        const result = await updateResp.json();
+        if (result.success) {
+            showNotification('Lock updated', 'success');
+        } else {
+            console.error('Update lock failed:', result.error);
+            showNotification('Failed to update lock: ' + (result.error || 'Unknown error'), 'error');
+            const el = document.getElementById('lock' + capitalizeFirstLetter(key));
+            if (el) el.checked = !value;
+        }
+    } catch (error) {
+        console.error('Error updating lock:', error);
+        showNotification('Failed to update lock', 'error');
+        const el = document.getElementById('lock' + capitalizeFirstLetter(key));
+        if (el) el.checked = !value;
+    }
+}
+
+async function toggleDisableUserCommands(enabled) {
+    try {
+        const url = `${API_BASE_URL}/api/group/${currentGroupId}/disable-user-commands?admin_id=${encodeURIComponent(userId || '123456789')}`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: userId || '123456789', enabled: !!enabled })
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            showNotification('Failed to update setting: ' + (data.error || 'Unknown error'), 'error');
+            const toggle = document.getElementById('disableAllCommandsToggle');
+            if (toggle) toggle.checked = !enabled;
+        } else {
+            showNotification('Setting updated', 'success');
+        }
+    } catch (err) {
+        console.error('Error toggling disable-user-commands:', err);
+        showNotification('Failed to update setting', 'error');
+        const toggle = document.getElementById('disableAllCommandsToggle');
+        if (toggle) toggle.checked = !enabled;
+    }
+}
+
+async function saveWelcomeMessages() {
+    const welcomeMessage = document.getElementById('welcomeMessage').value;
+    const goodbyeMessage = document.getElementById('goodbyeMessage').value;
+
+    try {
+        const response1 = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/welcome`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: userId || '123456789',
+                message: welcomeMessage
+            })
+        });
+
+        const response2 = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: userId || '123456789',
+                settings: {
+                    goodbye_message: goodbyeMessage
+                }
+            })
+        });
+
+        const data1 = await response1.json();
+        const data2 = await response2.json();
+
+        if (data1.success && data2.success) {
+            showNotification('Messages saved successfully', 'success');
+        } else {
+            console.error('Save messages failed:', data1, data2);
+            showNotification('Failed to save messages', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving messages:', error);
+        showNotification('Failed to save messages', 'error');
+    }
+}
+
+// Filter and Blocklist Management
+async function addFilter() {
+    const trigger = document.getElementById('filterTrigger').value.trim();
+    const response = document.getElementById('filterResponse').value.trim();
+
+    if (!trigger || !response) {
+        alert('Please fill in both trigger and response');
+        return;
+    }
+
+    try {
+        const apiResponse = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/filters`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: userId || '123456789',
+                trigger: trigger,
+                response: response
+            })
+        });
+
+        const data = await apiResponse.json();
+
+        if (data.success) {
+            document.getElementById('filterTrigger').value = '';
+            document.getElementById('filterResponse').value = '';
+            openGroupSettings(currentGroupId);
+            showNotification('Filter added successfully', 'success');
+        } else {
+            console.error('Add filter failed:', data.error);
+            showNotification('Failed to add filter: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error adding filter:', error);
+        showNotification('Failed to add filter', 'error');
+    }
+}
+
+async function removeFilter(trigger) {
+    if (!confirm(`Remove filter for "${trigger}"?`)) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/filters/${encodeURIComponent(trigger)}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: userId || '123456789' })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            openGroupSettings(currentGroupId);
+            showNotification('Filter removed successfully', 'success');
+        } else {
+            showNotification('Failed to remove filter', 'error');
+        }
+    } catch (error) {
+        console.error('Error removing filter:', error);
+        showNotification('Failed to remove filter', 'error');
+    }
+}
+
+async function addBlocklistWord() {
+    const word = document.getElementById('blocklistWord').value.trim();
+
+    if (!word) {
+        alert('Please enter a word to block');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/blocklist`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: userId || '123456789',
+                word: word
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('blocklistWord').value = '';
+            openGroupSettings(currentGroupId);
+            showNotification('Word added to blocklist', 'success');
+        } else {
+            showNotification('Failed to add word', 'error');
+        }
+    } catch (error) {
+        console.error('Error adding word:', error);
+        showNotification('Failed to add word', 'error');
+    }
+}
+
+async function removeBlocklistWord(word) {
+    if (!confirm(`Remove blocked word "${word}"?`)) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/blocklist/${encodeURIComponent(word)}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: userId || '123456789' })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            openGroupSettings(currentGroupId);
+            showNotification('Word removed from blocklist', 'success');
+        } else {
+            console.error('Remove word failed:', data.error);
+            showNotification('Failed to remove word', 'error');
+        }
+    } catch (err) {
+        console.error('Error removing word:', err);
+        showNotification('Failed to remove word', 'error');
+    }
+}
+
+async function updateBlocklistEnabled(enabled) {
+    await updateSetting('blocklist_enabled', enabled);
+}
+
+// Command Management
+async function disableCommand() {
+    const input = document.getElementById('disableCommandInput');
+    const command = input.value.trim().toLowerCase().replace('/', '');
+
+    if (!command) {
+        alert('Please enter a command name');
+        return;
+    }
+
+    try {
+        const url = `${API_BASE_URL}/api/group/${currentGroupId}/disabled-commands?admin_id=${encodeURIComponent(userId || '123456789')}`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                admin_id: userId || '123456789',
+                command: command
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            input.value = '';
+            await loadDisabledCommands();
+            showNotification('Command disabled successfully', 'success');
+        } else {
+            console.error('Disable command failed:', data.error);
+            showNotification('Failed to disable command: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error disabling command:', error);
+        showNotification('Failed to disable command', 'error');
+    }
+}
+
+async function enableCommand(command) {
+    if (!confirm(`Enable command "/${command}"?`)) return;
+
+    try {
+        const url = `${API_BASE_URL}/api/group/${currentGroupId}/disabled-commands/${encodeURIComponent(command)}?admin_id=${encodeURIComponent(userId || '123456789')}`;
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: userId || '123456789' })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            await loadDisabledCommands();
+            showNotification('Command enabled successfully', 'success');
+        } else {
+            console.error('Enable command failed:', data.error);
+            showNotification('Failed to enable command: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error enabling command:', error);
+        showNotification('Failed to enable command', 'error');
+    }
+}
+
+// Federation Management
+function refreshFederationInfo() {
+    if (!currentGroupId) return;
+    loadFederationInfo();
+    showNotification('Federation info refreshed', 'success');
+}
+
+async function createFederation() {
+    const fedNameEl = document.getElementById('newFedName');
+    const name = fedNameEl ? fedNameEl.value.trim() : '';
+    if (!name) {
+        showNotification('Please provide a federation name', 'error');
+        return;
+    }
+    if (!currentGroupId) {
+        showNotification('No group selected', 'error');
+        return;
+    }
+
+    try {
+        const resp = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/federation/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: userId || '123456789', fed_name: name })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            showNotification('Federation created and group joined', 'success');
+            if (document.getElementById('joinFedId')) document.getElementById('joinFedId').value = data.fed_id || '';
+            await loadFederationInfo();
+        } else {
+            showNotification('Failed to create federation: ' + (data.error || 'Unknown'), 'error');
+        }
+    } catch (err) {
+        console.error('Error creating federation:', err);
+        showNotification('Error creating federation', 'error');
+    }
+}
+
+async function joinFederation() {
+    const fedIdEl = document.getElementById('joinFedId');
+    const fedId = fedIdEl ? fedIdEl.value.trim() : '';
+    if (!fedId) {
+        showNotification('Please provide a federation ID to join', 'error');
+        return;
+    }
+    if (!currentGroupId) {
+        showNotification('No group selected', 'error');
+        return;
+    }
+
+    try {
+        const resp = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/federation/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: userId || '123456789', fed_id: fedId })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            showNotification('Group joined federation', 'success');
+            await loadFederationInfo();
+        } else {
+            showNotification('Failed to join federation: ' + (data.error || 'Unknown'), 'error');
+        }
+    } catch (err) {
+        console.error('Error joining federation:', err);
+        showNotification('Error joining federation', 'error');
+    }
+}
+
+async function leaveFederation() {
+    if (!currentGroupId) return showNotification('No group selected', 'error');
+
+    if (!confirm('Are you sure you want this group to leave its federation?')) return;
+
+    try {
+        const resp = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/federation/leave`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_id: userId || '123456789' })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            showNotification('Group left federation', 'success');
+            await loadFederationInfo();
+        } else {
+            showNotification('Failed to leave federation: ' + (data.error || 'Unknown'), 'error');
+        }
+    } catch (err) {
+        console.error('Error leaving federation:', err);
+        showNotification('Error leaving federation', 'error');
+    }
+}
+
+// UI Functions
+function switchTab(tabName, evt) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+
+    const content = document.getElementById(tabName + 'Tab');
+    if (content) content.classList.add('active');
+
+    try {
+        const e = evt || (window.event || null);
+        let target = null;
+        if (e) target = e.currentTarget || e.target || e.srcElement || null;
+
+        if (target && typeof target.closest === 'function') {
+            const tabBtn = target.closest('.tab');
+            if (tabBtn) tabBtn.classList.add('active');
+        }
+    } catch (e) {
+        // Ignore if we cannot determine the clicked tab button
+    }
+}
+
+function closeModal() {
+    document.getElementById('groupModal').classList.remove('active');
+    currentGroupId = null;
+    currentGroupConfig = null;
+}
+
+function capitalizeFirstLetter(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Initialize (only if on group management page)
+if (document.getElementById('groupsGrid')) {
+    loadGroups();
+}
