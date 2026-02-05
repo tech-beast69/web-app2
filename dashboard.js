@@ -1,8 +1,10 @@
 // Dashboard JavaScript - Real-time updates
-// API configuration - Try HTTPS first, fallback to HTTP
-let API_BASE = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
-const REFRESH_INTERVAL = window.DASHBOARDCONFIG?.REFRESH_INTERVAL || 30000; // 30 seconds
-const DEBUG = window.DASHBOARDCONFIG?.DEBUG || false;
+// API configuration - prefer configured API URL, then page origin, fallback to known host
+let API_BASE = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || (window.location && window.location.origin) || 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+const REFRESH_INTERVAL = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.REFRESH_INTERVAL) || 30000; // 30 seconds
+const DEBUG = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.DEBUG) || false;
+// Expose API base to other scripts/pages if needed
+try { window.API_BASE = API_BASE; } catch (e) { /* silent */ }
 
 // Cache to prevent redundant API calls
 const API_CACHE = {
