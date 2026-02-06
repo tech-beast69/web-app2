@@ -73,6 +73,9 @@
                     <button class="tab" onclick="switchTab('federation', event)">
                         <i class="fas fa-network-wired"></i> Federation
                     </button>
+                    <button class="tab" onclick="switchTab('mediaReactions', event)">
+                        <i class="fas fa-heart"></i> Media Reactions
+                    </button>
                 </div>
 
                 <!-- General Settings Tab -->
@@ -608,6 +611,41 @@
                             <div style="display:flex; gap:8px; align-items:center;">
                                 <button class="btn-danger" onclick="leaveFederation()"><i class="fas fa-sign-out-alt"></i> Leave Federation</button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Media Reactions Tab -->
+                <div id="mediaReactionsTab" class="tab-content">
+                    <div class="settings-section">
+                        <h3><i class="fas fa-heart"></i> Media Reactions</h3>
+                        <p class="setting-description">Automatically react to media and album messages sent in this group</p>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Enable Media Reactions</div>
+                                <div class="setting-description">Bot will react to all photos, videos, documents, and media albums</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="mediaReactionsEnabled" onchange="updateSetting('media_reactions_enabled', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Reaction Emojis</div>
+                                <div class="setting-description">Comma-separated list of emojis to randomly choose from</div>
+                            </div>
+                            <input type="text" id="mediaReactionEmojis" class="input-field" 
+                                   placeholder="🔥,❤️‍🔥,🥵,♨️,🙊,🍵,💸,🪙,😒,👌,😘,🤩,😶‍🌫️,🤤,😛,😜,😱,🤡,💎,🤑"
+                                   onchange="updateSetting('media_reaction_emojis', this.value.split(',').map(e => e.trim())); updateEmojiPreview();"
+                                   oninput="updateEmojiPreview()">
+                        </div>
+
+                        <div class="emoji-preview">
+                            <h4>Current Emojis:</h4>
+                            <div id="emojiList" class="emoji-grid"></div>
                         </div>
                     </div>
                 </div>
