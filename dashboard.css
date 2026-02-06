@@ -2443,3 +2443,39 @@ input:checked + .toggle-slider:before {
         font-size: 1.5em;
     }
 }
+
+/* Media Reactions Styles */
+.emoji-preview {
+    margin-top: 16px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.emoji-preview h4 {
+    margin-bottom: 8px;
+    color: var(--dark);
+    font-size: 0.9em;
+}
+
+.emoji-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.emoji-item {
+    font-size: 1.5em;
+    padding: 4px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    cursor: default;
+    transition: all 0.2s ease;
+}
+
+.emoji-item:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
