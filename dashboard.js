@@ -2124,6 +2124,11 @@ async function populateGroupSettings(config) {
 
     // Load federation info (if any)
     await loadFederationInfo();
+    
+    // Media reactions settings
+    document.getElementById('mediaReactionsEnabled').checked = config.media_reactions_enabled || false;
+    document.getElementById('mediaReactionEmojis').value = (config.media_reaction_emojis || ["🔥", "❤️‍🔥", "🥵", "♨️", "🙊", "🍵", "💸", "🪙", "😒", "👌", "😘", "🤩", "😶‍🌫️", "🤤", "😛", "😜", "😱", "🤡", "💎", "🤑"]).join(', ');
+    updateEmojiPreview();
 }
 
 // Helper Functions
@@ -2979,6 +2984,19 @@ function closeModal() {
 
 function capitalizeFirstLetter(s) {
     return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function updateEmojiPreview() {
+    const emojiInput = document.getElementById('mediaReactionEmojis');
+    const emojiList = document.getElementById('emojiList');
+    
+    if (!emojiInput || !emojiList) return;
+    
+    const emojis = emojiInput.value.split(',').map(e => e.trim()).filter(e => e);
+    
+    emojiList.innerHTML = emojis.map(emoji => 
+        `<span class="emoji-item" title="${emoji}">${emoji}</span>`
+    ).join('');
 }
 
 // Initialize (only if on group management page)
