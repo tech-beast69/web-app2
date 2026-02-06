@@ -2127,7 +2127,7 @@ async function populateGroupSettings(config) {
     
     // Media reactions settings
     document.getElementById('mediaReactionsEnabled').checked = config.media_reactions_enabled || false;
-    document.getElementById('mediaReactionEmojis').value = (config.media_reaction_emojis || ["🔥", "❤️‍🔥", "🥵", "♨️", "🙊", "🍵", "💸", "🪙", "😒", "👌", "😘", "🤩", "😶‍🌫️", "🤤", "😛", "😜", "😱", "🤡", "💎", "🤑"]).join(', ');
+    document.getElementById('mediaReactionEmojis').value = (config.media_reaction_emojis || ["🔥", "❤", "👍", "😍", "🤩", "👌", "😘", "🙊", "💯", "🎉", "😎", "👏", "😁", "🏆", "😱", "🤡"]).join(', ');
     updateEmojiPreview();
 }
 
