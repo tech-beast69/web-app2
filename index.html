@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bot Dashboard - Status & Statistics</title>
+    
+    <!-- Content Security Policy for Telegram Web App -->
+    <!-- Allow connections to API server and external resources -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self' https://tech-beast69.github.io https://telegram.org; 
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://cdnjs.cloudflare.com; 
+        style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; 
+        connect-src 'self' https://tech-beast69.github.io https://*.glacierhosting.org https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org;
+        img-src 'self' data: https:; 
+        font-src 'self' https://cdnjs.cloudflare.com data:;
+    ">
+    
     <link rel="stylesheet" href="dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/brands.min.css">
