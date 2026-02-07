@@ -5,6 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API Diagnostic Test</title>
+    
+    <!-- Content Security Policy for Telegram Web App -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self' https://tech-beast69.github.io https://telegram.org; 
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; 
+        style-src 'self' 'unsafe-inline'; 
+        connect-src 'self' https://tech-beast69.github.io https://*.glacierhosting.org https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org;
+        img-src 'self' data: https:;
+    ">
+    
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
