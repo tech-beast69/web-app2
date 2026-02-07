@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard API Debugger</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .status-ok {
+            color: #4ade80;
+        }
+
+        .status-error {
+            color: #f87171;
+        }
+
+        .card {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+
+        pre {
+            background: #000;
+            padding: 10px;
+            overflow-x: auto;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🛠️ Dashboard API Debugger</h1>
+
+    <div class="card">
+        <h2>1. Environment Check</h2>
+        <div id="envInfo">Loading...</div>
+    </div>
+
+    <div class="card">
+        <h2>2. API Connection Tests</h2>
+        <button onclick="runTests()">▶ Run Tests</button>
+        <div id="testResults"></div>
+    </div>
+
+    <script src="config.js?v=2.1"></script>
+    <script>
+        function log(msg, type = 'info') {
+            const div = document.getElementById('testResults');
+            const p = document.createElement('div');
+            p.style.margin = '5px 0';
+            if (type === 'error') p.className = 'status-error';
+            if (type === 'success') p.className = 'status-ok';
+            p.textContent = msg;
+            div.appendChild(p);
+        }
+
+        function showEnv() {
+            const div = document.getElementById('envInfo');
+            let html = `<p><strong>Origin:</strong> ${window.location.origin}</p>`;
+            html += `<p><strong>Hostname:</strong> ${window.location.hostname}</p>`;
+
+            if (window.DASHBOARDCONFIG) {
+                html += `<p class="status-ok">✅ config.js loaded</p>`;
+                html += `<p><strong>APIURL (Config):</strong> ${window.DASHBOARDCONFIG.APIURL}</p>`;
+            } else {
+                html += `<p class="status-error">❌ config.js NOT loaded or DASHBOARDCONFIG missing</p>`;
+            }
+
+            // Replicate logic from dashboard.js to see what it resolves to
+            let resolvedApi = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || (window.location && window.location.origin) || 'Fallback-Hardcoded';
+            html += `<p><strong>Resolved API Base:</strong> ${resolvedApi}</p>`;
+
+            div.innerHTML = html;
+            return resolvedApi;
+        }
+
+        async function testEndpoint(name, url) {
+            log(`Testing ${name} (${url})...`);
+            try {
+                const start = Date.now();
+                const res = await fetch(url);
+                const ms = Date.now() - start;
+
+                if (res.ok) {
+                    const data = await res.json();
+                    log(`✅ ${name}: HTTP ${res.status} (${ms}ms)`, 'success');
+                    log(`   Response: ${JSON.stringify(data).substring(0, 100)}...`);
+                } else {
+                    log(`❌ ${name}: HTTP ${res.status} ${res.statusText}`, 'error');
+                }
+            } catch (e) {
+                log(`❌ ${name}: Network Error - ${e.message}`, 'error');
+                log(`   Check CORS or Mixed Content blocking (HTTPS vs HTTP)`, 'error');
+            }
+        }
+
+        async function runTests() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = ''; // Clear
+
+            const apiBase = showEnv();
+            if (!apiBase.startsWith('http')) {
+                log('❌ API URL is invalid', 'error');
+                return;
+            }
+
+            await testEndpoint('Status', `${apiBase}/api/status`);
+            await testEndpoint('Users', `${apiBase}/api/users`);
+            await testEndpoint('Media', `${apiBase}/api/media`);
+            await testEndpoint('Groups', `${apiBase}/api/groups`);
+        }
+
+        // Init
+        showEnv();
+    </script>
+</body>
+
+</html>
