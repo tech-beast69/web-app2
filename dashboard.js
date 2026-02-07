@@ -474,17 +474,28 @@ async function updateAllData() {
 
 // Initialize dashboard
 function initDashboard() {
+    console.log('========================================');
+    console.log('🚀 initDashboard() STARTED');
+    console.log('API_BASE:', API_BASE);
+    console.log('========================================');
+    
     debugLog('Initializing dashboard...');
     
     // Initialize Telegram Web App first
     initTelegramWebApp();
     
     // Initial load
-    updateAllData();
+    console.log('📡 Calling updateAllData()...');
+    updateAllData().then(() => {
+        console.log('✅ updateAllData() completed');
+    }).catch(err => {
+        console.error('❌ updateAllData() failed:', err);
+    });
     
     // Auto-refresh using configured interval
     updateInterval = setInterval(updateAllData, REFRESH_INTERVAL);
     debugLog('Auto-refresh enabled', { interval: REFRESH_INTERVAL });
+    console.log('⏰ Auto-refresh enabled, interval:', REFRESH_INTERVAL);
     
     // Add visibility change handler to pause/resume updates
     document.addEventListener('visibilitychange', () => {
@@ -499,8 +510,20 @@ function initDashboard() {
     });
 }
 
-// Start the dashboard when page loads
-document.addEventListener('DOMContentLoaded', initDashboard);
+// Start the dashboard when page loads - ONLY on appropriate pages
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('groupsGrid')) {
+        // Group management page - only load groups
+        console.log('📋 Group Management page detected');
+        loadGroups();
+    } else if (document.getElementById('statusIndicator')) {
+        // Main dashboard page - initialize full dashboard
+        console.log('📊 Main Dashboard page detected');
+        initDashboard();
+    } else {
+        console.log('⚠️ Unknown page - no initialization');
+    }
+});
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
@@ -3007,11 +3030,4 @@ function updateEmojiPreview() {
     ).join('');
 }
 
-// Initialize based on which page we're on
-if (document.getElementById('groupsGrid')) {
-    // Group management page
-    loadGroups();
-} else if (document.getElementById('botStatus')) {
-    // Main dashboard page
-    initDashboard();
-}
+// NOTE: Page-specific initialization is handled by DOMContentLoaded listener above
