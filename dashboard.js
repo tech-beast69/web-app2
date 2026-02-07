@@ -1,8 +1,10 @@
 // Dashboard JavaScript - Real-time updates
-// API configuration - prefer configured API URL, then page origin, fallback to known host
-let API_BASE = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || (window.location && window.location.origin) || 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+// API configuration - prefer configured API URL, fallback to known host
+// CRITICAL: Do NOT use window.location.origin as fallback - in Telegram it would be telegram.org!
+let API_BASE = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
 const REFRESH_INTERVAL = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.REFRESH_INTERVAL) || 30000; // 30 seconds
 const DEBUG = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.DEBUG) || false;
+
 // Expose API base to other scripts/pages if needed
 try { window.API_BASE = API_BASE; } catch (e) { /* silent */ }
 
@@ -21,6 +23,16 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
     API_BASE = 'http://localhost:3027';
     console.log('Running locally - using HTTP API:', API_BASE);
 }
+
+// Debug logging to verify API_BASE is set correctly
+console.log('=== API_BASE Configuration ===');
+console.log('window.location.origin:', window.location.origin);
+console.log('window.location.hostname:', window.location.hostname);
+console.log('DASHBOARDCONFIG available:', !!(window.DASHBOARDCONFIG));
+console.log('DASHBOARDCONFIG.APIURL:', window.DASHBOARDCONFIG?.APIURL);
+console.log('Final API_BASE:', API_BASE);
+console.log('✅ API_BASE set correctly - will NOT use window.location.origin');
+console.log('==============================');
 
 let updateInterval;
 let telegramUser = null;
