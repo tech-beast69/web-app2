@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Diagnostic Test</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #2d2d2d;
+            border-radius: 8px;
+            border-left: 4px solid #007acc;
+        }
+
+        .error {
+            border-left-color: #f44336;
+        }
+
+        .success {
+            border-left-color: #4caf50;
+        }
+
+        h2 {
+            color: #569cd6;
+            margin-top: 0;
+        }
+
+        pre {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #005a9e;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔍 API Diagnostic Test</h1>
+
+    <div class="section">
+        <h2>Environment Detection</h2>
+        <pre id="envInfo">Loading...</pre>
+    </div>
+
+    <div class="section">
+        <h2>API Configuration</h2>
+        <pre id="apiConfig">Loading...</pre>
+    </div>
+
+    <div class="section">
+        <h2>API Test Results</h2>
+        <button onclick="testAPI()">Test API Connection</button>
+        <button onclick="testCORS()">Test CORS</button>
+        <pre id="apiTest">Click button to test API</pre>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        // Display environment info
+        const envInfo = {
+            'Telegram Web App': !!(window.Telegram && window.Telegram.WebApp),
+            'Has initData': !!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData),
+            'window.location.origin': window.location.origin,
+            'window.location.hostname': window.location.hostname,
+            'window.location.href': window.location.href,
+            'User Agent': navigator.userAgent
+        };
+        document.getElementById('envInfo').textContent = JSON.stringify(envInfo, null, 2);
+
+        // Display API config
+        setTimeout(() => {
+            const apiConfig = {
+                'DASHBOARDCONFIG exists': !!(window.DASHBOARDCONFIG),
+                'DASHBOARDCONFIG.APIURL': window.DASHBOARDCONFIG?.APIURL,
+                'Expected API URL': 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org'
+            };
+            document.getElementById('apiConfig').textContent = JSON.stringify(apiConfig, null, 2);
+        }, 100);
+
+        async function testAPI() {
+            const output = document.getElementById('apiTest');
+            const apiUrl = window.DASHBOARDCONFIG?.APIURL || 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+
+            output.textContent = 'Testing API at: ' + apiUrl + '\n\n';
+
+            try {
+                output.textContent += '1. Fetching /api/status...\n';
+                const response = await fetch(`${apiUrl}/api/status`);
+                output.textContent += `   Status: ${response.status} ${response.statusText}\n`;
+                output.textContent += `   Headers: ${JSON.stringify([...response.headers.entries()], null, 2)}\n`;
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                output.textContent += '\n2. Response data:\n';
+                output.textContent += JSON.stringify(data, null, 2);
+
+                document.getElementById('apiTest').parentElement.classList.add('success');
+                document.getElementById('apiTest').parentElement.classList.remove('error');
+            } catch (error) {
+                output.textContent += '\n❌ ERROR:\n';
+                output.textContent += error.message + '\n';
+                output.textContent += error.stack;
+
+                document.getElementById('apiTest').parentElement.classList.add('error');
+                document.getElementById('apiTest').parentElement.classList.remove('success');
+            }
+        }
+
+        async function testCORS() {
+            const output = document.getElementById('apiTest');
+            const apiUrl = window.DASHBOARDCONFIG?.APIURL || 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+
+            output.textContent = 'Testing CORS from origin: ' + window.location.origin + '\n\n';
+
+            try {
+                const response = await fetch(`${apiUrl}/api/status`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                output.textContent += `✅ CORS works!\n`;
+                output.textContent += `Status: ${response.status}\n`;
+                output.textContent += `Access-Control-Allow-Origin: ${response.headers.get('access-control-allow-origin')}\n`;
+
+                document.getElementById('apiTest').parentElement.classList.add('success');
+            } catch (error) {
+                output.textContent += `❌ CORS failed!\n`;
+                output.textContent += error.message;
+
+                document.getElementById('apiTest').parentElement.classList.add('error');
+            }
+        }
+    </script>
+</body>
+
+</html>
