@@ -33,8 +33,14 @@ function initTelegramWebApp() {
             const tg = window.Telegram.WebApp;
             console.log('Telegram WebApp object found:', tg);
             
-            // Expand to full height
+            // CRITICAL: Tell Telegram the app is ready to be displayed
+            // This must be called as early as possible
+            tg.ready();
+            console.log('✅ Called Telegram.WebApp.ready()');
+            
+            // Expand to full height immediately after ready()
             tg.expand();
+            console.log('✅ Called Telegram.WebApp.expand()');
             
             // Get user data
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
@@ -55,18 +61,23 @@ function initTelegramWebApp() {
             }
             
             // Set theme based on Telegram theme
-            if (tg.themeParams.bg_color) {
+            if (tg.themeParams && tg.themeParams.bg_color) {
                 document.body.style.background = tg.themeParams.bg_color;
             }
+            
+            return true; // Successfully initialized
         } else {
             console.log('⚠️ Telegram WebApp not available - running in regular browser');
             // For testing: Create a mock user
             createMockUserForTesting();
+            return false; // Not in Telegram context
         }
     } catch (error) {
         console.error('❌ Error in initTelegramWebApp:', error);
+        showErrorBanner('Failed to initialize Telegram Web App: ' + error.message);
         // For testing: Create a mock user on error
         createMockUserForTesting();
+        return false;
     }
 }
 
@@ -562,7 +573,48 @@ async function updateAllData() {
     }
 }
 
-// Initialize dashboard
+// Show error banner to users
+function showErrorBanner(message, canRetry = true) {
+    console.error('Showing error banner:', message);
+    
+    const banner = document.getElementById('errorBanner');
+    if (!banner) {
+        console.warn('Error banner element not found in HTML');
+        return;
+    }
+    
+    const messageEl = document.getElementById('errorMessage');
+    const retryBtn = document.getElementById('retryBtn');
+    
+    if (messageEl) {
+        messageEl.textContent = message;
+    }
+    
+    if (retryBtn) {
+        retryBtn.style.display = canRetry ? 'inline-block' : 'none';
+    }
+    
+    banner.style.display = 'block';
+}
+
+// Hide error banner
+function hideErrorBanner() {
+    const banner = document.getElementById('errorBanner');
+    if (banner) {
+        banner.style.display = 'none';
+    }
+}
+
+// Retry loading data
+function retryLoadData() {
+    console.log('Retrying data load...');
+    hideErrorBanner();
+    updateAllData().catch(err => {
+        showErrorBanner('Still unable to load data. Please check your connection and try again.');
+    });
+}
+
+// Initialize dashboard with proper Telegram Web App support
 function initDashboard() {
     console.log('========================================');
     console.log('🚀 initDashboard() STARTED');
@@ -575,22 +627,40 @@ function initDashboard() {
     // Check if all required elements exist
     checkDashboardElements();
     
-    // Initialize Telegram Web App first
-    initTelegramWebApp();
+    // Initialize Telegram Web App first and wait for it
+    const isInTelegram = initTelegramWebApp();
     
-    // Initial load
-    console.log('📡 Calling updateAllData()...');
-    updateAllData().then(() => {
-        console.log('✅ updateAllData() completed');
-    }).catch(err => {
-        console.error('❌ updateAllData() failed:', err);
-        console.error('Stack trace:', err.stack);
-    });
+    // Wait a bit for Telegram SDK to fully initialize before making API calls
+    const initDelay = isInTelegram ? 500 : 0;
     
-    // Auto-refresh using configured interval
-    updateInterval = setInterval(updateAllData, REFRESH_INTERVAL);
-    debugLog('Auto-refresh enabled', { interval: REFRESH_INTERVAL });
-    console.log('⏰ Auto-refresh enabled, interval:', REFRESH_INTERVAL);
+    console.log(`⏱️ Waiting ${initDelay}ms for ${isInTelegram ? 'Telegram SDK' : 'browser'} initialization...`);
+    
+    setTimeout(() => {
+        // Initial load
+        console.log('📡 Calling updateAllData()...');
+        updateAllData().then(() => {
+            console.log('✅ updateAllData() completed');
+            hideErrorBanner();
+        }).catch(err => {
+            console.error('❌ updateAllData() failed:', err);
+            console.error('Stack trace:', err.stack);
+            showErrorBanner('Failed to load dashboard data. Please check your connection and try again.');
+        });
+        
+        // Auto-refresh using configured interval
+        updateInterval = setInterval(async () => {
+            try {
+                await updateAllData();
+                hideErrorBanner();
+            } catch (err) {
+                console.error('Auto-refresh failed:', err);
+                // Don't show banner on auto-refresh failures to avoid spam
+            }
+        }, REFRESH_INTERVAL);
+        
+        debugLog('Auto-refresh enabled', { interval: REFRESH_INTERVAL });
+        console.log('⏰ Auto-refresh enabled, interval:', REFRESH_INTERVAL);
+    }, initDelay);
     
     // Add visibility change handler to pause/resume updates
     document.addEventListener('visibilitychange', () => {
@@ -599,7 +669,7 @@ function initDashboard() {
             debugLog('Page hidden - pausing updates');
         } else {
             debugLog('Page visible - resuming updates');
-            updateAllData();
+            updateAllData().catch(err => console.error('Resume update failed:', err));
             updateInterval = setInterval(updateAllData, REFRESH_INTERVAL);
         }
     });
