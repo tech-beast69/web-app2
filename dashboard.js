@@ -350,41 +350,52 @@ async function updateStatus() {
         const statusElement = document.getElementById('statusIndicator');
         const statusText = document.getElementById('botStatus');
         
-        if (data.bot_status === 'online') {
-            statusElement.classList.remove('offline');
-            statusElement.classList.add('online');
-            statusText.textContent = 'Online';
-        } else {
-            statusElement.classList.remove('online');
-            statusElement.classList.add('offline');
-            statusText.textContent = 'Offline';
+        if (statusElement && statusText) {
+            if (data.bot_status === 'online') {
+                statusElement.classList.remove('offline');
+                statusElement.classList.add('online');
+                statusText.textContent = 'Online';
+            } else {
+                statusElement.classList.remove('online');
+                statusElement.classList.add('offline');
+                statusText.textContent = 'Offline';
+            }
         }
         
         // Uptime
-        document.getElementById('uptime').textContent = data.uptime || '--';
+        const uptimeEl = document.getElementById('uptime');
+        if (uptimeEl) uptimeEl.textContent = data.uptime || '--';
         
         // CPU & Memory
-        document.getElementById('cpuUsage').textContent = `${data.cpu_percent || 0}%`;
-        document.getElementById('memoryUsage').textContent = `${data.memory_percent || 0}%`;
+        const cpuEl = document.getElementById('cpuUsage');
+        const memEl = document.getElementById('memoryUsage');
+        if (cpuEl) cpuEl.textContent = `${data.cpu_percent || 0}%`;
+        if (memEl) memEl.textContent = `${data.memory_percent || 0}%`;
         
         // Downloads & Uploads
-        document.getElementById('totalDownloads').textContent = formatNumber(data.total_downloads || 0);
-        document.getElementById('totalUploads').textContent = formatNumber(data.total_uploads || 0);
+        const downloadsEl = document.getElementById('totalDownloads');
+        const uploadsEl = document.getElementById('totalUploads');
+        if (downloadsEl) downloadsEl.textContent = formatNumber(data.total_downloads || 0);
+        if (uploadsEl) uploadsEl.textContent = formatNumber(data.total_uploads || 0);
         
         // System Resources
         updateResourceBar('cpu', data.cpu_percent || 0);
         updateResourceBar('memory', data.memory_percent || 0);
         updateResourceBar('disk', data.disk_percent || 0);
         
-        document.getElementById('cpuDetails').textContent = `${data.cpu_percent || 0}%`;
-        document.getElementById('memoryDetails').textContent = 
-            `${data.memory_used_gb || 0} GB / ${data.memory_total_gb || 0} GB`;
-        document.getElementById('diskDetails').textContent = 
-            `${data.disk_used_gb || 0} GB / ${data.disk_total_gb || 0} GB`;
+        const cpuDetailsEl = document.getElementById('cpuDetails');
+        const memDetailsEl = document.getElementById('memoryDetails');
+        const diskDetailsEl = document.getElementById('diskDetails');
+        
+        if (cpuDetailsEl) cpuDetailsEl.textContent = `${data.cpu_percent || 0}%`;
+        if (memDetailsEl) memDetailsEl.textContent = `${data.memory_used_gb || 0} GB / ${data.memory_total_gb || 0} GB`;
+        if (diskDetailsEl) diskDetailsEl.textContent = `${data.disk_used_gb || 0} GB / ${data.disk_total_gb || 0} GB`;
         
     } catch (error) {
         console.error('❌ Error fetching status:', error);
         console.error('API_BASE:', API_BASE);
+        console.error('Full error details:', error.message, error.stack);
+        
         // Set offline status on error
         const statusElement = document.getElementById('statusIndicator');
         const statusText = document.getElementById('botStatus');
@@ -407,15 +418,22 @@ async function updateUsers() {
         const data = await response.json();
         console.log('Users data received:', data);
         
-        document.getElementById('totalUsers').textContent = formatNumber(data.total_users || 0);
-        document.getElementById('activeUsers').textContent = formatNumber(data.active_users || 0);
-        document.getElementById('inactiveUsers').textContent = formatNumber(data.inactive_users || 0);
-        document.getElementById('premiumUsers').textContent = formatNumber(data.premium_users || 0);
-        document.getElementById('recentUsers').textContent = formatNumber(data.recent_users_7d || 0);
+        const totalUsersEl = document.getElementById('totalUsers');
+        const activeUsersEl = document.getElementById('activeUsers');
+        const inactiveUsersEl = document.getElementById('inactiveUsers');
+        const premiumUsersEl = document.getElementById('premiumUsers');
+        const recentUsersEl = document.getElementById('recentUsers');
+        
+        if (totalUsersEl) totalUsersEl.textContent = formatNumber(data.total_users || 0);
+        if (activeUsersEl) activeUsersEl.textContent = formatNumber(data.active_users || 0);
+        if (inactiveUsersEl) inactiveUsersEl.textContent = formatNumber(data.inactive_users || 0);
+        if (premiumUsersEl) premiumUsersEl.textContent = formatNumber(data.premium_users || 0);
+        if (recentUsersEl) recentUsersEl.textContent = formatNumber(data.recent_users_7d || 0);
         
     } catch (error) {
         console.error('❌ Error fetching users:', error);
         console.error('API_BASE:', API_BASE);
+        console.error('Full error details:', error.message);
     }
 }
 
@@ -430,10 +448,12 @@ async function updateMedia() {
         const data = await response.json();
         console.log('Media data received:', data);
         
-        document.getElementById('totalMedia').textContent = formatNumber(data.total_media || 0);
+        const totalMediaEl = document.getElementById('totalMedia');
+        if (totalMediaEl) totalMediaEl.textContent = formatNumber(data.total_media || 0);
         
     } catch (error) {
         console.error('❌ Error fetching media:', error);
+        console.error('Full error details:', error.message);
     }
 }
 
@@ -448,10 +468,12 @@ async function updateGroups() {
         const data = await response.json();
         console.log('Groups data received:', data);
         
-        document.getElementById('totalGroups').textContent = formatNumber(data.total_groups || 0);
+        const totalGroupsEl = document.getElementById('totalGroups');
+        if (totalGroupsEl) totalGroupsEl.textContent = formatNumber(data.total_groups || 0);
         
     } catch (error) {
         console.error('❌ Error fetching groups:', error);
+        console.error('Full error details:', error.message);
     }
 }
 
@@ -466,10 +488,12 @@ async function updateFeedback() {
         const data = await response.json();
         console.log('Feedback data received:', data);
         
-        document.getElementById('totalFeedback').textContent = formatNumber(data.total_feedback || 0);
+        const totalFeedbackEl = document.getElementById('totalFeedback');
+        if (totalFeedbackEl) totalFeedbackEl.textContent = formatNumber(data.total_feedback || 0);
         
     } catch (error) {
         console.error('❌ Error fetching feedback:', error);
+        console.error('Full error details:', error.message);
     }
 }
 
@@ -494,19 +518,48 @@ function updateResourceBar(resource, percentage) {
 function updateLastUpdateTime() {
     const now = new Date();
     const timeString = now.toLocaleTimeString();
-    document.getElementById('lastUpdate').textContent = timeString;
+    const lastUpdateEl = document.getElementById('lastUpdate');
+    if (lastUpdateEl) lastUpdateEl.textContent = timeString;
+}
+
+// Check if all required elements exist
+function checkDashboardElements() {
+    const requiredElements = [
+        'statusIndicator', 'botStatus', 'uptime', 'cpuUsage', 'memoryUsage',
+        'totalUsers', 'activeUsers', 'inactiveUsers', 'premiumUsers', 'recentUsers',
+        'totalDownloads', 'totalUploads', 'totalMedia', 'totalGroups', 'totalFeedback'
+    ];
+    
+    const missing = [];
+    for (const id of requiredElements) {
+        if (!document.getElementById(id)) {
+            missing.push(id);
+        }
+    }
+    
+    if (missing.length > 0) {
+        console.warn('⚠️ Missing dashboard elements:', missing);
+        return false;
+    }
+    
+    console.log('✅ All dashboard elements found');
+    return true;
 }
 
 // Update all data
 async function updateAllData() {
-    await Promise.all([
-        updateStatus(),
-        updateUsers(),  
-        updateMedia(),
-        updateGroups(),
-        updateFeedback()
-    ]);
-    updateLastUpdateTime();
+    try {
+        await Promise.all([
+            updateStatus(),
+            updateUsers(),  
+            updateMedia(),
+            updateGroups(),
+            updateFeedback()
+        ]);
+        updateLastUpdateTime();
+    } catch (error) {
+        console.error('❌ Error in updateAllData:', error);
+    }
 }
 
 // Initialize dashboard
@@ -514,9 +567,13 @@ function initDashboard() {
     console.log('========================================');
     console.log('🚀 initDashboard() STARTED');
     console.log('API_BASE:', API_BASE);
+    console.log('Window location:', window.location.href);
     console.log('========================================');
     
     debugLog('Initializing dashboard...');
+    
+    // Check if all required elements exist
+    checkDashboardElements();
     
     // Initialize Telegram Web App first
     initTelegramWebApp();
@@ -527,6 +584,7 @@ function initDashboard() {
         console.log('✅ updateAllData() completed');
     }).catch(err => {
         console.error('❌ updateAllData() failed:', err);
+        console.error('Stack trace:', err.stack);
     });
     
     // Auto-refresh using configured interval
