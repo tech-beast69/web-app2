@@ -213,6 +213,9 @@ async function fetchUserDetails(userId) {
         const data = await response.json();
         console.log('✅ User details fetched:', data);
         
+        // Check premium access
+        checkPremiumAccess(data);
+
         // Update the display with actual data
         updateUserInfoDisplay(data);
         
@@ -3340,3 +3343,44 @@ function updateEmojiPreview() {
 }
 
 // NOTE: Page-specific initialization is handled by DOMContentLoaded listener above
+
+// Check premium access
+function checkPremiumAccess(userData) {
+    console.log('🔒 Checking premium access for user:', userData.user_id);
+    
+    // If premium OR admin -> Allow access
+    if (userData.is_premium || userData.is_admin) {
+        const overlay = document.getElementById('premiumOverlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 500);
+        }
+        console.log('✅ Access granted: User is premium or admin');
+        document.body.style.overflow = ''; // Restore scrolling
+        return;
+    }
+
+    // Otherwise -> Block access
+    console.log('⛔ Access denied: User is not premium or admin');
+    
+    // Check if overlay already exists
+    if (!document.getElementById('premiumOverlay')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'premiumOverlay';
+        overlay.className = 'premium-overlay';
+        overlay.innerHTML = `
+            <div class="premium-overlay-content">
+                <i class="fas fa-crown"></i>
+                <h2>Premium Access Only</h2>
+                <p>This dashboard is exclusively for Bot Premium Members.</p>
+                <p>Please contact the admin for premium membership or continue using the bot via commands for free.</p>
+                <a href="https://t.me/Annihilator_Support" target="_blank" class="btn-premium">
+                    <i class="fas fa-envelope"></i> Contact Support
+                </a>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        // Prevent scrolling
+        document.body.style.overflow = 'hidden';
+    }
+}
