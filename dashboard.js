@@ -2299,10 +2299,6 @@ async function loadGroups() {
                             <span class="stat-label">Members</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-value">${group.media_count || 0}</span>
-                            <span class="stat-label">Media</span>
-                        </div>
-                        <div class="stat-item">
                             <span class="stat-value">${group.filters_count}</span>
                             <span class="stat-label">Filters</span>
                         </div>
