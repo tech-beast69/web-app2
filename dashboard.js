@@ -3007,7 +3007,11 @@ function updateEmojiPreview() {
     ).join('');
 }
 
-// Initialize (only if on group management page)
+// Initialize based on which page we're on
 if (document.getElementById('groupsGrid')) {
+    // Group management page
     loadGroups();
+} else if (document.getElementById('botStatus')) {
+    // Main dashboard page
+    initDashboard();
 }
