@@ -328,16 +328,23 @@ function formatNumber(num) {
 // Update bot status
 async function updateStatus() {
     try {
-        // Check cache first
+        let data;
         const now = Date.now();
+        
+        // Check cache first
         if (API_CACHE.status.data && (now - API_CACHE.status.timestamp) < CACHE_TTL) {
-            const data = API_CACHE.status.data;
+            data = API_CACHE.status.data;
+            console.log('Using cached status data');
         } else {
+            console.log('Fetching fresh status from:', `${API_BASE}/api/status`);
             const response = await fetch(`${API_BASE}/api/status`);
-            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            data = await response.json();
             API_CACHE.status = { data, timestamp: now };
+            console.log('Status data received:', data);
         }
-        const data = API_CACHE.status.data;
         
         // Bot Status
         const statusElement = document.getElementById('statusIndicator');
@@ -376,15 +383,29 @@ async function updateStatus() {
             `${data.disk_used_gb || 0} GB / ${data.disk_total_gb || 0} GB`;
         
     } catch (error) {
-        console.error('Error fetching status:', error);
+        console.error('❌ Error fetching status:', error);
+        console.error('API_BASE:', API_BASE);
+        // Set offline status on error
+        const statusElement = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('botStatus');
+        if (statusElement && statusText) {
+            statusElement.classList.remove('online');
+            statusElement.classList.add('offline');
+            statusText.textContent = 'Error';
+        }
     }
 }
 
 // Update user statistics
 async function updateUsers() {
     try {
+        console.log('Fetching users from:', `${API_BASE}/api/users`);
         const response = await fetch(`${API_BASE}/api/users`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         const data = await response.json();
+        console.log('Users data received:', data);
         
         document.getElementById('totalUsers').textContent = formatNumber(data.total_users || 0);
         document.getElementById('activeUsers').textContent = formatNumber(data.active_users || 0);
@@ -393,46 +414,62 @@ async function updateUsers() {
         document.getElementById('recentUsers').textContent = formatNumber(data.recent_users_7d || 0);
         
     } catch (error) {
-        console.error('Error fetching users:', error);
+        console.error('❌ Error fetching users:', error);
+        console.error('API_BASE:', API_BASE);
     }
 }
 
 // Update media statistics
 async function updateMedia() {
     try {
+        console.log('Fetching media from:', `${API_BASE}/api/media`);
         const response = await fetch(`${API_BASE}/api/media`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         const data = await response.json();
+        console.log('Media data received:', data);
         
         document.getElementById('totalMedia').textContent = formatNumber(data.total_media || 0);
         
     } catch (error) {
-        console.error('Error fetching media:', error);
+        console.error('❌ Error fetching media:', error);
     }
 }
 
 // Update groups statistics
 async function updateGroups() {
     try {
+        console.log('Fetching groups from:', `${API_BASE}/api/groups`);
         const response = await fetch(`${API_BASE}/api/groups`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         const data = await response.json();
+        console.log('Groups data received:', data);
         
         document.getElementById('totalGroups').textContent = formatNumber(data.total_groups || 0);
         
     } catch (error) {
-        console.error('Error fetching groups:', error);
+        console.error('❌ Error fetching groups:', error);
     }
 }
 
 // Update feedback statistics
 async function updateFeedback() {
     try {
+        console.log('Fetching feedback from:', `${API_BASE}/api/feedback`);
         const response = await fetch(`${API_BASE}/api/feedback`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         const data = await response.json();
+        console.log('Feedback data received:', data);
         
         document.getElementById('totalFeedback').textContent = formatNumber(data.total_feedback || 0);
         
     } catch (error) {
-        console.error('Error fetching feedback:', error);
+        console.error('❌ Error fetching feedback:', error);
     }
 }
 
