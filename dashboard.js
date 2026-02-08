@@ -3387,7 +3387,7 @@ function checkPremiumAccess(userData) {
                 <h2>Premium Access Only</h2>
                 <p>This dashboard is available exclusively for Bot Premium Members.</p>
                 <p>Please contact the admin for premium membership or continue using the bot via commands for free.</p>
-                <a href=\"https://t.me/Annihilator_Support\" target=\"_blank\" class=\"btn-premium\">
+                <a href=\"https://t.me/the_witcher88\" target=\"_blank\" class=\"btn-premium\">
                     <i class=\"fas fa-envelope\"></i> Contact Support
                 </a>
                 <div style=\"margin-top: 20px;\">
