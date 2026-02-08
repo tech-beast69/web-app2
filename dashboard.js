@@ -820,9 +820,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('DASHBOARDCONFIG:', window.DASHBOARDCONFIG);
     
     if (document.getElementById('groupsGrid')) {
-        // Group management page - only load groups
+        // Group management page - initialize Telegram and check access
         console.log('📋 Group Management page detected');
-        loadGroups();
+        initTelegramWebApp();
     } else if (document.getElementById('statusIndicator')) {
         // Main dashboard page - initialize full dashboard
         console.log('📊 Main Dashboard page detected');
@@ -3365,6 +3365,11 @@ function checkPremiumAccess(userData) {
         }
         console.log('✅ Access granted: User is admin or premium');
         document.body.style.overflow = ''; // Restore scrolling
+        
+        // If this is the group management page, load the groups
+        if (isGroupManagement) {
+            loadGroups();
+        }
         return;
     }
 
