@@ -3346,30 +3346,33 @@ function updateEmojiPreview() {
 
 // Check premium access
 function checkPremiumAccess(userData) {
-    // Only enforce premium access on Group Management page
+    // Only enforce access control on Group Management page
     const isGroupManagement = !!document.getElementById('groupsGrid');
     
     if (!isGroupManagement) {
-        console.log('Skipping premium check - not on Group Management page');
+        console.log('Skipping access check - not on Group Management page');
         return;
     }
 
-    console.log('🔒 Checking premium access for user:', userData.user_id);
+    console.log('🔒 Checking access for user:', userData.user_id);
     
-    // If premium OR admin -> Allow access
-    if (userData.is_premium || userData.is_admin) {
+    // Allow access if user is:
+    // 1. Admin (global access)
+    // 2. Premium member (paid feature access)
+    // 3. Group owner (can manage their own groups)
+    if (userData.is_admin || userData.is_premium || userData.is_group_owner) {
         const overlay = document.getElementById('premiumOverlay');
         if (overlay) {
             overlay.style.opacity = '0';
             setTimeout(() => overlay.remove(), 500);
         }
-        console.log('✅ Access granted: User is premium or admin');
+        console.log('✅ Access granted: User is admin, premium, or group owner');
         document.body.style.overflow = ''; // Restore scrolling
         return;
     }
 
     // Otherwise -> Block access
-    console.log('⛔ Access denied: User is not premium or admin');
+    console.log('⛔ Access denied: User is not admin, premium, or group owner');
     
     // Check if overlay already exists
     if (!document.getElementById('premiumOverlay')) {
@@ -3377,17 +3380,17 @@ function checkPremiumAccess(userData) {
         overlay.id = 'premiumOverlay';
         overlay.className = 'premium-overlay';
         overlay.innerHTML = `
-            <div class="premium-overlay-content">
-                <i class="fas fa-crown"></i>
-                <h2>Premium Access Only</h2>
-                <p>This dashboard available exclusively for Bot Premium Members.</p>
-                <p>Please contact the admin for premium membership or continue using the bot via commands for free.</p>
-                <a href="https://t.me/Annihilator_Support" target="_blank" class="btn-premium">
-                    <i class="fas fa-envelope"></i> Contact Support
+            <div class=\"premium-overlay-content\">
+                <i class=\"fas fa-users-cog\"></i>
+                <h2>Group Owners Only</h2>
+                <p>This dashboard is available for group owners to manage their groups.</p>
+                <p>You need to own at least one group where the bot is added to access this feature.</p>
+                <a href=\"https://t.me/Annihilator_Support\" target=\"_blank\" class=\"btn-premium\">
+                    <i class=\"fas fa-envelope\"></i> Contact Support
                 </a>
-                <div style="margin-top: 20px;">
-                    <a href="index.html" class="btn-secondary" style="margin-right: 10px;">
-                        <i class="fas fa-arrow-left"></i> Back to Home
+                <div style=\"margin-top: 20px;\">
+                    <a href=\"index.html\" class=\"btn-secondary\" style=\"margin-right: 10px;\">
+                        <i class=\"fas fa-arrow-left\"></i> Back to Home
                     </a>
                 </div>
             </div>
