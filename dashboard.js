@@ -3346,6 +3346,14 @@ function updateEmojiPreview() {
 
 // Check premium access
 function checkPremiumAccess(userData) {
+    // Only enforce premium access on Group Management page
+    const isGroupManagement = !!document.getElementById('groupsGrid');
+    
+    if (!isGroupManagement) {
+        console.log('Skipping premium check - not on Group Management page');
+        return;
+    }
+
     console.log('🔒 Checking premium access for user:', userData.user_id);
     
     // If premium OR admin -> Allow access
@@ -3372,11 +3380,16 @@ function checkPremiumAccess(userData) {
             <div class="premium-overlay-content">
                 <i class="fas fa-crown"></i>
                 <h2>Premium Access Only</h2>
-                <p>This dashboard is exclusively for Bot Premium Members.</p>
+                <p>This dashboard available exclusively for Bot Premium Members.</p>
                 <p>Please contact the admin for premium membership or continue using the bot via commands for free.</p>
                 <a href="https://t.me/Annihilator_Support" target="_blank" class="btn-premium">
                     <i class="fas fa-envelope"></i> Contact Support
                 </a>
+                <div style="margin-top: 20px;">
+                    <a href="index.html" class="btn-secondary" style="margin-right: 10px;">
+                        <i class="fas fa-arrow-left"></i> Back to Home
+                    </a>
+                </div>
             </div>
         `;
         document.body.appendChild(overlay);
