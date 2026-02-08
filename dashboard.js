@@ -3344,6 +3344,23 @@ function updateEmojiPreview() {
 
 // NOTE: Page-specific initialization is handled by DOMContentLoaded listener above
 
+// Open support chat using Telegram Web App API if available
+function openSupportChat(event) {
+    event.preventDefault();
+    const supportUrl = 'https://t.me/the_witcher88';
+    
+    if (window.Telegram && window.Telegram.WebApp) {
+        try {
+            window.Telegram.WebApp.openLink(supportUrl);
+        } catch (error) {
+            console.error('Failed to open link via Telegram WebApp:', error);
+            window.open(supportUrl, '_blank');
+        }
+    } else {
+        window.open(supportUrl, '_blank');
+    }
+}
+
 // Check premium access
 function checkPremiumAccess(userData) {
     // Only enforce premium access on Group Management page
@@ -3387,7 +3404,7 @@ function checkPremiumAccess(userData) {
                 <h2>Premium Access Only</h2>
                 <p>This dashboard is available exclusively for Bot Premium Members.</p>
                 <p>Please contact the admin for premium membership or continue using the bot via commands for free.</p>
-                <a href=\"https://t.me/the_witcher88\" target=\"_blank\" class=\"btn-premium\">
+                <a href=\"https://t.me/the_witcher88\" target=\"_blank\" class=\"btn-premium\" onclick=\"openSupportChat(event)\">
                     <i class=\"fas fa-envelope\"></i> Contact Support
                 </a>
                 <div style=\"margin-top: 20px;\">
