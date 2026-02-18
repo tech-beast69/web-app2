@@ -35,11 +35,12 @@ const API_CACHE = {
 };
 const CACHE_TTL = 10000; // 10 seconds cache TTL
 
-// Check if we're on localhost and use HTTP
-if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    API_BASE = 'http://localhost:3027';
-    console.log('🏠 Running locally - using HTTP API:', API_BASE);
-}
+// Check if we're on localhost and use HTTP - ONLY if explicitly needed for local backend dev
+// If you are developing frontend only against live backend, comment this out
+// if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+//     API_BASE = 'http://localhost:3027';
+//     console.log('🏠 Running locally - using HTTP API:', API_BASE);
+// }
 
 // Debug logging to verify API_BASE is set correctly
 console.log('=== API_BASE Configuration Complete ===');
@@ -938,6 +939,38 @@ function initLinksBrowser() {
     
     // Don't auto-load links - wait for user to search
     console.log('Links browser ready. Use search or "Show All Links" to view content.');
+
+    // Event delegation for link actions
+    const linksContainer = document.getElementById('linksContainer');
+    if (linksContainer) {
+        linksContainer.addEventListener('click', (e) => {
+            const accessBtn = e.target.closest('.btn-access');
+            if (accessBtn) {
+                // Prevent double clicks if disabled
+                if (accessBtn.disabled) return;
+                
+                const url = accessBtn.dataset.url;
+                const title = accessBtn.dataset.title;
+                if (url) {
+                    accessLink(url, title, accessBtn);
+                }
+                return;
+            }
+
+            const reportBtn = e.target.closest('.btn-report');
+            if (reportBtn) {
+                // Prevent double clicks if disabled
+                if (reportBtn.disabled) return;
+                
+                const url = reportBtn.dataset.url;
+                const title = reportBtn.dataset.title;
+                if (url) {
+                    reportLink(url, title, reportBtn);
+                }
+                return;
+            }
+        });
+    }
 }
 
 // Load user information for links browser
@@ -1325,18 +1358,18 @@ function createLinkCard(linkData, index) {
     accessBtn.dataset.url = url;
     accessBtn.dataset.title = title;
     
-    accessBtn.addEventListener('click', function() { 
-        accessLink(this.dataset.url, this.dataset.title, this); 
-    });
+    // accessBtn.addEventListener('click', function() { 
+    //    accessLink(this.dataset.url, this.dataset.title, this); 
+    // });
     
     const reportBtn = card.querySelector('.btn-report');
     // Store data safely
     reportBtn.dataset.url = url;
     reportBtn.dataset.title = title;
     
-    reportBtn.addEventListener('click', function() { 
-        reportLink(this.dataset.url, this.dataset.title, this); 
-    });
+    // reportBtn.addEventListener('click', function() { 
+    //    reportLink(this.dataset.url, this.dataset.title, this); 
+    // });
     
     // If no photo URL, try to fetch from backend in the background (non-blocking)
     if (!photoUrl) {
@@ -1537,6 +1570,11 @@ async function accessLink(url, title, btnElement) {
 
 // Report a link
 async function reportLink(url, title, btnElement) {
+    // Auto-load user if Telegram user is available but currentUserId not set
+    if (!currentUserId && telegramUser && telegramUser.id) {
+        await loadUserForLinks(telegramUser.id);
+    }
+
     if (!currentUserId) {
         showNotification('Please load user first', 'warning');
         return;
@@ -1580,18 +1618,34 @@ async function reportLink(url, title, btnElement) {
         if (data.success) {
             showNotification(data.message || 'Link reported successfully. Thank you for helping us maintain quality!', 'success');
             
-            // Immediately remove the reported link from the displayed list
+            // Update data model
             allLinks = allLinks.filter(link => link.link !== url);
             totalLinks = Math.max(0, totalLinks - 1);
-            
-            // Update the display
-            displayLinks(allLinks);
             updatePagination();
-            
-            // If the current page is now empty and it's not the first page, go back one page
-            if (allLinks.length === 0 && currentPage > 0) {
-                currentPage--;
-                await loadLinks();
+
+            // Animate removal if button element is provided
+            if (btnElement) {
+                const card = btnElement.closest('.link-card');
+                if (card) {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        card.remove();
+                        // If the current page is now empty and it's not the first page, go back one page
+                        if (allLinks.length === 0 && currentPage > 0) {
+                            currentPage--;
+                            loadLinks();
+                        } else if (allLinks.length === 0) {
+                            // Show empty state
+                            displayLinks([]);
+                        }
+                    }, 500);
+                } else {
+                    displayLinks(allLinks);
+                }
+            } else {
+                displayLinks(allLinks);
             }
         } else {
             showNotification('Error: ' + (data.error || 'Failed to report link'), 'error');
@@ -2284,15 +2338,15 @@ let API_BASE_URL = (window.API_BASE) || (window.DASHBOARDCONFIG && window.DASHBO
 
 if (!API_BASE_URL) {
     // If running on developer machine, prefer the local dashboard server
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        API_BASE_URL = 'http://localhost:3027';
-    } else if (window.location.protocol === 'file:') {
-        // Opened as a local file - assume local dashboard server
-        API_BASE_URL = 'http://localhost:3027';
-    } else {
+    // if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    //     API_BASE_URL = 'http://localhost:3027';
+    // } else if (window.location.protocol === 'file:') {
+    //     // Opened as a local file - assume local dashboard server
+    //     API_BASE_URL = 'http://localhost:3027';
+    // } else {
         // Fallback to public dashboard API domain
         API_BASE_URL = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
-    }
+    // }
 }
 
 console.log('DEBUG - Hostname:', window.location.hostname);
