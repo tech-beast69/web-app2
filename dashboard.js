@@ -1319,12 +1319,24 @@ function createLinkCard(linkData, index) {
         </div>
     `;
     
-    // Add event listeners
+    // Add event listeners with button reference for loading state
     const accessBtn = card.querySelector('.btn-access');
-    accessBtn.addEventListener('click', () => accessLink(url, title));
+    // Store data safely
+    accessBtn.dataset.url = url;
+    accessBtn.dataset.title = title;
+    
+    accessBtn.addEventListener('click', function() { 
+        accessLink(this.dataset.url, this.dataset.title, this); 
+    });
     
     const reportBtn = card.querySelector('.btn-report');
-    reportBtn.addEventListener('click', () => reportLink(url, title));
+    // Store data safely
+    reportBtn.dataset.url = url;
+    reportBtn.dataset.title = title;
+    
+    reportBtn.addEventListener('click', function() { 
+        reportLink(this.dataset.url, this.dataset.title, this); 
+    });
     
     // If no photo URL, try to fetch from backend in the background (non-blocking)
     if (!photoUrl) {
@@ -1392,10 +1404,18 @@ function extractCleanDescription(desc) {
 }
 
 // Access a link (deduct tokens and open)
-async function accessLink(url, title) {
+async function accessLink(url, title, btnElement) {
     // Save scroll position before opening link
     const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
     sessionStorage.setItem('dashboardScrollPosition', scrollPosition.toString());
+    
+    // Show loading state on button
+    let originalBtnContent = '';
+    if (btnElement) {
+        originalBtnContent = btnElement.innerHTML;
+        btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        btnElement.disabled = true;
+    }
     
     // Auto-load user if Telegram user is available but currentUserId not set
     if (!currentUserId && telegramUser && telegramUser.id) {
@@ -1404,16 +1424,35 @@ async function accessLink(url, title) {
     
     if (!currentUserId) {
         showNotification('Please open from Telegram to access links', 'warning');
+        if (btnElement) {
+            btnElement.innerHTML = originalBtnContent;
+            btnElement.disabled = false;
+        }
         return;
     }
     
+    // Validate URL
+    if (!url || url === '#' || (!url.startsWith('http') && !url.startsWith('tg://'))) {
+        showNotification('Invalid link URL', 'error');
+        if (btnElement) {
+            btnElement.innerHTML = originalBtnContent;
+            btnElement.disabled = false;
+        }
+        return;
+    }
+
     if (currentUserBalance < 10) {
         showNotification('Insufficient tokens! You need 10 tokens to access a link.', 'error');
+        if (btnElement) {
+            btnElement.innerHTML = originalBtnContent;
+            btnElement.disabled = false;
+        }
         return;
     }
     
     try {
-        showLoading('Processing...');
+        // Don't show full screen loading if we have button loading
+        if (!btnElement) showLoading('Processing...');
         
         console.log('Accessing link for user:', currentUserId);
         console.log('Current balance before:', currentUserBalance);
@@ -1464,23 +1503,40 @@ async function accessLink(url, title) {
             
             showNotification(message, 'success');
             
-            // Open the link
-            window.open(url, '_blank');
+            // Open the link with robust handling for Telegram and Browsers
+            if (window.Telegram && window.Telegram.WebApp) {
+                // Telegram Web App
+                console.log('Opening link via Telegram WebApp:', url);
+                window.Telegram.WebApp.openLink(url);
+            } else {
+                // Regular Browser
+                console.log('Opening link via window.open:', url);
+                const newWindow = window.open(url, '_blank');
+                if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                    showNotification('Popup blocked! Please allow popups to open links.', 'error');
+                }
+            }
         } else {
             showNotification('Error: ' + (data.error || 'Failed to access link'), 'error');
         }
         
-        hideLoading();
+        if (!btnElement) hideLoading();
         
     } catch (error) {
         console.error('Error accessing link:', error);
         showNotification('Failed to access link: ' + error.message, 'error');
-        hideLoading();
+        if (!btnElement) hideLoading();
+    } finally {
+        // Restore button state
+        if (btnElement) {
+            btnElement.innerHTML = originalBtnContent;
+            btnElement.disabled = false;
+        }
     }
 }
 
 // Report a link
-async function reportLink(url, title) {
+async function reportLink(url, title, btnElement) {
     if (!currentUserId) {
         showNotification('Please load user first', 'warning');
         return;
@@ -1491,7 +1547,15 @@ async function reportLink(url, title) {
         return;
     }
     
-    showLoading('Reporting link...');
+    // Show loading state on button
+    let originalBtnContent = '';
+    if (btnElement) {
+        originalBtnContent = btnElement.innerHTML;
+        btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reporting...';
+        btnElement.disabled = true;
+    }
+    
+    if (!btnElement) showLoading('Reporting link...');
     
     try {
         const response = await fetch(`${API_BASE}/api/links/report`, {
@@ -1533,12 +1597,18 @@ async function reportLink(url, title) {
             showNotification('Error: ' + (data.error || 'Failed to report link'), 'error');
         }
         
-        hideLoading();
+        if (!btnElement) hideLoading();
         
     } catch (error) {
         console.error('Error reporting link:', error);
         showNotification('Failed to report link: ' + error.message, 'error');
-        hideLoading();
+        if (!btnElement) hideLoading();
+    } finally {
+        // Restore button state
+        if (btnElement) {
+            btnElement.innerHTML = originalBtnContent;
+            btnElement.disabled = false;
+        }
     }
 }
 
