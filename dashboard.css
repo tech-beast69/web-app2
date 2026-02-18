@@ -1533,14 +1533,15 @@ mark {
 
 /* Enhanced Link Cards with Glassmorphism */
 .link-card {
-    background: white;
-    border: 1px solid var(--border);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e5e7eb;
     border-radius: 20px;
     padding: 28px;
     margin-bottom: 24px;
     transition: all var(--transition-base);
     position: relative;
     overflow: hidden;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
 }
 
 .link-card::before {
@@ -1550,15 +1551,15 @@ mark {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.02), rgba(168, 85, 247, 0.02));
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.06), rgba(168, 85, 247, 0.06));
     opacity: 0;
     transition: opacity var(--transition-base);
 }
 
 .link-card:hover {
-    border-color: var(--primary);
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
-    transform: translateY(-4px) scale(1.01);
+    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+    transform: translateY(-6px) scale(1.01);
 }
 
 .link-card:hover::before {
@@ -1569,6 +1570,7 @@ mark {
     display: flex;
     gap: 16px;
     margin-bottom: 16px;
+    align-items: center;
 }
 
 .link-profile-pic {
@@ -1581,7 +1583,7 @@ mark {
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 6px 14px rgba(102, 126, 234, 0.35);
     position: relative;
 }
 
@@ -1632,14 +1634,16 @@ mark {
     color: var(--gray);
     line-height: 1.4;
     font-size: 0.9em;
+    margin-top: 6px;
 }
 
 .link-preview-container {
     margin: 12px 0;
     padding: 16px;
-    background: var(--light);
+    background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
     border-radius: 8px;
     border-left: 3px solid var(--primary);
+    box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.08);
 }
 
 .link-preview-loading {
@@ -1729,11 +1733,12 @@ mark {
 .link-actions {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .btn-report {
     padding: 14px 24px;
-    border: none;
     border-radius: 8px;
     font-size: 1.05rem;
     font-weight: 600;
@@ -1742,16 +1747,17 @@ mark {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: #fee2e2;
-    color: #dc2626;
-    border: 1px solid #fca5a5;
+    background: #fff1f2;
+    color: #be123c;
+    border: 1px solid #fecdd3;
+    box-shadow: 0 4px 10px rgba(190, 18, 60, 0.12);
 }
 
 .btn-report:hover {
-    background: #fecaca;
-    border-color: #f87171;
+    background: #ffe4e6;
+    border-color: #fda4af;
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.2);
+    box-shadow: 0 8px 18px rgba(190, 18, 60, 0.18);
 }
 
 .btn-report:disabled {
@@ -1771,6 +1777,8 @@ mark {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    min-width: 160px;
+    justify-content: center;
 }
 
 .btn-preview {
@@ -1786,13 +1794,14 @@ mark {
 }
 
 .btn-access {
-    background: linear-gradient(135deg, var(--success), #059669);
+    background: linear-gradient(135deg, #22c55e, #16a34a);
     color: white;
+    box-shadow: 0 6px 16px rgba(34, 197, 94, 0.35);
 }
 
 .btn-access:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 10px 22px rgba(34, 197, 94, 0.45);
 }
 
 /* Pagination */
