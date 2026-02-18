@@ -1561,16 +1561,20 @@ mark {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.06), rgba(168, 85, 247, 0.06));
     opacity: 0;
     transition: opacity var(--transition-base);
+    pointer-events: none;
+    z-index: 1;
 }
 
-.link-card:hover {
-    border-color: rgba(102, 126, 234, 0.5);
-    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
-    transform: translateY(-6px) scale(1.01);
-}
+@media (hover: hover) {
+    .link-card:hover {
+        border-color: rgba(102, 126, 234, 0.5);
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+        transform: translateY(-6px) scale(1.01);
+    }
 
-.link-card:hover::before {
-    opacity: 1;
+    .link-card:hover::before {
+        opacity: 1;
+    }
 }
 
 .link-card-header {
@@ -1578,6 +1582,8 @@ mark {
     gap: 16px;
     margin-bottom: 16px;
     align-items: center;
+    position: relative;
+    z-index: 2;
 }
 
 .link-profile-pic {
@@ -1723,6 +1729,8 @@ mark {
     align-items: center;
     gap: 15px;
     flex-wrap: wrap;
+    position: relative;
+    z-index: 2;
 }
 
 .link-url {
@@ -1758,6 +1766,8 @@ mark {
     color: #be123c;
     border: 1px solid #fecdd3;
     box-shadow: 0 4px 10px rgba(190, 18, 60, 0.12);
+    position: relative;
+    z-index: 3;
 }
 
 .btn-report:hover {
@@ -1786,6 +1796,8 @@ mark {
     gap: 8px;
     min-width: 160px;
     justify-content: center;
+    position: relative;
+    z-index: 3;
 }
 
 .btn-preview {
