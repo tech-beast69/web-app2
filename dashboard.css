@@ -1151,6 +1151,8 @@ footer p {
 .clear-btn {
     position: absolute;
     right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
     background: none;
     border: none;
     color: var(--gray);
@@ -1159,6 +1161,11 @@ footer p {
     padding: 5px;
     border-radius: 50%;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
 }
 
 .clear-btn:hover {
@@ -2611,39 +2618,7 @@ input:checked + .toggle-slider:before {
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    padding: 12px 30px;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-}
-
-.btn-secondary {
-    background: #6c757d;
-    color: white;
-    border: none;
-    padding: 12px 30px;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-secondary:hover {
-    background: #5a6268;
-}
+/* Enhanced Group Management UI Styles */
 
 .filter-list, .blocklist-items, .ban-list {
     list-style: none;
@@ -2652,44 +2627,67 @@ input:checked + .toggle-slider:before {
 }
 
 .filter-item, .blocklist-item, .ban-item {
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 10px;
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+}
+
+.filter-item:hover, .blocklist-item:hover, .ban-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    border-color: rgba(102, 126, 234, 0.2);
 }
 
 .filter-trigger {
     font-weight: 700;
     color: #667eea;
+    font-size: 1.05em;
+    margin-bottom: 4px;
 }
 
 .filter-response {
-    color: #666;
-    margin-top: 5px;
+    color: #64748b;
+    font-size: 0.95em;
+    line-height: 1.4;
 }
 
 .delete-btn {
-    background: #dc3545;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 5px;
+    background: #fee2e2;
+    color: #ef4444;
+    border: 1px solid #fca5a5;
+    padding: 8px 16px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 0.9em;
 }
 
 .delete-btn:hover {
-    background: #c82333;
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25);
+    transform: translateY(-1px);
 }
 
 .add-form {
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 10px;
-    margin-top: 15px;
+    background: white;
+    padding: 25px;
+    border-radius: 16px;
+    margin-top: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.05);
 }
 
 .form-group {
@@ -2699,45 +2697,54 @@ input:checked + .toggle-slider:before {
 .form-label {
     display: block;
     font-weight: 600;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
     color: #333;
 }
 
 .tabs {
     display: flex;
-    gap: 5px;
-    border-bottom: 2px solid #e9ecef;
-    margin-bottom: 20px;
+    gap: 8px;
+    border-bottom: none;
+    margin-bottom: 25px;
+    padding-bottom: 5px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
 
 .tab {
-    padding: 12px 20px;
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent;
+    padding: 10px 20px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
     cursor: pointer;
     font-weight: 600;
-    color: #666;
+    color: #64748b;
     transition: all 0.3s ease;
     white-space: nowrap;
     font-size: 0.95em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
 .tab:hover {
     color: #667eea;
-    background: rgba(102, 126, 234, 0.1);
+    border-color: #667eea;
+    background: #f8fafc;
+    transform: translateY(-1px);
 }
 
 .tab.active {
-    color: #667eea;
-    border-bottom-color: #667eea;
-    background: rgba(102, 126, 234, 0.05);
+    color: white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .tab i {
-    margin-right: 5px;
+    margin-right: 0;
+    font-size: 1.1em;
 }
 
 .tab-content {
