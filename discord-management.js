@@ -2,16 +2,16 @@
 
 (function () {
     const API_BASE = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || "";
-    const TOKEN_KEY = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.DISCORD_ADMIN_TOKEN_STORAGE_KEY) || "discord_admin_token";
     const SERVERS_KEY = "discord_managed_servers";
     const SELECTED_SERVER_KEY = "discord_selected_server";
 
     const els = {
-        token: document.getElementById("adminToken"),
-        tokenStatus: document.getElementById("tokenStatus"),
         serverSelect: document.getElementById("serverSelect"),
         newGuildId: document.getElementById("newGuildId"),
         newGuildName: document.getElementById("newGuildName"),
+        serverRolesSelect: document.getElementById("serverRolesSelect"),
+        refreshRolesBtn: document.getElementById("refreshRolesBtn"),
+        applySelectedRolesBtn: document.getElementById("applySelectedRolesBtn"),
         enabled: document.getElementById("enabled"),
         exemptAdmins: document.getElementById("exemptAdmins"),
         logChannelId: document.getElementById("logChannelId"),
@@ -65,8 +65,6 @@
         casesBody: document.getElementById("casesBody"),
         warningsUserId: document.getElementById("warningsUserId"),
         warningsList: document.getElementById("warningsList"),
-        saveTokenBtn: document.getElementById("saveTokenBtn"),
-        clearTokenBtn: document.getElementById("clearTokenBtn"),
         addServerBtn: document.getElementById("addServerBtn"),
         removeServerBtn: document.getElementById("removeServerBtn"),
         loadConfigBtn: document.getElementById("loadConfigBtn"),
@@ -96,6 +94,7 @@
 
     let advancedVisible = false;
     let serverDiscoveryAttempts = 0;
+    let adminId = "";
 
     function setLastAction(actionText) {
         if (els.lastActionLabel) {
@@ -127,21 +126,63 @@
         }, 2600);
     }
 
-    function getToken() {
-        return localStorage.getItem(TOKEN_KEY) || "";
+    function getAdminId() {
+        if (adminId) {
+            return adminId;
+        }
+
+        try {
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                const tgId = String(window.Telegram.WebApp.initDataUnsafe.user.id || "").trim();
+                if (tgId) {
+                    adminId = tgId;
+                    return adminId;
+                }
+            }
+        } catch (_) {}
+
+        try {
+            const params = new URLSearchParams(window.location.search || "");
+            const queryAdminId = String(params.get("admin_id") || params.get("user_id") || "").trim();
+            if (queryAdminId) {
+                adminId = queryAdminId;
+                return adminId;
+            }
+        } catch (_) {}
+
+        try {
+            const fallback = localStorage.getItem("dashboard_user_id") || "";
+            if (fallback) {
+                adminId = String(fallback).trim();
+            }
+        } catch (_) {}
+
+        return adminId;
     }
 
-    function setTokenStatus() {
-        const hasToken = !!getToken();
-        if (hasToken) {
-            els.tokenStatus.classList.add("pill-success");
-            els.tokenStatus.classList.remove("pill-danger");
-            els.tokenStatus.innerHTML = '<i class="fas fa-circle" style="color:#16a34a"></i><span>Token saved</span>';
-        } else {
-            els.tokenStatus.classList.remove("pill-success");
-            els.tokenStatus.classList.add("pill-danger");
-            els.tokenStatus.innerHTML = '<i class="fas fa-circle" style="color:#dc2626"></i><span>No token saved</span>';
+    function appendAdminId(path) {
+        const id = getAdminId();
+        if (!id) {
+            return path;
         }
+        return path.includes("?")
+            ? `${path}&admin_id=${encodeURIComponent(id)}`
+            : `${path}?admin_id=${encodeURIComponent(id)}`;
+    }
+
+    function numberOrDefault(value, fallback, min, max) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) {
+            return fallback;
+        }
+        let out = n;
+        if (typeof min === "number") {
+            out = Math.max(min, out);
+        }
+        if (typeof max === "number") {
+            out = Math.min(max, out);
+        }
+        return out;
     }
 
     function loadServers() {
@@ -238,15 +279,16 @@
     }
 
     async function api(path, opts) {
-        const token = getToken();
-        if (!token) {
-            throw new Error("Admin token is missing");
+        const id = getAdminId();
+        if (!id) {
+            throw new Error("Admin ID is missing. Open this page from Telegram admin account.");
         }
-        const response = await fetch(`${API_BASE}${path}`, {
+
+        const fullPath = appendAdminId(path);
+        const response = await fetch(`${API_BASE}${fullPath}`, {
             ...(opts || {}),
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
                 ...((opts && opts.headers) || {})
             }
         });
@@ -263,7 +305,7 @@
             throw new Error(detail);
         }
 
-        setLastAction(`API ${opts && opts.method ? opts.method : "GET"} ${path}`);
+        setLastAction(`API ${opts && opts.method ? opts.method : "GET"} ${fullPath}`);
 
         return payload;
     }
@@ -344,7 +386,7 @@
         return {
             enabled: !!els.enabled.checked,
             exempt_admins: !!els.exemptAdmins.checked,
-            log_channel_id: els.logChannelId.value ? Number(els.logChannelId.value) : null,
+            log_channel_id: els.logChannelId.value ? numberOrDefault(els.logChannelId.value, null, 1) : null,
             exempt_role_ids: exemptRoleIds,
             exempt_channel_ids: exemptChannelIds,
             features: {
@@ -360,62 +402,62 @@
                 anti_spam: {
                     enabled: !!els.antiSpamEnabled.checked,
                     action: els.antiSpamAction.value,
-                    message_limit: Number(els.antiSpamLimit.value || 6),
-                    window_seconds: Number(els.antiSpamWindow.value || 10),
-                    duplicate_limit: Number(els.duplicateLimit.value || 4),
-                    timeout_seconds: Number(els.spamTimeoutSeconds.value || 600),
+                    message_limit: numberOrDefault(els.antiSpamLimit.value, 6, 2, 30),
+                    window_seconds: numberOrDefault(els.antiSpamWindow.value, 10, 3, 120),
+                    duplicate_limit: numberOrDefault(els.duplicateLimit.value, 4, 2, 20),
+                    timeout_seconds: numberOrDefault(els.spamTimeoutSeconds.value, 600, 60, 2419200),
                 },
                 anti_mention_spam: {
                     enabled: !!els.antiMentionEnabled.checked,
-                    max_mentions: Number(els.mentionLimit.value || 5),
-                    timeout_seconds: Number(els.mentionTimeoutSeconds.value || 600),
+                    max_mentions: numberOrDefault(els.mentionLimit.value, 5, 1, 50),
+                    timeout_seconds: numberOrDefault(els.mentionTimeoutSeconds.value, 600, 60, 2419200),
                     action: els.antiMentionAction.value,
                 },
                 anti_everyone_mention: {
                     enabled: !!els.antiEveryoneEnabled.checked,
-                    max_mentions: Number(els.everyoneMentionLimit.value || 0),
+                    max_mentions: numberOrDefault(els.everyoneMentionLimit.value, 0, 0, 10),
                     action: els.antiEveryoneAction.value,
                 },
                 anti_emoji_spam: {
                     enabled: !!els.antiEmojiEnabled.checked,
-                    max_emojis: Number(els.emojiLimit.value || 14),
+                    max_emojis: numberOrDefault(els.emojiLimit.value, 14, 1, 200),
                     action: els.antiEmojiAction.value,
                 },
                 anti_line_spam: {
                     enabled: !!els.antiLineEnabled.checked,
-                    max_lines: Number(els.lineLimit.value || 12),
+                    max_lines: numberOrDefault(els.lineLimit.value, 12, 2, 100),
                     action: els.antiLineAction.value,
                 },
                 anti_long_message: {
                     enabled: !!els.antiLongEnabled.checked,
-                    max_chars: Number(els.charLimit.value || 1400),
+                    max_chars: numberOrDefault(els.charLimit.value, 1400, 100, 4000),
                     action: els.antiLongAction.value,
                 },
                 anti_attachment_spam: {
                     enabled: !!els.antiAttachmentEnabled.checked,
-                    max_attachments: Number(els.attachmentLimit.value || 3),
+                    max_attachments: numberOrDefault(els.attachmentLimit.value, 3, 1, 20),
                     action: els.antiAttachmentAction.value,
                 },
                 anti_caps: {
                     enabled: !!els.antiCapsEnabled.checked,
-                    ratio: Number(els.capsRatio.value || 0.8),
-                    min_length: Number(els.capsMinLength.value || 14),
+                    ratio: numberOrDefault(els.capsRatio.value, 0.8, 0.1, 1),
+                    min_length: numberOrDefault(els.capsMinLength.value, 14, 5, 200),
                     action: els.antiCapsAction.value,
                 },
                 new_account_guard: {
                     enabled: !!els.newAccountGuardEnabled.checked,
-                    min_account_age_minutes: Number(els.newAccountAgeMinutes.value || 60),
+                    min_account_age_minutes: numberOrDefault(els.newAccountAgeMinutes.value, 60, 1, 10080),
                     action: els.newAccountAction.value,
                 },
                 warn_escalation: {
                     enabled: !!els.warnEscalationEnabled.checked,
-                    max_warns: Number(els.warnMax.value || 3),
+                    max_warns: numberOrDefault(els.warnMax.value, 3, 2, 20),
                     action: els.warnEscalationAction.value,
-                    timeout_seconds: Number(els.warnEscalationTimeoutSeconds.value || 1800),
+                    timeout_seconds: numberOrDefault(els.warnEscalationTimeoutSeconds.value, 1800, 60, 2419200),
                 },
                 raid_mode: {
                     enabled: !!els.raidModeEnabled.checked,
-                    quarantine_role_id: els.raidQuarantineRoleId.value ? Number(els.raidQuarantineRoleId.value) : null,
+                    quarantine_role_id: els.raidQuarantineRoleId.value ? numberOrDefault(els.raidQuarantineRoleId.value, null, 1) : null,
                 },
                 banned_words: {
                     words: words,
@@ -803,17 +845,11 @@
 
     async function fetchServersFromApi() {
         try {
-            const token = getToken();
             const url = `${API_BASE}/api/discord/servers`;
-            const requestHeaders = token
-                ? {
-                    "Authorization": `Bearer ${token}`
-                }
-                : {};
 
             const res = await fetch(url, {
                 method: "GET",
-                headers: requestHeaders
+                headers: {}
             });
 
             if (!res.ok) {
@@ -832,9 +868,63 @@
             renderServers();
             notify(`Loaded ${remoteServers.length} server(s) from Discord`, "success");
             setLastAction("Synced Discord servers list");
+            fetchRolesForSelectedServer();
         } catch (err) {
             notify(`Could not load Discord servers: ${err.message}`, "error");
         }
+    }
+
+    async function fetchRolesForSelectedServer() {
+        const gid = selectedGuildId();
+        const id = getAdminId();
+        if (!gid || !id || !els.serverRolesSelect) {
+            return;
+        }
+        try {
+            const url = `${API_BASE}${appendAdminId(`/api/discord/roles/${encodeURIComponent(gid)}`)}`;
+            const res = await fetch(url);
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+            const payload = await res.json();
+            const roles = (payload && payload.data && payload.data.roles) || [];
+            els.serverRolesSelect.innerHTML = "";
+            roles.forEach((role) => {
+                const opt = document.createElement("option");
+                opt.value = String(role.id || "");
+                opt.textContent = `${role.name || "role"} (${role.id || ""})`;
+                els.serverRolesSelect.appendChild(opt);
+            });
+            syncRoleSelectionFromTextarea();
+        } catch (err) {
+            notify(`Could not load server roles: ${err.message}`, "error");
+        }
+    }
+
+    function syncRoleSelectionFromTextarea() {
+        if (!els.serverRolesSelect || !els.exemptRoleIds) {
+            return;
+        }
+        const selectedIds = new Set(
+            els.exemptRoleIds.value
+                .split("\n")
+                .map((v) => String(v || "").trim())
+                .filter(Boolean)
+        );
+        Array.from(els.serverRolesSelect.options).forEach((opt) => {
+            opt.selected = selectedIds.has(String(opt.value));
+        });
+    }
+
+    function applySelectedRolesToExemptions() {
+        if (!els.serverRolesSelect || !els.exemptRoleIds) {
+            return;
+        }
+        const selected = Array.from(els.serverRolesSelect.selectedOptions)
+            .map((opt) => String(opt.value || "").trim())
+            .filter(Boolean);
+        els.exemptRoleIds.value = selected.join("\n");
+        updateChecklist();
     }
 
     function scheduleServerDiscovery() {
@@ -898,23 +988,6 @@
     }
 
     function bindEvents() {
-        els.saveTokenBtn.addEventListener("click", () => {
-            const token = String(els.token.value || "").trim();
-            if (!token) {
-                notify("Token cannot be empty");
-                return;
-            }
-            localStorage.setItem(TOKEN_KEY, token);
-            setTokenStatus();
-            notify("Token saved");
-        });
-
-        els.clearTokenBtn.addEventListener("click", () => {
-            localStorage.removeItem(TOKEN_KEY);
-            els.token.value = "";
-            setTokenStatus();
-        });
-
         els.addServerBtn.addEventListener("click", addServer);
         els.removeServerBtn.addEventListener("click", removeServer);
         els.loadConfigBtn.addEventListener("click", loadConfig);
@@ -927,6 +1000,15 @@
         els.testConnectionBtn.addEventListener("click", fetchServersFromApi);
         if (els.syncServersBtn) {
             els.syncServersBtn.addEventListener("click", fetchServersFromApi);
+        }
+        if (els.refreshRolesBtn) {
+            els.refreshRolesBtn.addEventListener("click", fetchRolesForSelectedServer);
+        }
+        if (els.applySelectedRolesBtn) {
+            els.applySelectedRolesBtn.addEventListener("click", applySelectedRolesToExemptions);
+        }
+        if (els.serverRolesSelect) {
+            els.serverRolesSelect.addEventListener("change", applySelectedRolesToExemptions);
         }
         els.presetRelaxedBtn.addEventListener("click", function () { applyPreset("relaxed"); });
         els.presetBalancedBtn.addEventListener("click", function () { applyPreset("balanced"); });
@@ -945,7 +1027,10 @@
                 setAdvancedVisibility(!advancedVisible);
             });
         }
-        els.serverSelect.addEventListener("change", updateSelectedServerLabel);
+        els.serverSelect.addEventListener("change", () => {
+            updateSelectedServerLabel();
+            fetchRolesForSelectedServer();
+        });
         [
             els.enabled,
             els.exemptAdmins,
@@ -973,14 +1058,16 @@
     }
 
     function init() {
+        const id = getAdminId();
+        if (!id) {
+            notify("Admin identity not detected. Open from Telegram admin account.", "error");
+        }
         if (!API_BASE) {
             notify("API base URL is missing in config.js", "error");
             setConnectionStatus("Missing API URL", false);
         } else {
             setConnectionStatus("Not tested", false);
         }
-        els.token.value = getToken();
-        setTokenStatus();
         renderServers();
         updateSelectedServerLabel();
         bindEvents();
@@ -988,6 +1075,7 @@
         updateChecklist();
         testConnection();
         fetchServersFromApi();
+        fetchRolesForSelectedServer();
         scheduleServerDiscovery();
     }
 
