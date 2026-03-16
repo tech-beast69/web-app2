@@ -86,6 +86,7 @@
         presetStrictBtn: document.getElementById("presetStrictBtn"),
         guidedMode: document.getElementById("guidedMode"),
         enforcementMode: document.getElementById("enforcementMode"),
+        syncServersBtn: document.getElementById("syncServersBtn"),
         applyGuidedBtn: document.getElementById("applyGuidedBtn"),
         toggleAdvancedBtn: document.getElementById("toggleAdvancedBtn"),
         advancedStateLabel: document.getElementById("advancedStateLabel"),
@@ -94,6 +95,7 @@
     };
 
     let advancedVisible = false;
+    let serverDiscoveryAttempts = 0;
 
     function setLastAction(actionText) {
         if (els.lastActionLabel) {
@@ -153,6 +155,31 @@
 
     function saveServers(list) {
         localStorage.setItem(SERVERS_KEY, JSON.stringify(list));
+    }
+
+    function mergeServers(existing, incoming) {
+        const merged = [];
+        const seen = new Set();
+
+        (existing || []).forEach((srv) => {
+            const gid = String((srv && srv.guild_id) || "").trim();
+            if (!gid || seen.has(gid)) {
+                return;
+            }
+            seen.add(gid);
+            merged.push({ guild_id: gid, label: String(srv.label || `Guild ${gid}`) });
+        });
+
+        (incoming || []).forEach((srv) => {
+            const gid = String((srv && srv.guild_id) || "").trim();
+            if (!gid || seen.has(gid)) {
+                return;
+            }
+            seen.add(gid);
+            merged.push({ guild_id: gid, label: String(srv.label || `Guild ${gid}`) });
+        });
+
+        return merged;
     }
 
     function renderServers() {
@@ -774,6 +801,44 @@
         }
     }
 
+    async function fetchServersFromApi() {
+        const token = getToken();
+        if (!token) {
+            return;
+        }
+        try {
+            const response = await api("/api/discord/servers");
+            const remoteServers = (response && response.data && response.data.servers) || [];
+            if (!Array.isArray(remoteServers) || !remoteServers.length) {
+                return;
+            }
+            const localServers = loadServers();
+            const merged = mergeServers(localServers, remoteServers);
+            saveServers(merged);
+            renderServers();
+            notify(`Loaded ${remoteServers.length} server(s) from Discord`, "success");
+            setLastAction("Synced Discord servers list");
+        } catch (err) {
+            notify(`Could not load Discord servers: ${err.message}`, "error");
+        }
+    }
+
+    function scheduleServerDiscovery() {
+        if (serverDiscoveryAttempts >= 6) {
+            return;
+        }
+        const local = loadServers();
+        if (local.length > 0) {
+            return;
+        }
+        serverDiscoveryAttempts += 1;
+        fetchServersFromApi().finally(() => {
+            if (loadServers().length === 0 && serverDiscoveryAttempts < 6) {
+                setTimeout(scheduleServerDiscovery, 3000);
+            }
+        });
+    }
+
     function escapeHtml(value) {
         return value
             .replace(/&/g, "&amp;")
@@ -845,6 +910,10 @@
         els.loadWarningsBtn.addEventListener("click", loadWarnings);
         els.clearWarningsBtn.addEventListener("click", clearWarnings);
         els.testConnectionBtn.addEventListener("click", testConnection);
+        els.testConnectionBtn.addEventListener("click", fetchServersFromApi);
+        if (els.syncServersBtn) {
+            els.syncServersBtn.addEventListener("click", fetchServersFromApi);
+        }
         els.presetRelaxedBtn.addEventListener("click", function () { applyPreset("relaxed"); });
         els.presetBalancedBtn.addEventListener("click", function () { applyPreset("balanced"); });
         els.presetStrictBtn.addEventListener("click", function () { applyPreset("strict"); });
@@ -903,6 +972,8 @@
         bindEvents();
         setAdvancedVisibility(false);
         updateChecklist();
+        fetchServersFromApi();
+        scheduleServerDiscovery();
     }
 
     document.addEventListener("DOMContentLoaded", init);
