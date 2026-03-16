@@ -221,23 +221,6 @@
         </section>
 
         <section>
-            <h2><i class="fas fa-user-shield"></i> Admin Access</h2>
-            <div class="discord-grid">
-                <div class="discord-card full">
-                    <div class="row">
-                        <label class="sr-only" for="adminToken">Dashboard Admin Token</label>
-                        <input id="adminToken" type="password" autocomplete="off" placeholder="Dashboard Admin Token (Bearer token)">
-                        <button class="btn btn-primary" id="saveTokenBtn">Save Token</button>
-                        <button class="btn btn-secondary" id="clearTokenBtn">Clear Token</button>
-                        <button class="btn btn-outline" id="testConnectionBtn">Test Connection</button>
-                    </div>
-                    <p class="muted">Token is stored only in your browser localStorage for this dashboard host.</p>
-                    <div class="status-pill" id="tokenStatus" role="status" aria-live="polite"><i class="fas fa-circle"></i><span>No token saved</span></div>
-                </div>
-            </div>
-        </section>
-
-        <section>
             <h2><i class="fas fa-server"></i> Server Selection</h2>
             <div class="discord-grid">
                 <div class="discord-card">
@@ -246,6 +229,7 @@
                         <label class="sr-only" for="serverSelect">Managed Discord Servers</label>
                         <select id="serverSelect"></select>
                         <button class="btn btn-outline" id="syncServersBtn" type="button">Sync Servers</button>
+                        <button class="btn btn-outline" id="testConnectionBtn" type="button">Test Connection</button>
                         <button class="btn btn-secondary" id="loadConfigBtn">Load Config</button>
                     </div>
                     <p class="muted">Select a server from your saved list, then load moderation config.</p>
@@ -320,6 +304,13 @@
                 <div class="discord-card full">
                     <h3><i class="fas fa-user-shield"></i> Exemptions</h3>
                     <p class="setting-help">IDs here are never punished by automod in normal operation.</p>
+                    <div class="row">
+                        <select id="serverRolesSelect" multiple size="8" aria-label="Server roles"></select>
+                    </div>
+                    <div class="row">
+                        <button class="btn btn-outline" id="refreshRolesBtn" type="button">Refresh Roles</button>
+                        <button class="btn btn-secondary" id="applySelectedRolesBtn" type="button">Use Selected Roles as Exemptions</button>
+                    </div>
                     <div class="row">
                         <textarea id="exemptRoleIds" class="mono" placeholder="Exempt Role IDs (one per line)"></textarea>
                     </div>
@@ -576,6 +567,6 @@
     <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
 
     <script src="config.js?v=3.0"></script>
-    <script src="discord-management.js?v=3.4"></script>
+    <script src="discord-management.js?v=3.5"></script>
 </body>
 </html>
