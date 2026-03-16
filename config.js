@@ -12,6 +12,9 @@ const DASHBOARDCONFIG = {
     
     // Refresh interval in milliseconds (default: 5000ms = 5 seconds)
     REFRESH_INTERVAL: 5000,
+
+    // Browser storage key used by discord-management.html for bearer token
+    DISCORD_ADMIN_TOKEN_STORAGE_KEY: 'discord_admin_token',
     
     // Enable debug logging
     DEBUG: true  // Enable for troubleshooting
