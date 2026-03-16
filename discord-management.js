@@ -802,14 +802,28 @@
     }
 
     async function fetchServersFromApi() {
-        const token = getToken();
-        if (!token) {
-            return;
-        }
         try {
-            const response = await api("/api/discord/servers");
+            const token = getToken();
+            const url = `${API_BASE}/api/discord/servers`;
+            const requestHeaders = token
+                ? {
+                    "Authorization": `Bearer ${token}`
+                }
+                : {};
+
+            const res = await fetch(url, {
+                method: "GET",
+                headers: requestHeaders
+            });
+
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+
+            const response = await res.json();
             const remoteServers = (response && response.data && response.data.servers) || [];
             if (!Array.isArray(remoteServers) || !remoteServers.length) {
+                setLastAction("No Discord servers discovered yet");
                 return;
             }
             const localServers = loadServers();
@@ -972,6 +986,7 @@
         bindEvents();
         setAdvancedVisibility(false);
         updateChecklist();
+        testConnection();
         fetchServersFromApi();
         scheduleServerDiscovery();
     }
