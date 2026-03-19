@@ -25,6 +25,99 @@ const DEBUG = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.DEBUG) || false;
 // Expose API base to other scripts/pages if needed
 try { window.API_BASE = API_BASE; } catch (e) { console.error('Failed to expose API_BASE:', e); }
 
+const DEFAULT_API_BASE = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+const API_BASE_STORAGE_KEY = 'dashboard_last_good_api_base';
+
+function normalizeApiBase(url) {
+    return String(url || '').trim().replace(/\/$/, '');
+}
+
+function getRuntimeApiOverride() {
+    try {
+        const params = new URLSearchParams(window.location.search || '');
+        return normalizeApiBase(params.get('api') || window.__DASHBOARD_API_URL || '');
+    } catch (_) {
+        return normalizeApiBase(window.__DASHBOARD_API_URL || '');
+    }
+}
+
+function getStoredApiBase() {
+    try {
+        return normalizeApiBase(localStorage.getItem(API_BASE_STORAGE_KEY) || '');
+    } catch (_) {
+        return '';
+    }
+}
+
+function persistApiBase(apiBase) {
+    try {
+        localStorage.setItem(API_BASE_STORAGE_KEY, normalizeApiBase(apiBase));
+    } catch (_) {}
+}
+
+function buildApiCandidates() {
+    const configured = normalizeApiBase(window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL);
+    const runtime = getRuntimeApiOverride();
+    const stored = getStoredApiBase();
+    const current = normalizeApiBase(API_BASE);
+
+    const candidates = [runtime, stored, current, configured, DEFAULT_API_BASE].filter(Boolean);
+    return [...new Set(candidates)];
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+    if (typeof AbortController === 'undefined') {
+        return fetch(url, options);
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+async function probeApiBase(candidate) {
+    const base = normalizeApiBase(candidate);
+    if (!base) {
+        return false;
+    }
+
+    try {
+        const res = await fetchWithTimeout(`${base}/api/status`, {
+            method: 'GET',
+            mode: 'cors',
+            cache: 'no-store',
+            headers: { 'Accept': 'application/json' }
+        }, 7000);
+        return res.ok;
+    } catch (err) {
+        console.warn('API probe failed for candidate:', base, err && err.message ? err.message : err);
+        return false;
+    }
+}
+
+async function ensureApiBaseReachable() {
+    const candidates = buildApiCandidates();
+    console.log('API probe candidates:', candidates);
+
+    for (const candidate of candidates) {
+        const ok = await probeApiBase(candidate);
+        if (ok) {
+            API_BASE = normalizeApiBase(candidate);
+            try { window.API_BASE = API_BASE; } catch (_) {}
+            persistApiBase(API_BASE);
+            console.log('✅ Selected reachable API_BASE:', API_BASE);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // Cache to prevent redundant API calls
 const API_CACHE = {
     status: { data: null, timestamp: 0 },
@@ -646,14 +739,16 @@ function checkDashboardElements() {
 async function updateAllData() {
     console.log('📊 updateAllData() called');
     try {
-        // Use Promise.allSettled instead of Promise.all to get results even if some fail
-        const results = await Promise.allSettled([
+        const runAll = async () => Promise.allSettled([
             updateStatus(),
-            updateUsers(),  
+            updateUsers(),
             updateMedia(),
             updateGroups(),
             updateFeedback()
         ]);
+
+        // Use Promise.allSettled instead of Promise.all to get results even if some fail
+        let results = await runAll();
         
         // Check results and log any failures
         const apiNames = ['updateStatus', 'updateUsers', 'updateMedia', 'updateGroups', 'updateFeedback'];
@@ -672,6 +767,35 @@ async function updateAllData() {
         
         // If ALL failed, throw an error with details
         if (failed.length === results.length) {
+            const allNetworkFailures = failed.every(({ error }) => {
+                const msg = String((error && error.message) || error || '').toLowerCase();
+                return msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('aborterror');
+            });
+
+            if (allNetworkFailures) {
+                console.warn('All API calls failed due to network errors. Attempting API base recovery...');
+                const recovered = await ensureApiBaseReachable();
+                if (recovered) {
+                    results = await runAll();
+
+                    const retryFailed = [];
+                    results.forEach((r, i) => {
+                        if (r.status === 'rejected') {
+                            retryFailed.push({ name: apiNames[i], error: r.reason });
+                        }
+                    });
+
+                    if (retryFailed.length < results.length) {
+                        console.log('✅ Recovery retry succeeded for at least one API call');
+                        updateLastUpdateTime();
+                        return;
+                    }
+
+                    const retryErrorMsg = `All ${retryFailed.length} API calls failed after recovery. First error: ${retryFailed[0].error.message || retryFailed[0].error}`;
+                    throw new Error(retryErrorMsg);
+                }
+            }
+
             const errorMsg = `All ${failed.length} API calls failed. First error: ${failed[0].error.message || failed[0].error}`;
             throw new Error(errorMsg);
         }
@@ -736,8 +860,11 @@ function hideErrorBanner() {
 function retryLoadData() {
     console.log('Retrying data load...');
     hideErrorBanner();
-    updateAllData().catch(err => {
-        showErrorBanner('Still unable to load data. Please check your connection and try again.');
+    (async () => {
+        await ensureApiBaseReachable();
+        await updateAllData();
+    })().catch(err => {
+        showErrorBanner('Still unable to load dashboard data. API may be unreachable from this network.');
     });
 }
 
@@ -773,6 +900,11 @@ function initDashboard() {
         // Initial load
         console.log('📡 Calling updateAllData()...');
         try {
+            const reachable = await ensureApiBaseReachable();
+            if (!reachable) {
+                throw new Error('No reachable API endpoint found. The configured backend may be blocked from Telegram WebView/network.');
+            }
+
             await updateAllData();
             console.log('✅ Initial load completed successfully');
             hideErrorBanner();
