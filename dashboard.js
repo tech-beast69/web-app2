@@ -66,7 +66,11 @@ function buildApiCandidates() {
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
-    if (typeof AbortController === 'undefined') {
+    const isTelegramWebView = !!(window.Telegram && window.Telegram.WebApp);
+
+    // Some Telegram WebView builds expose AbortController but behave unreliably
+    // with fetch(signal), causing false "no reachable endpoint" probe failures.
+    if (isTelegramWebView || typeof AbortController === 'undefined') {
         return fetch(url, options);
     }
 
@@ -75,6 +79,13 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
 
     try {
         return await fetch(url, { ...options, signal: controller.signal });
+    } catch (err) {
+        // Fallback to plain fetch when signal-based fetch is not supported.
+        const msg = String((err && err.message) || err || '').toLowerCase();
+        if (msg.includes('signal') || msg.includes('abort')) {
+            return fetch(url, options);
+        }
+        throw err;
     } finally {
         clearTimeout(timeoutId);
     }
@@ -89,10 +100,9 @@ async function probeApiBase(candidate) {
     try {
         const res = await fetchWithTimeout(`${base}/api/status`, {
             method: 'GET',
-            mode: 'cors',
             cache: 'no-store',
             headers: { 'Accept': 'application/json' }
-        }, 7000);
+        }, 15000);
         return res.ok;
     } catch (err) {
         console.warn('API probe failed for candidate:', base, err && err.message ? err.message : err);
@@ -902,7 +912,7 @@ function initDashboard() {
         try {
             const reachable = await ensureApiBaseReachable();
             if (!reachable) {
-                throw new Error('No reachable API endpoint found. The configured backend may be blocked from Telegram WebView/network.');
+                console.warn('No probe candidate confirmed yet; continuing with direct data fetch attempts.');
             }
 
             await updateAllData();
