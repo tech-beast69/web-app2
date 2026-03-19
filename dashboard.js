@@ -1198,6 +1198,15 @@ async function performSearch() {
 async function loadLinks() {
     try {
         showLoading('Loading links...');
+
+        const fetchWithDeadline = async (targetUrl, timeoutMs = 20000) => {
+            return await Promise.race([
+                fetch(targetUrl),
+                new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error(`Request timeout after ${Math.round(timeoutMs / 1000)}s`)), timeoutMs);
+                })
+            ]);
+        };
         
         const offset = currentPage * linksPerPage;
         let url = `${API_BASE}/api/links/search?limit=${linksPerPage}&offset=${offset}`;
@@ -1216,7 +1225,7 @@ async function loadLinks() {
         
         let response;
         try {
-            response = await fetch(url);
+            response = await fetchWithDeadline(url, 20000);
         } catch (fetchError) {
             console.error('Fetch error:', fetchError);
             
@@ -1225,7 +1234,7 @@ async function loadLinks() {
                 console.log('HTTPS failed, trying HTTP...');
                 const httpUrl = url.replace('https://', 'http://');
                 try {
-                    response = await fetch(httpUrl);
+                    response = await fetchWithDeadline(httpUrl, 12000);
                     // Update API_BASE if HTTP works
                     API_BASE = API_BASE.replace('https://', 'http://');
                     console.log('✅ HTTP connection successful, updated API_BASE:', API_BASE);
