@@ -2376,26 +2376,41 @@ if (tg) {
 async function loadGroups() {
     try {
         const cacheBuster = `_t=${Date.now()}`;
-        const separator = userId ? '&' : '?';
-        const url = userId ? 
+        const managedUrl = userId ? 
             `${API_BASE_URL}/api/groups/managed?user_id=${userId}&${cacheBuster}` : 
             `${API_BASE_URL}/api/groups/managed?${cacheBuster}`;
+        const legacyUrl = userId ?
+            `${API_BASE_URL}/api/groups?user_id=${userId}&${cacheBuster}` :
+            `${API_BASE_URL}/api/groups?${cacheBuster}`;
         
         console.log('=== API Request Debug ===');
         console.log('API Base URL:', API_BASE_URL);
-        console.log('Full URL:', url);
+        console.log('Managed URL:', managedUrl);
+        console.log('Legacy URL:', legacyUrl);
         console.log('User ID:', userId);    
         console.log('Current location:', window.location.href);
         console.log('Protocol:', window.location.protocol);
-            
-        const response = await fetch(url);
-        console.log('Response status:', response.status);
+
+        let response = await fetch(managedUrl);
+        console.log('Managed response status:', response.status);
+
+        // Backward compatibility: older servers may not expose /api/groups/managed yet.
+        if (!response.ok && (response.status === 404 || response.status === 405)) {
+            console.warn('Managed groups endpoint unavailable, trying legacy endpoint:', legacyUrl);
+            response = await fetch(legacyUrl);
+            console.log('Legacy response status:', response.status);
+        }
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
+
+        if (!Array.isArray(data.groups)) {
+            throw new Error('BACKEND_OUTDATED_GROUPS_API');
+        }
+
         console.log('Received data:', data);
 
         const loadingSection = document.getElementById('loadingSection');
@@ -2464,12 +2479,28 @@ async function loadGroups() {
         
         // Check if this is a network/CORS error
         const isNetworkError = error instanceof TypeError && error.message.includes('Failed to fetch');
+        const isOutdatedBackend = error && error.message === 'BACKEND_OUTDATED_GROUPS_API';
         
         const loadingSection = document.getElementById('loadingSection');
         loadingSection.style.display = 'block';
         
         let errorHtml = '';
-        if (isNetworkError) {
+        if (isOutdatedBackend) {
+            errorHtml = `
+                <div class="error-message" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; padding: 30px; border-radius: 15px; text-align: center;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3em; margin-bottom: 15px;"></i>
+                    <h3>Backend Update Required</h3>
+                    <p style="margin: 15px 0;">This API server does not support Group Management endpoints yet.</p>
+                    <p style="margin: 15px 0; font-size: 0.9em; opacity: 0.9;">
+                        Required endpoint: <strong>/api/groups/managed</strong><br>
+                        Please deploy/restart the latest dashboard backend.
+                    </p>
+                    <button class="btn-primary" onclick="loadGroups()" style="margin-top: 20px; padding: 12px 24px; background: white; color: #ff6b6b; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-redo"></i> Retry
+                    </button>
+                </div>
+            `;
+        } else if (isNetworkError) {
             errorHtml = `
                 <div class="error-message" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; padding: 30px; border-radius: 15px; text-align: center;">
                     <i class="fas fa-exclamation-triangle" style="font-size: 3em; margin-bottom: 15px;"></i>
