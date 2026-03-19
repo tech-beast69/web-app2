@@ -829,14 +829,36 @@
 
         setBusy(els.testConnectionBtn, true, "Testing...");
         try {
-            const response = await fetch(`${API_BASE}/health`);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+            // Support both new and legacy dashboard backends.
+            // Some deployments expose only /api/status and not /health.
+            const probes = [
+                { path: "/health", okText: "Healthy (/health)" },
+                { path: "/api/status", okText: "Connected (/api/status)" }
+            ];
+
+            let lastError = "No compatible health endpoint responded";
+            let connected = false;
+
+            for (const probe of probes) {
+                try {
+                    const response = await fetch(`${API_BASE}${probe.path}`);
+                    if (response.ok) {
+                        setConnectionStatus(probe.okText, true);
+                        notify("Connection healthy", "success");
+                        connected = true;
+                        break;
+                    }
+                    lastError = `${probe.path} returned HTTP ${response.status}`;
+                } catch (probeErr) {
+                    lastError = `${probe.path} failed: ${probeErr.message}`;
+                }
             }
-            setConnectionStatus("Healthy", true);
-            notify("Connection healthy", "success");
+
+            if (!connected) {
+                throw new Error(lastError);
+            }
         } catch (err) {
-            setConnectionStatus("Health check failed", false);
+            setConnectionStatus("Connection check failed", false);
             notify(`Connection failed: ${err.message}`, "error");
         } finally {
             setBusy(els.testConnectionBtn, false);
