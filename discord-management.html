@@ -1,731 +1,572 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Group Management - Bot Dashboard</title>
-    
-    <!-- Content Security Policy for Telegram Web App -->
+    <title>Discord Management - Bot Dashboard</title>
     <meta http-equiv="Content-Security-Policy" content="
-        default-src 'self' https://tech-beast69.github.io https://telegram.org; 
-        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://cdnjs.cloudflare.com; 
-        style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; 
+        default-src 'self' https://tech-beast69.github.io https://telegram.org;
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://cdnjs.cloudflare.com;
+        style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
         connect-src 'self' https://tech-beast69.github.io https://*.glacierhosting.org https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org;
-        img-src 'self' data: https:; 
+        img-src 'self' data: https:;
         font-src 'self' https://cdnjs.cloudflare.com data:;
     ">
-    
     <link rel="stylesheet" href="dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Telegram Web App SDK -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        .discord-wrap { max-width: 1240px; margin: 0 auto; }
+        .summary-grid { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+        .summary-card { background: rgba(255,255,255,0.92); border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08); }
+        .summary-label { color: #64748b; font-size: 0.82rem; margin-bottom: 6px; }
+        .summary-value { color: #0f172a; font-size: 1.02rem; font-weight: 700; }
+        .discord-grid { display: grid; grid-template-columns: repeat(2, minmax(300px, 1fr)); gap: 18px; }
+        .discord-card { background: rgba(255,255,255,0.9); border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; box-shadow: 0 6px 18px rgba(15,23,42,0.08); }
+        .discord-card h3 { margin-bottom: 12px; font-size: 1.04rem; display: flex; gap: 8px; align-items: center; }
+        .row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        .row input:not([type="checkbox"]), .row select, .row textarea {
+            flex: 1;
+            min-width: 220px;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: #fff;
+        }
+        .row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            flex: 0 0 auto;
+            accent-color: #2563eb;
+            vertical-align: middle;
+        }
+        .row textarea { min-height: 110px; }
+        .btn {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-weight: 600;
+            min-height: 42px;
+        }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-primary { background: #2563eb; color: #fff; }
+        .btn-secondary { background: #e2e8f0; color: #0f172a; }
+        .btn-danger { background: #dc2626; color: #fff; }
+        .btn-outline { background: #fff; border: 1px solid #cbd5e1; color: #0f172a; }
+        .muted { color: #64748b; font-size: 0.92rem; }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+        .full { grid-column: 1 / -1; }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 999px;
+            padding: 7px 11px;
+            background: #e2e8f0;
+            font-size: 0.85rem;
+        }
+        .pill-success { background: #dcfce7; color: #166534; }
+        .pill-danger { background: #fee2e2; color: #991b1b; }
+        .filters-line { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+        .toggle-chip {
+            display: inline-flex;
+            gap: 6px;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 8px 10px;
+            border-radius: 999px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            font-size: 0.88rem;
+            min-height: 44px;
+        }
+        .preset-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border-bottom: 1px solid #e2e8f0; padding: 8px; text-align: left; font-size: 0.9rem; }
+        .warnings-item { padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+        .actions-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .subgrid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 12px; margin-bottom: 12px; }
+        .mini-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; }
+        .mini-title { font-weight: 700; color: #1e293b; margin-bottom: 8px; font-size: 0.92rem; }
+        .mini-card .row { margin-bottom: 8px; }
+        .field-label { font-size: 0.82rem; color: #475569; min-width: 120px; }
+        .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 12px; }
+        .setting-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; }
+        .setting-title { font-weight: 700; color: #111827; margin-bottom: 4px; }
+        .setting-help { color: #64748b; font-size: 0.84rem; margin-bottom: 10px; }
+        .guide-list { margin: 0; padding-left: 20px; color: #334155; line-height: 1.5; }
+        .guide-list li { margin-bottom: 6px; }
+        .quick-setup {
+            border: 1px solid #bfdbfe;
+            background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+        }
+        .quick-setup h3 { color: #1d4ed8; }
+        .inline-help {
+            margin-top: 8px;
+            color: #334155;
+            font-size: 0.88rem;
+            line-height: 1.45;
+        }
+        .action-note {
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: #eef2ff;
+            color: #312e81;
+            border: 1px solid #c7d2fe;
+            font-size: 0.86rem;
+        }
+        .checklist-box {
+            margin-top: 10px;
+            border: 1px solid #dbeafe;
+            background: #f8fbff;
+            border-radius: 12px;
+            padding: 10px 12px;
+        }
+        .checklist-title {
+            font-size: 0.87rem;
+            font-weight: 700;
+            color: #1e3a8a;
+            margin-bottom: 6px;
+        }
+        .checklist-item {
+            font-size: 0.85rem;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+        .checklist-item.warn { color: #92400e; }
+        .checklist-item.good { color: #166534; }
+        .collapsed-advanced .advanced-setting {
+            display: none;
+        }
+        .advanced-state {
+            font-size: 0.85rem;
+            color: #475569;
+            margin-left: 8px;
+        }
+        .toast-wrap {
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            z-index: 1500;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 340px;
+        }
+        .toast {
+            background: #0f172a;
+            color: #fff;
+            border-radius: 10px;
+            padding: 10px 12px;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.35);
+            animation: toastIn 180ms ease-out;
+            font-size: 0.92rem;
+        }
+        .toast.success { background: #166534; }
+        .toast.error { background: #991b1b; }
+        @keyframes toastIn {
+            from { transform: translateY(8px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        @media (max-width: 1000px) {
+            .discord-grid { grid-template-columns: 1fr; }
+            .summary-grid { grid-template-columns: 1fr; }
+            .subgrid { grid-template-columns: 1fr; }
+            .settings-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
-
 <body>
-    <div class="group-management-container">
+    <div class="container discord-wrap">
         <header>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;">
                 <div>
-                    <h1><i class="fas fa-users-cog"></i> Group Management Dashboard</h1>
-                    <p class="subtitle">Manage all your Telegram groups from one place</p>
+                    <h1><i class="fab fa-discord"></i> Discord Management</h1>
+                    <p class="subtitle">Manage Discord server moderation settings, cases, and warnings</p>
                 </div>
-                <a href="index.html" class="btn-secondary" style="text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s ease; background: white; color: #0f172a; border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);">
-                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                <a href="index.html" class="btn-secondary" style="text-decoration:none; padding:10px 14px; border-radius:10px; font-weight:700;">
+                    <i class="fas fa-arrow-left"></i> Back
                 </a>
             </div>
         </header>
 
-        <!-- Error Banner (hidden by default) -->
-        <div id="errorBanner" class="error-banner" style="display: none;">
-            <div class="error-content">
-                <i class="fas fa-exclamation-triangle"></i>
-                <span id="errorMessage">An error occurred</span>
-                <button id="retryBtn" class="retry-btn" onclick="retryLoadData()">
-                    <i class="fas fa-redo"></i> Retry
-                </button>
+        <section>
+            <h2><i class="fas fa-gauge-high"></i> Session Overview</h2>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-label">Connection</div>
+                    <div class="summary-value" id="connectionStatus">Not tested</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Selected Server</div>
+                    <div class="summary-value mono" id="selectedServerLabel">None</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Last Action</div>
+                    <div class="summary-value" id="lastActionLabel">No actions yet</div>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <div id="loadingSection" class="loading">
-            <i class="fas fa-spinner"></i>
-            <p>Loading your groups...</p>
-        </div>
+        <section>
+            <h2><i class="fas fa-server"></i> Server Selection</h2>
+            <div class="discord-grid">
+                <div class="discord-card">
+                    <h3>Managed Servers</h3>
+                    <div class="row">
+                        <label class="sr-only" for="serverSelect">Managed Discord Servers</label>
+                        <select id="serverSelect"></select>
+                        <button class="btn btn-outline" id="syncServersBtn" type="button">Sync Servers</button>
+                        <button class="btn btn-outline" id="testConnectionBtn" type="button">Test Connection</button>
+                        <button class="btn btn-secondary" id="loadConfigBtn">Load Config</button>
+                    </div>
+                    <p class="muted">Select a server from your saved list, then load moderation config.</p>
+                </div>
+                <div class="discord-card">
+                    <h3>Add Server</h3>
+                    <div class="row">
+                        <label class="sr-only" for="newGuildId">Guild ID</label>
+                        <input id="newGuildId" class="mono" placeholder="Guild ID (e.g. 123456789012345678)">
+                        <label class="sr-only" for="newGuildName">Guild label</label>
+                        <input id="newGuildName" placeholder="Label (optional)">
+                    </div>
+                    <div class="row">
+                        <button class="btn btn-primary" id="addServerBtn">Add Server</button>
+                        <button class="btn btn-danger" id="removeServerBtn">Remove Selected</button>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-        <div id="groupsSection" style="display: none;">
-            <div class="groups-grid" id="groupsGrid"></div>
-        </div>
+        <section>
+            <h2><i class="fas fa-shield-alt"></i> Moderation Settings</h2>
+            <div class="discord-card full">
+                <h3><i class="fas fa-circle-info"></i> How To Use Settings Correctly</h3>
+                <ol class="guide-list">
+                    <li>Step 1: Pick a profile in <strong>Quick Setup</strong> and click <strong>Apply Profile</strong>.</li>
+                    <li>Step 2: Set <strong>Log Channel ID</strong>, then enable <strong>Moderation Enabled</strong>.</li>
+                    <li>Step 3: Add <strong>Exempt Role IDs</strong> and <strong>Exempt Channel IDs</strong> for trusted staff/bot channels.</li>
+                    <li>Step 4: Save config, monitor cases for a day, then open <strong>Advanced Settings</strong> only if needed.</li>
+                </ol>
+            </div>
 
-        <div id="emptyState" class="empty-state" style="display: none;">
-            <i class="fas fa-inbox"></i>
-            <h3>No Groups Found</h3>
-            <p>Add the bot to your Telegram groups to manage them here</p>
-        </div>
+            <div class="discord-card full quick-setup">
+                <h3><i class="fas fa-wand-magic-sparkles"></i> Quick Setup (Recommended)</h3>
+                <div class="row">
+                    <label class="field-label" for="guidedMode">Protection Profile</label>
+                    <select id="guidedMode" aria-label="Protection profile">
+                        <option value="starter">Starter: low-risk, fewer false positives</option>
+                        <option value="balanced" selected>Balanced: recommended for most servers</option>
+                        <option value="high_security">High Security: raid-focused and stricter</option>
+                    </select>
+                    <label class="field-label" for="enforcementMode">Enforcement</label>
+                    <select id="enforcementMode" aria-label="Enforcement mode">
+                        <option value="learning" selected>Learning: warn/delete_warn only</option>
+                        <option value="standard">Standard: mixed actions</option>
+                        <option value="aggressive">Aggressive: timeout-heavy</option>
+                    </select>
+                    <button class="btn btn-primary" id="applyGuidedBtn" type="button">Apply Profile</button>
+                    <button class="btn btn-outline" id="toggleAdvancedBtn" type="button">Show Advanced Settings</button>
+                </div>
+                <div class="inline-help">
+                    Profiles configure common values automatically. You can still customize any field later.
+                    <span class="advanced-state" id="advancedStateLabel">Advanced settings are hidden</span>
+                </div>
+            </div>
+
+            <div class="discord-grid">
+                <div class="discord-card full">
+                    <h3><i class="fas fa-sliders"></i> Core Controls</h3>
+                    <div class="row">
+                        <label class="sr-only" for="logChannelId">Log Channel ID</label>
+                        <input id="logChannelId" class="mono" placeholder="Log Channel ID">
+                    </div>
+                    <div class="filters-line">
+                        <label class="toggle-chip"><input type="checkbox" id="enabled"> Moderation Enabled</label>
+                        <label class="toggle-chip"><input type="checkbox" id="exemptAdmins" checked> Exempt Admins (recommended)</label>
+                        <label class="toggle-chip"><input type="checkbox" id="raidModeEnabled"> Raid Quarantine Mode</label>
+                    </div>
+                    <div class="checklist-box" id="configChecklist" aria-live="polite"></div>
+                </div>
+
+                <div class="discord-card full">
+                    <h3><i class="fas fa-user-shield"></i> Exemptions</h3>
+                    <p class="setting-help">IDs here are never punished by automod in normal operation.</p>
+                    <div class="row">
+                        <select id="serverRolesSelect" multiple size="8" aria-label="Server roles"></select>
+                    </div>
+                    <div class="row">
+                        <button class="btn btn-outline" id="refreshRolesBtn" type="button">Refresh Roles</button>
+                        <button class="btn btn-secondary" id="applySelectedRolesBtn" type="button">Use Selected Roles as Exemptions</button>
+                    </div>
+                    <div class="row">
+                        <textarea id="exemptRoleIds" class="mono" placeholder="Exempt Role IDs (one per line)"></textarea>
+                    </div>
+                    <div class="row">
+                        <textarea id="exemptChannelIds" class="mono" placeholder="Exempt Channel IDs (one per line)"></textarea>
+                    </div>
+                </div>
+
+                <div class="discord-card full collapsed-advanced" id="moderationSettingsBlock">
+                    <h3><i class="fas fa-boxes-stacked"></i> Filter Settings (Separated)</h3>
+                    <p class="action-note">Action meaning: <strong>warn</strong> = warning only, <strong>delete_warn</strong> = remove message + warning, <strong>delete_timeout</strong> = remove message + timeout.</p>
+                    <div class="settings-grid">
+                        <div class="setting-card">
+                            <div class="setting-title">Anti-Spam</div>
+                            <div class="setting-help">Stops flooding and repeated message spam.</div>
+                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiSpamEnabled"> Enable Anti-Spam</label></div>
+                            <div class="row"><input id="antiSpamLimit" type="number" min="2" max="30" placeholder="How many messages are allowed"></div>
+                            <div class="row"><input id="antiSpamWindow" type="number" min="3" max="120" placeholder="In how many seconds"></div>
+                            <div class="row"><input id="duplicateLimit" type="number" min="2" max="20" placeholder="How many duplicate messages"></div>
+                            <div class="row"><input id="spamTimeoutSeconds" type="number" min="60" max="2419200" placeholder="Timeout seconds"></div>
+                            <div class="row">
+                                <select id="antiSpamAction">
+                                    <option value="warn">warn</option>
+                                    <option value="delete_warn">delete_warn</option>
+                                    <option value="delete_timeout">delete_timeout</option>
+                                    <option value="timeout">timeout</option>
+                                    <option value="kick">kick</option>
+                                    <option value="ban">ban</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-card">
+                            <div class="setting-title">Mention Spam</div>
+                            <div class="setting-help">Controls too many user/role mentions in one message.</div>
+                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiMentionEnabled"> Enable Mention Guard</label></div>
+                            <div class="row"><input id="mentionLimit" type="number" min="1" max="50" placeholder="Max mentions per message"></div>
+                            <div class="row"><input id="mentionTimeoutSeconds" type="number" min="60" max="2419200" placeholder="Timeout seconds"></div>
+                            <div class="row">
+                                <select id="antiMentionAction">
+                                    <option value="warn">warn</option>
+                                    <option value="delete_warn">delete_warn</option>
+                                    <option value="delete_timeout">delete_timeout</option>
+                                    <option value="timeout">timeout</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-card">
+                            <div class="setting-title">@everyone / @here Guard</div>
+                            <div class="setting-help">Blocks public role ping abuse.</div>
+                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiEveryoneEnabled"> Enable Public Ping Guard</label></div>
+                            <div class="row"><input id="everyoneMentionLimit" type="number" min="0" max="10" placeholder="Allowed @everyone/@here (0=none)"></div>
+                            <div class="row">
+                                <select id="antiEveryoneAction">
+                                    <option value="warn">warn</option>
+                                    <option value="delete_warn">delete_warn</option>
+                                    <option value="delete_timeout">delete_timeout</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-card">
+                            <div class="setting-title">Anti-Link</div>
+                            <div class="setting-help">Filters external links except allow-listed domains.</div>
+                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiLinkEnabled"> Enable Anti-Link</label></div>
+                            <div class="row">
+                                <select id="antiLinkAction">
+                                    <option value="warn">warn</option>
+                                    <option value="delete_warn">delete_warn</option>
+                                    <option value="delete_timeout">delete_timeout</option>
+                                    <option value="timeout">timeout</option>
+                                </select>
+                            </div>
+                            <div class="row"><textarea id="allowDomains" placeholder="Allowed domains for anti-link (one per line)"></textarea></div>
+                        </div>
+
+                        <div class="setting-card">
+                            <div class="setting-title">Anti-Invite</div>
+                            <div class="setting-help">Blocks Discord invite links and ad spam.</div>
+                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiInviteEnabled"> Enable Anti-Invite</label></div>
+                            <div class="row">
+                                <select id="antiInviteAction">
+                                    <option value="warn">warn</option>
+                                    <option value="delete_warn">delete_warn</option>
+                                    <option value="delete_timeout">delete_timeout</option>
+                                    <option value="timeout">timeout</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-card advanced-setting">
+                            <div class="setting-title">Emoji Spam</div>
+                            <div class="setting-help">Restricts excessive emoji usage per message.</div>
+                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiEmojiEnabled"> Enable Emoji Guard</label></div>
+                            <div class="row"><input id="emojiLimit" type="number" min="1" max="200" placeholder="Max emojis"></div>
+                            <div class="row">
+                                <select id="antiEmojiAction">
+                                    <option value="warn">warn</option>
+                                    <option value="delete_warn">delete_warn</option>
+                                    <option value="delete_timeout">delete_timeout</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-card advanced-setting">
+                            <div class="setting-title">Line Spam</div>
+                            <div class="setting-help">Limits large newline floods and wall text.</div>
+                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiLineEnabled"> Enable Line Guard</label></div>
+                            <div class="row"><input id="lineLimit" type="number" min="2" max="100" placeholder="Max lines"></div>
+                            <div class="row">
+                                <select id="antiLineAction">
+                                    <option value="warn">warn</option>
+                                    <option value="delete_warn">delete_warn</option>
+                                    <option value="delete_timeout">delete_timeout</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-card advanced-setting">
+                            <div class="setting-title">Long Message Guard</div>
+                            <div class="setting-help">Controls very long messages to reduce spam load.</div>
+                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiLongEnabled"> Enable Long Message Guard</label></div>
+                            <div class="row"><input id="charLimit" type="number" min="100" max="4000" placeholder="Max characters"></div>
+                            <div class="row">
+                                <select id="antiLongAction">
+                                    <option value="warn">warn</option>
+                                    <option value="delete_warn">delete_warn</option>
+                                    <option value="delete_timeout">delete_timeout</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-card advanced-setting">
+                            <div class="setting-title">CAPS Guard</div>
+                            <div class="setting-help">Flags all-caps shouting behavior.</div>
+                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiCapsEnabled"> Enable CAPS Guard</label></div>
+                            <div class="row"><input id="capsRatio" type="number" min="0.1" max="1" step="0.05" placeholder="Caps ratio (0.8)"></div>
+                            <div class="row"><input id="capsMinLength" type="number" min="5" max="200" placeholder="Minimum letters"></div>
+                            <div class="row">
+                                <select id="antiCapsAction">
+                                    <option value="warn">warn</option>
+                                    <option value="delete_warn">delete_warn</option>
+                                    <option value="delete_timeout">delete_timeout</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-card advanced-setting">
+                            <div class="setting-title">Attachment Spam Guard</div>
+                            <div class="setting-help">Limits excessive file/image upload bursts.</div>
+                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiAttachmentEnabled"> Enable Attachment Guard</label></div>
+                            <div class="row"><input id="attachmentLimit" type="number" min="1" max="20" placeholder="Max attachments"></div>
+                            <div class="row">
+                                <select id="antiAttachmentAction">
+                                    <option value="warn">warn</option>
+                                    <option value="delete_warn">delete_warn</option>
+                                    <option value="delete_timeout">delete_timeout</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-card advanced-setting">
+                            <div class="setting-title">New Account Guard</div>
+                            <div class="setting-help">Applies policy to very new accounts (anti-raid).</div>
+                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="newAccountGuardEnabled"> Enable New Account Guard</label></div>
+                            <div class="row"><input id="newAccountAgeMinutes" type="number" min="1" max="10080" placeholder="Minimum account age (minutes)"></div>
+                            <div class="row">
+                                <select id="newAccountAction">
+                                    <option value="log">log</option>
+                                    <option value="warn">warn</option>
+                                    <option value="delete_warn">delete_warn</option>
+                                    <option value="delete_timeout">delete_timeout</option>
+                                    <option value="kick">kick</option>
+                                    <option value="ban">ban</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-card">
+                            <div class="setting-title">Warn Escalation</div>
+                            <div class="setting-help">Automatically escalates repeat offenders after warn cap.</div>
+                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="warnEscalationEnabled"> Enable Warn Escalation</label></div>
+                            <div class="row"><input id="warnMax" type="number" min="2" max="20" placeholder="Warn cap"></div>
+                            <div class="row">
+                                <select id="warnEscalationAction">
+                                    <option value="timeout">timeout</option>
+                                    <option value="kick">kick</option>
+                                    <option value="ban">ban</option>
+                                </select>
+                            </div>
+                            <div class="row"><input id="warnEscalationTimeoutSeconds" type="number" min="60" max="2419200" placeholder="Escalation timeout seconds"></div>
+                        </div>
+
+                        <div class="setting-card advanced-setting">
+                            <div class="setting-title">Raid Quarantine Role</div>
+                            <div class="setting-help">Role applied when raid mode action is quarantine.</div>
+                            <div class="row"><input id="raidQuarantineRoleId" class="mono" placeholder="Raid quarantine role ID"></div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="preset-group" role="group" aria-label="Moderation presets">
+                            <button class="btn btn-outline" id="presetRelaxedBtn" type="button">Preset: Relaxed</button>
+                            <button class="btn btn-outline" id="presetBalancedBtn" type="button">Preset: Balanced</button>
+                            <button class="btn btn-outline" id="presetStrictBtn" type="button">Preset: Strict</button>
+                        </div>
+                    </div>
+                    <div class="row advanced-setting">
+                        <label class="sr-only" for="bannedWords">Banned words</label>
+                        <textarea id="bannedWords" placeholder="Banned words (one per line)"></textarea>
+                    </div>
+                    <div class="actions-row">
+                        <button class="btn btn-primary" id="saveConfigBtn">Save Moderation Config</button>
+                        <button class="btn btn-secondary" id="refreshConfigBtn">Refresh</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2><i class="fas fa-folder-open"></i> Cases and Warnings</h2>
+            <div class="discord-grid">
+                <div class="discord-card">
+                    <h3>Recent Cases</h3>
+                    <div class="row">
+                        <label class="sr-only" for="casesLimit">Cases limit</label>
+                        <input id="casesLimit" type="number" value="100" min="1" max="500" placeholder="Limit">
+                        <button class="btn btn-secondary" id="loadCasesBtn">Load Cases</button>
+                    </div>
+                    <div style="max-height: 320px; overflow: auto;">
+                        <table>
+                            <thead><tr><th>Case</th><th>Action</th><th>User</th><th>Rule</th><th>Auto</th></tr></thead>
+                            <tbody id="casesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="discord-card">
+                    <h3>User Warnings</h3>
+                    <div class="row">
+                        <label class="sr-only" for="warningsUserId">Warnings user ID</label>
+                        <input id="warningsUserId" class="mono" placeholder="User ID">
+                    </div>
+                    <div class="row">
+                        <button class="btn btn-secondary" id="loadWarningsBtn">Load Warnings</button>
+                        <button class="btn btn-danger" id="clearWarningsBtn">Clear Warnings</button>
+                    </div>
+                    <div id="warningsList" style="max-height: 320px; overflow: auto;"></div>
+                </div>
+            </div>
+        </section>
     </div>
 
-    <!-- Group Management Modal -->
-    <div id="groupModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalGroupTitle">Group Settings</h2>
-                <button class="close-modal" onclick="closeModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="tabs">
-                    <button class="tab active" onclick="switchTab('general', event)">
-                        <i class="fas fa-cog"></i> General
-                    </button>
-                    <button class="tab" onclick="switchTab('welcome', event)">
-                        <i class="fas fa-door-open"></i> Welcome
-                    </button>
-                    <button class="tab" onclick="switchTab('cleanservice', event)">
-                        <i class="fas fa-broom"></i> Clean Service
-                    </button>
-                    <button class="tab" onclick="switchTab('cleanmsg', event)">
-                        <i class="fas fa-comment-slash"></i> Clean Messages
-                    </button>
-                    <button class="tab" onclick="switchTab('locks', event)">
-                        <i class="fas fa-lock"></i> Locks
-                    </button>
-                    <button class="tab" onclick="switchTab('disabled', event)">
-                        <i class="fas fa-slash"></i> Disabled Commands
-                    </button>
-                    <button class="tab" onclick="switchTab('filters', event)">
-                        <i class="fas fa-filter"></i> Filters
-                    </button>
-                    <button class="tab" onclick="switchTab('moderation', event)">
-                        <i class="fas fa-shield-alt"></i> Moderation
-                    </button>
-                    <button class="tab" onclick="switchTab('bans', event)">
-                        <i class="fas fa-ban"></i> Bans & Warns
-                    </button>
-                    <button class="tab" onclick="switchTab('federation', event)">
-                        <i class="fas fa-network-wired"></i> Federation
-                    </button>
-                    <button class="tab" onclick="switchTab('mediaReactions', event)">
-                        <i class="fas fa-heart"></i> Media Reactions
-                    </button>
-                </div>
+    <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
 
-                <!-- General Settings Tab -->
-                <div id="generalTab" class="tab-content active">
-                    <div class="settings-section">
-                        <h3><i class="fas fa-sliders-h"></i> General Settings</h3>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Welcome Messages</div>
-                                <div class="setting-description">Send welcome messages to new members</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="welcomeEnabled"
-                                    onchange="updateSetting('welcome_enabled', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Goodbye Messages</div>
-                                <div class="setting-description">Send goodbye messages when members leave</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="goodbyeEnabled"
-                                    onchange="updateSetting('goodbye_enabled', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Anti-Flood</div>
-                                <div class="setting-description">Prevent spam by limiting message frequency</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="antifloodEnabled"
-                                    onchange="updateSetting('antiflood_enabled', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Delete Service Messages</div>
-                                <div class="setting-description">Automatically delete join/leave notifications</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="deleteServiceMessages"
-                                    onchange="updateSetting('delete_service_messages', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Clean Service Tab -->
-                <div id="cleanserviceTab" class="tab-content">
-                    <div class="settings-section">
-                        <h3><i class="fas fa-broom"></i> Clean Service Settings</h3>
-                        <p style="color: #666;">Match MissRose/Rose cleanservice types. Toggle which service messages to
-                            auto-delete.</p>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Enable Cleanservice</div>
-                                <div class="setting-description">Enable or disable the cleanservice feature entirely
-                                </div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="csEnabled"
-                                    onchange="updateCleanService('enabled', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Join</div>
-                                <div class="setting-description">Auto-delete "user joined" notifications</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="csJoin" onchange="updateCleanService('join', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Leave</div>
-                                <div class="setting-description">Auto-delete "user left" notifications</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="csLeave"
-                                    onchange="updateCleanService('leave', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Pin</div>
-                                <div class="setting-description">Auto-delete pinned message notifications</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="csPin" onchange="updateCleanService('pin', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Photo</div>
-                                <div class="setting-description">Auto-delete chat photo change notifications</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="csPhoto"
-                                    onchange="updateCleanService('photo', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Title</div>
-                                <div class="setting-description">Auto-delete chat title change notifications</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="csTitle"
-                                    onchange="updateCleanService('title', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Videochat</div>
-                                <div class="setting-description">Auto-delete video chat start/end/member notifications
-                                </div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="csVideochat"
-                                    onchange="updateCleanService('videochat', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Other</div>
-                                <div class="setting-description">Auto-delete miscellaneous service messages (payments,
-                                    webapp, etc.)</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="csOther"
-                                    onchange="updateCleanService('other', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Clean Messages Tab -->
-                <div id="cleanmsgTab" class="tab-content">
-                    <div class="settings-section">
-                        <h3><i class="fas fa-comment-slash"></i> Clean Message Settings</h3>
-                        <p style="color: #666;">Automatically delete Rose's own messages of certain types
-                            (action/filter/note)</p>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Enable Clean Messages</div>
-                                <div class="setting-description">Enable or disable cleanmsg (delete bot messages)</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="cmEnabled"
-                                    onchange="updateCleanMessage('enabled', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Action Messages</div>
-                                <div class="setting-description">Delete action messages (ban/mute/kick etc.)</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="cmAction"
-                                    onchange="updateCleanMessage('action', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Filter Replies</div>
-                                <div class="setting-description">Delete filter reply messages</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="cmFilter"
-                                    onchange="updateCleanMessage('filter', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Note Replies</div>
-                                <div class="setting-description">Delete note reply messages</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="cmNote" onchange="updateCleanMessage('note', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Locks Tab -->
-                <div id="locksTab" class="tab-content">
-                    <div class="settings-section">
-                        <h3><i class="fas fa-lock"></i> Locks</h3>
-                        <p style="color:#666;">Enable or disable various lock types for this group</p>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Messages</div>
-                                <div class="setting-description">Lock sending of text messages</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockMessages"
-                                    onchange="updateLock('messages', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Media</div>
-                                <div class="setting-description">Lock photos, videos and other media</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockMedia" onchange="updateLock('media', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Stickers</div>
-                                <div class="setting-description">Lock stickers</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockStickers"
-                                    onchange="updateLock('stickers', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">GIFs</div>
-                                <div class="setting-description">Lock GIFs</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockGifs" onchange="updateLock('gifs', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">URLs</div>
-                                <div class="setting-description">Lock links/URLs</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockUrl" onchange="updateLock('url', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Bots</div>
-                                <div class="setting-description">Prevent bots from posting</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockBots" onchange="updateLock('bots', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Forwards</div>
-                                <div class="setting-description">Lock forwarded messages</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockForward" onchange="updateLock('forward', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Games</div>
-                                <div class="setting-description">Lock game messages</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockGame" onchange="updateLock('game', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Inline</div>
-                                <div class="setting-description">Lock inline queries/results</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockInline" onchange="updateLock('inline', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Location</div>
-                                <div class="setting-description">Lock location messages</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockLocation"
-                                    onchange="updateLock('location', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Polls</div>
-                                <div class="setting-description">Lock polls</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockPoll" onchange="updateLock('poll', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Invites</div>
-                                <div class="setting-description">Lock invite links</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockInvite" onchange="updateLock('invite', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Pin</div>
-                                <div class="setting-description">Lock pin/unpin actions</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockPin" onchange="updateLock('pin', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Info</div>
-                                <div class="setting-description">Lock chat info commands</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="lockInfo" onchange="updateLock('info', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- Disabled Commands Tab -->
-                <div id="disabledTab" class="tab-content">
-                    <div class="settings-section">
-                        <h3><i class="fas fa-slash"></i> Disabled Commands</h3>
-                        <p style="color: #666;">Prevent specific bot commands from working in this group</p>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0;">
-                            <div>
-                                <div style="font-weight:600;">Disable all commands for normal users</div>
-                                <div style="color:#666;font-size:0.9em;">When enabled, only admins can use bot commands
-                                    in this group</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="disableAllCommandsToggle"
-                                    onchange="toggleDisableUserCommands(this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                        <ul id="disabledCommandsList" class="filter-list"></ul>
-
-                        <div class="add-form">
-                            <h4>Disable a Command</h4>
-                            <div class="form-group">
-                                <label class="form-label">Command Name (without /)</label>
-                                <input type="text" id="disableCommandInput" class="input-field"
-                                    placeholder="e.g., help, start, settings">
-                                <p style="color: #666; font-size: 0.85em; margin-top: 5px;">
-                                    Common commands: help, start, settings, info, rules, ban, kick, warn, mute
-                                </p>
-                            </div>
-                            <button class="btn-primary" onclick="disableCommand()">
-                                <i class="fas fa-ban"></i> Disable Command
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Welcome Tab -->
-                <div id="welcomeTab" class="tab-content">
-                    <div class="settings-section">
-                        <h3><i class="fas fa-door-open"></i> Welcome & Goodbye Messages</h3>
-
-                        <div class="form-group">
-                            <label class="form-label">Welcome Message</label>
-                            <p style="color: #666; font-size: 0.9em; margin: 5px 0 10px 0;">
-                                Use {user} for user mention, {first} for first name, {id} for user ID
-                            </p>
-                            <textarea id="welcomeMessage" class="textarea-field"
-                                placeholder="Welcome {user}! Enjoy your stay."></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Goodbye Message</label>
-                            <textarea id="goodbyeMessage" class="textarea-field"
-                                placeholder="Goodbye {user}!"></textarea>
-                        </div>
-
-                        <button class="btn-primary" onclick="saveWelcomeMessages()">
-                            <i class="fas fa-save"></i> Save Messages
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Filters Tab -->
-                <div id="filtersTab" class="tab-content">
-                    <div class="settings-section">
-                        <h3><i class="fas fa-filter"></i> Custom Filters</h3>
-                        <p style="color: #666;">Create automatic responses to specific words or phrases</p>
-
-                        <ul id="filtersList" class="filter-list"></ul>
-
-                        <div class="add-form">
-                            <h4>Add New Filter</h4>
-                            <div class="form-group">
-                                <label class="form-label">Trigger Word/Phrase</label>
-                                <input type="text" id="filterTrigger" class="input-field" placeholder="e.g., hello">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Response</label>
-                                <textarea id="filterResponse" class="textarea-field"
-                                    placeholder="Bot will send this message when the trigger is detected"></textarea>
-                            </div>
-                            <button class="btn-primary" onclick="addFilter()">
-                                <i class="fas fa-plus"></i> Add Filter
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Moderation Tab -->
-                <div id="moderationTab" class="tab-content">
-                    <div class="settings-section">
-                        <h3><i class="fas fa-shield-alt"></i> Moderation Settings</h3>
-
-                        <div class="setting-item">
-                            <div>
-                                <div class="setting-label">Blocklist Enabled</div>
-                                <div class="setting-description">Delete messages containing blocked words</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="blocklistEnabled"
-                                    onchange="updateBlocklistEnabled(this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <h4 style="margin-top: 20px;">Blocked Words</h4>
-                        <ul id="blocklistItems" class="blocklist-items"></ul>
-
-                        <div class="add-form">
-                            <div class="form-group">
-                                <label class="form-label">Add Word to Blocklist</label>
-                                <input type="text" id="blocklistWord" class="input-field" placeholder="Word to block">
-                            </div>
-                            <button class="btn-primary" onclick="addBlocklistWord()">
-                                <i class="fas fa-plus"></i> Add Word
-                            </button>
-                        </div>
-
-                        <div style="margin-top: 30px;">
-                            <h4>Warning Settings</h4>
-                            <div class="form-group">
-                                <label class="form-label">Maximum Warnings Before Action</label>
-                                <input type="number" id="warnsLimit" class="input-field" value="3" min="1" max="10"
-                                    onchange="updateSetting('warns_limit', parseInt(this.value))">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Bans & Warns Tab -->
-                <div id="bansTab" class="tab-content">
-                    <div class="settings-section">
-                        <h3><i class="fas fa-ban"></i> Banned Users</h3>
-                        <ul id="bansList" class="ban-list"></ul>
-                        <div id="noBans" class="empty-state" style="padding: 20px;">
-                            <p>No banned users</p>
-                        </div>
-                    </div>
-
-                    <div class="settings-section">
-                        <h3><i class="fas fa-exclamation-triangle"></i> User Warnings</h3>
-                        <ul id="warnsList" class="ban-list"></ul>
-                        <div id="noWarns" class="empty-state" style="padding: 20px;">
-                            <p>No warnings issued</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Federation Tab -->
-                <div id="federationTab" class="tab-content">
-                    <div class="settings-section">
-                        <h3><i class="fas fa-network-wired"></i> Federation Info</h3>
-                        <div id="federationInfo">
-                            <div><strong>Name:</strong> <span id="fedName">—</span></div>
-                            <div><strong>ID:</strong> <span id="fedId">—</span></div>
-                            <div><strong>Owner:</strong> <span id="fedOwner">—</span></div>
-                            <div><strong>Groups in Federation:</strong> <span id="fedGroupsCount">0</span></div>
-                            <div><strong>Banned Users:</strong> <span id="fedBannedCount">0</span></div>
-                        </div>
-
-                        <h4 style="margin-top: 16px;">Member Groups</h4>
-                        <ul id="fedGroupsList" class="ban-list"></ul>
-
-                        <div style="margin-top: 12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                            <button class="btn-primary" onclick="refreshFederationInfo()"><i class="fas fa-sync"></i>
-                                Refresh</button>
-
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <input id="newFedName" placeholder="New federation name" class="input-field"
-                                    style="width:220px;" />
-                                <button class="btn-primary" onclick="createFederation()"><i class="fas fa-plus"></i>
-                                    Create + Join</button>
-                            </div>
-
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <input id="joinFedId" placeholder="Federation ID" class="input-field"
-                                    style="width:160px;" />
-                                <button class="btn-primary" onclick="joinFederation()"><i
-                                        class="fas fa-sign-in-alt"></i> Join</button>
-                            </div>
-
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <button class="btn-danger" onclick="leaveFederation()"><i
-                                        class="fas fa-sign-out-alt"></i> Leave Federation</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Media Reactions Tab -->
-                <div id="mediaReactionsTab" class="tab-content">
-                    <div class="settings-section">
-                        <h3><i class="fas fa-heart"></i> Media Reactions</h3>
-                        <p class="setting-description">Automatically react to media and album messages sent in this
-                            group</p>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Enable Media Reactions</div>
-                                <div class="setting-description">Bot will react to all photos, videos, documents, and
-                                    media albums</div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="mediaReactionsEnabled"
-                                    onchange="updateSetting('media_reactions_enabled', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <div class="setting-label">Reaction Emojis</div>
-                                <div class="setting-description">Comma-separated list of emojis to randomly choose from
-                                </div>
-                            </div>
-                            <input type="text" id="mediaReactionEmojis" class="input-field"
-                                placeholder="🔥,❤,👍,😍,🤩,👌,😘,🙊,💯,🎉,😎,👏,😁,🏆,😱,🤡"
-                                onchange="updateSetting('media_reaction_emojis', this.value.split(',').map(e => e.trim())); updateEmojiPreview();"
-                                oninput="updateEmojiPreview()">
-                        </div>
-
-                        <div class="emoji-preview">
-                            <h4>Current Emojis:</h4>
-                            <div id="emojiList" class="emoji-grid"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="config.js?v=3.1"></script>
-    <script src="dashboard.js?v=3.1"></script>
+    <script src="config.js?v=3.0"></script>
+    <script src="discord-management.js?v=3.5"></script>
 </body>
-
 </html>
