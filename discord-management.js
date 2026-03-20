@@ -12,6 +12,7 @@
         serverRolesSelect: document.getElementById("serverRolesSelect"),
         refreshRolesBtn: document.getElementById("refreshRolesBtn"),
         applySelectedRolesBtn: document.getElementById("applySelectedRolesBtn"),
+        logChannelSelect: document.getElementById("logChannelSelect"),
         enabled: document.getElementById("enabled"),
         exemptAdmins: document.getElementById("exemptAdmins"),
         logChannelId: document.getElementById("logChannelId"),
@@ -315,6 +316,17 @@
         els.enabled.checked = !!config.enabled;
         els.exemptAdmins.checked = config.exempt_admins !== false;
         els.logChannelId.value = config.log_channel_id || "";
+        if (els.logChannelSelect) {
+            // attempt to set select value to saved log channel id
+            const saved = String(config.log_channel_id || "");
+            if (saved) {
+                // if option exists, select it; otherwise leave select untouched until channels loaded
+                const opt = els.logChannelSelect.querySelector(`option[value=\"${saved}\"]`);
+                if (opt) {
+                    els.logChannelSelect.value = saved;
+                }
+            }
+        }
         els.exemptRoleIds.value = (config.exempt_role_ids || []).join("\n");
         els.exemptChannelIds.value = (config.exempt_channel_ids || []).join("\n");
         els.antiLinkEnabled.checked = !!(features.anti_link && features.anti_link.enabled);
@@ -584,6 +596,60 @@
         }
     }
 
+    async function fetchChannelsForSelectedServer() {
+        const gid = selectedGuildId();
+        const id = getAdminId();
+        if (!gid || !id || !els.logChannelSelect) {
+            return;
+        }
+        try {
+            const url = `${API_BASE}${appendAdminId(`/api/discord/channels/${encodeURIComponent(gid)}`)}`;
+            const res = await fetch(url);
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+            const payload = await res.json();
+            let channels = (payload && payload.data && payload.data.channels) || [];
+            // If no live channels, fall back to saved log_channel_id only
+            els.logChannelSelect.innerHTML = "";
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.textContent = "-- Select a channel --";
+            els.logChannelSelect.appendChild(placeholder);
+            if (!channels || channels.length === 0) {
+                try {
+                    const cfgRes = await fetch(`${API_BASE}${appendAdminId(`/api/discord/moderation/config/${encodeURIComponent(gid)}`)}`);
+                    if (cfgRes.ok) {
+                        const cfgPayload = await cfgRes.json();
+                        const cfg = (cfgPayload && cfgPayload.data) || {};
+                        const saved = String(cfg.log_channel_id || "");
+                        if (saved) {
+                            const opt = document.createElement("option");
+                            opt.value = saved;
+                            opt.textContent = `Saved (${saved})`;
+                            els.logChannelSelect.appendChild(opt);
+                        }
+                    }
+                } catch (_) {}
+            } else {
+                channels.forEach((ch) => {
+                    const opt = document.createElement("option");
+                    opt.value = String(ch.id || "");
+                    opt.textContent = `${ch.name || "channel"} (${ch.id || ""})`;
+                    els.logChannelSelect.appendChild(opt);
+                });
+            }
+            // if saved input matches an option, mark it
+            const savedInput = String(els.logChannelId.value || "");
+            if (savedInput) {
+                const match = els.logChannelSelect.querySelector(`option[value=\"${savedInput}\"]`);
+                if (match) els.logChannelSelect.value = savedInput;
+            }
+        } catch (err) {
+            notify(`Could not load server channels: ${err.message}`, "error");
+        }
+    }
+
     async function saveConfig() {
         const gid = selectedGuildId();
         if (!gid) {
@@ -599,6 +665,11 @@
                 return;
             }
         }
+        // if channel select available, prefer its value for saving
+        if (els.logChannelSelect && els.logChannelSelect.value) {
+            els.logChannelId.value = String(els.logChannelSelect.value || "");
+        }
+
         setBusy(els.saveConfigBtn, true, "Saving...");
         try {
             await api(`/api/discord/moderation/config/${encodeURIComponent(gid)}`, {
@@ -761,6 +832,70 @@
         notify("Balanced preset applied", "success");
     }
 
+    
+
+    async function importFromProvider(provider) {
+        const gid = selectedGuildId();
+        if (!gid) {
+            notify('Select a server first', 'error');
+            return;
+        }
+
+        const payloadText = window.prompt('Paste provider config JSON to import (or cancel to abort):');
+        if (!payloadText) return;
+
+        let payload = null;
+        try {
+            payload = JSON.parse(payloadText);
+        } catch (err) {
+            notify('Invalid JSON', 'error');
+            return;
+        }
+
+        setBusy(null, true, 'Importing...');
+        try {
+            await api(`/api/discord/integrations/import?provider=${encodeURIComponent(provider)}&guild_id=${encodeURIComponent(gid)}`, {
+                method: 'POST',
+                body: JSON.stringify({ provider_payload: payload })
+            });
+            notify('Import succeeded', 'success');
+        } catch (err) {
+            notify('Import failed: ' + err.message, 'error');
+        } finally {
+            setBusy(null, false);
+        }
+    }
+
+    async function syncToProvider(provider) {
+        const gid = selectedGuildId();
+        if (!gid) {
+            notify('Select a server first', 'error');
+            return;
+        }
+        setBusy(null, true, 'Preparing payload...');
+        try {
+            const res = await api(`/api/discord/integrations/sync?provider=${encodeURIComponent(provider)}&guild_id=${encodeURIComponent(gid)}`);
+            const payload = (res && res.payload) || null;
+            if (!payload) {
+                notify('No payload returned', 'error');
+                return;
+            }
+            // Copy payload to clipboard for manual push to provider if needed
+            try {
+                await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+                notify('Payload copied to clipboard. Paste into provider API or dashboard.', 'success');
+            } catch (_) {
+                // fallback: show raw payload prompt
+                window.prompt('Provider payload (copy manually):', JSON.stringify(payload, null, 2));
+            }
+        } catch (err) {
+            notify('Sync failed: ' + err.message, 'error');
+        } finally {
+            setBusy(null, false);
+        }
+    }
+    
+
     function setAdvancedVisibility(visible) {
         advancedVisible = !!visible;
         if (els.moderationSettingsBlock) {
@@ -891,6 +1026,7 @@
             notify(`Loaded ${remoteServers.length} server(s) from Discord`, "success");
             setLastAction("Synced Discord servers list");
             fetchRolesForSelectedServer();
+            fetchChannelsForSelectedServer();
         } catch (err) {
             notify(`Could not load Discord servers: ${err.message}`, "error");
         }
@@ -909,7 +1045,22 @@
                 throw new Error(`HTTP ${res.status}`);
             }
             const payload = await res.json();
-            const roles = (payload && payload.data && payload.data.roles) || [];
+            let roles = (payload && payload.data && payload.data.roles) || [];
+            // If live bot didn't return roles, fall back to moderation config stored on server
+            if (!roles || roles.length === 0) {
+                try {
+                    const cfgRes = await fetch(`${API_BASE}${appendAdminId(`/api/discord/moderation/config/${encodeURIComponent(gid)}`)}`);
+                    if (cfgRes.ok) {
+                        const cfgPayload = await cfgRes.json();
+                        const cfg = (cfgPayload && cfgPayload.data) || {};
+                        const exemptIds = (cfg.exempt_role_ids && Array.isArray(cfg.exempt_role_ids)) ? cfg.exempt_role_ids : [];
+                        // build placeholder role entries from ids
+                        roles = exemptIds.map((rid) => ({ id: String(rid), name: `Role ${rid}`, position: 0 }));
+                    }
+                } catch (fallbackErr) {
+                    // ignore fallback errors and continue with empty roles
+                }
+            }
             els.serverRolesSelect.innerHTML = "";
             roles.forEach((role) => {
                 const opt = document.createElement("option");
@@ -1024,7 +1175,7 @@
             els.syncServersBtn.addEventListener("click", fetchServersFromApi);
         }
         if (els.refreshRolesBtn) {
-            els.refreshRolesBtn.addEventListener("click", fetchRolesForSelectedServer);
+            els.refreshRolesBtn.addEventListener("click", function () { fetchRolesForSelectedServer(); fetchChannelsForSelectedServer(); });
         }
         if (els.applySelectedRolesBtn) {
             els.applySelectedRolesBtn.addEventListener("click", applySelectedRolesToExemptions);
@@ -1052,6 +1203,7 @@
         els.serverSelect.addEventListener("change", () => {
             updateSelectedServerLabel();
             fetchRolesForSelectedServer();
+            fetchChannelsForSelectedServer();
         });
         [
             els.enabled,
@@ -1077,6 +1229,12 @@
                 addServer();
             }
         });
+        if (els.logChannelSelect) {
+            els.logChannelSelect.addEventListener("change", function () {
+                els.logChannelId.value = String(els.logChannelSelect.value || "");
+                updateChecklist();
+            });
+        }
     }
 
     function init() {
@@ -1098,6 +1256,7 @@
         testConnection();
         fetchServersFromApi();
         fetchRolesForSelectedServer();
+        fetchChannelsForSelectedServer();
         scheduleServerDiscovery();
     }
 
