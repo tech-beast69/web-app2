@@ -295,6 +295,7 @@
                             <select class="form-control" id="logChannelSelect">
                                 <option value="">-- Select a channel --</option>
                             </select>
+                            <div id="channelsSourceHint" class="muted small" aria-live="polite"></div>
                             <small class="form-text text-muted">If your bot is offline, you can paste a channel ID manually below.</small>
                             <input type="text" class="form-control mt-2" id="logChannelId" placeholder="Or paste channel ID manually">
                     </div>
@@ -311,6 +312,7 @@
                     <p class="setting-help">IDs here are never punished by automod in normal operation.</p>
                     <div class="row">
                         <select id="serverRolesSelect" multiple size="8" aria-label="Server roles"></select>
+                        <div id="rolesSourceHint" class="muted small" aria-live="polite"></div>
                     </div>
                     <div class="row">
                         <button class="btn btn-outline" id="refreshRolesBtn" type="button">Refresh Roles</button>
