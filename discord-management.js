@@ -10,9 +10,11 @@
         newGuildId: document.getElementById("newGuildId"),
         newGuildName: document.getElementById("newGuildName"),
         serverRolesSelect: document.getElementById("serverRolesSelect"),
+        rolesSourceHint: document.getElementById("rolesSourceHint"),
         refreshRolesBtn: document.getElementById("refreshRolesBtn"),
         applySelectedRolesBtn: document.getElementById("applySelectedRolesBtn"),
         logChannelSelect: document.getElementById("logChannelSelect"),
+        channelsSourceHint: document.getElementById("channelsSourceHint"),
         enabled: document.getElementById("enabled"),
         exemptAdmins: document.getElementById("exemptAdmins"),
         logChannelId: document.getElementById("logChannelId"),
@@ -645,6 +647,12 @@
                 const match = els.logChannelSelect.querySelector(`option[value=\"${savedInput}\"]`);
                 if (match) els.logChannelSelect.value = savedInput;
             }
+            try {
+                const source = (payload && payload.data && payload.data.source) || "";
+                if (els.channelsSourceHint) {
+                    els.channelsSourceHint.textContent = source ? `Source: ${source}` : "";
+                }
+            } catch (_) {}
         } catch (err) {
             notify(`Could not load server channels: ${err.message}`, "error");
         }
@@ -1069,6 +1077,13 @@
                 els.serverRolesSelect.appendChild(opt);
             });
             syncRoleSelectionFromTextarea();
+            // show source hint if available
+            try {
+                const source = (payload && payload.data && payload.data.source) || "";
+                if (els.rolesSourceHint) {
+                    els.rolesSourceHint.textContent = source ? `Source: ${source}` : "";
+                }
+            } catch (_) {}
         } catch (err) {
             notify(`Could not load server roles: ${err.message}`, "error");
         }
