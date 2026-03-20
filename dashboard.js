@@ -156,6 +156,53 @@ console.log('==============================');
 let updateInterval;
 let telegramUser = null;
 
+function persistDashboardUserId(userId) {
+    const normalized = String(userId || '').trim();
+    if (!normalized) {
+        return '';
+    }
+    try {
+        localStorage.setItem('dashboard_user_id', normalized);
+    } catch (_) {}
+    return normalized;
+}
+
+function withAdminId(url, userId) {
+    const normalized = String(userId || '').trim();
+    if (!normalized) {
+        return url;
+    }
+    try {
+        const resolved = new URL(url, window.location.href);
+        if (!resolved.searchParams.get('admin_id') && !resolved.searchParams.get('user_id')) {
+            resolved.searchParams.set('admin_id', normalized);
+        }
+        return resolved.toString();
+    } catch (_) {
+        return url;
+    }
+}
+
+function updateManagementLinks(userId) {
+    const normalized = persistDashboardUserId(userId);
+    if (!normalized) {
+        return;
+    }
+
+    [
+        'a[href="discord-management.html"]',
+        'a[href="group-management.html"]'
+    ].forEach((selector) => {
+        document.querySelectorAll(selector).forEach((link) => {
+            const href = link.getAttribute('href');
+            if (!href) {
+                return;
+            }
+            link.setAttribute('href', withAdminId(href, normalized));
+        });
+    });
+}
+
 // Initialize Telegram Web App
 function initTelegramWebApp() {
     console.log('=== Initializing Telegram Web App ===');
@@ -177,6 +224,7 @@ function initTelegramWebApp() {
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 telegramUser = tg.initDataUnsafe.user;
                 console.log('✅ Telegram user detected:', telegramUser);
+                updateManagementLinks(telegramUser.id);
                 
                 // Display user info in header
                 displayTelegramUserInfo(telegramUser);
@@ -227,6 +275,7 @@ function createMockUserForTesting() {
         username: 'RawQueen',
         language_code: 'en'
     };
+    updateManagementLinks(telegramUser.id);
     console.log('Mock user created:', telegramUser);
     displayTelegramUserInfo(telegramUser);
 }
@@ -1119,6 +1168,7 @@ function initLinksBrowser() {
 async function loadUserForLinks(userId) {
     try {
         currentUserId = userId;
+        updateManagementLinks(userId);
         
         console.log('Loading user for links browser:', userId);
         
