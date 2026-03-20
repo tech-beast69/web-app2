@@ -2632,6 +2632,7 @@ async function loadGroups() {
                             <h3 class="group-title">${escapeHtml(group.group_title)}</h3>
                             <p class="group-id">ID: ${group.group_id}</p>
                             ${group.is_owner ? '<p class="group-id" style="color: #ffd700;"><i class="fas fa-crown"></i> You are the owner</p>' : ''}
+                            ${!group.is_owner && group.is_group_admin ? '<p class="group-id" style="color: #60a5fa;"><i class="fas fa-user-shield"></i> You are an admin</p>' : ''}
                         </div>
                         ${group.bot_is_admin ? '<span class="admin-badge"><i class="fas fa-shield-alt"></i> Admin</span>' : ''}
                     </div>
@@ -2668,7 +2669,7 @@ async function loadGroups() {
             
             if (userId && data.filtered_by_user) {
                 document.querySelector('#emptyState h3').textContent = 'No Groups Found';
-                document.querySelector('#emptyState p').textContent = 'You are not the owner of any groups where the bot is admin. Add the bot to your groups to manage them here.';
+                document.querySelector('#emptyState p').textContent = 'You are not an owner or admin of any groups where the bot is active. Add the bot to your groups to manage them here.';
             }
         }
     } catch (error) {
