@@ -99,6 +99,57 @@
     let serverDiscoveryAttempts = 0;
     let adminId = "";
 
+    function persistAdminId(value) {
+        const normalized = String(value || "").trim();
+        if (!normalized) {
+            return "";
+        }
+        adminId = normalized;
+        try {
+            localStorage.setItem("dashboard_user_id", normalized);
+        } catch (_) {}
+        return normalized;
+    }
+
+    function syncAdminIdIntoUrl(value) {
+        const normalized = String(value || "").trim();
+        if (!normalized || !window.history || !window.history.replaceState) {
+            return;
+        }
+        try {
+            const url = new URL(window.location.href);
+            const hasAdminId = String(url.searchParams.get("admin_id") || url.searchParams.get("user_id") || "").trim();
+            if (hasAdminId) {
+                return;
+            }
+            url.searchParams.set("admin_id", normalized);
+            window.history.replaceState({}, "", url.toString());
+        } catch (_) {}
+    }
+
+    function initTelegramWebAppContext() {
+        try {
+            if (!(window.Telegram && window.Telegram.WebApp)) {
+                return "";
+            }
+            const tg = window.Telegram.WebApp;
+            if (typeof tg.ready === "function") {
+                tg.ready();
+            }
+            if (typeof tg.expand === "function") {
+                tg.expand();
+            }
+            const tgId = String((tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || "").trim();
+            if (tgId) {
+                persistAdminId(tgId);
+                syncAdminIdIntoUrl(tgId);
+            }
+            return tgId;
+        } catch (_) {
+            return "";
+        }
+    }
+
     function setLastAction(actionText) {
         if (els.lastActionLabel) {
             els.lastActionLabel.textContent = actionText;
@@ -134,29 +185,23 @@
             return adminId;
         }
 
-        try {
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
-                const tgId = String(window.Telegram.WebApp.initDataUnsafe.user.id || "").trim();
-                if (tgId) {
-                    adminId = tgId;
-                    return adminId;
-                }
-            }
-        } catch (_) {}
+        const telegramAdminId = initTelegramWebAppContext();
+        if (telegramAdminId) {
+            return telegramAdminId;
+        }
 
         try {
             const params = new URLSearchParams(window.location.search || "");
             const queryAdminId = String(params.get("admin_id") || params.get("user_id") || "").trim();
             if (queryAdminId) {
-                adminId = queryAdminId;
-                return adminId;
+                return persistAdminId(queryAdminId);
             }
         } catch (_) {}
 
         try {
             const fallback = localStorage.getItem("dashboard_user_id") || "";
             if (fallback) {
-                adminId = String(fallback).trim();
+                return persistAdminId(fallback);
             }
         } catch (_) {}
 
@@ -1305,9 +1350,12 @@
     }
 
     function init() {
+        initTelegramWebAppContext();
         const id = getAdminId();
         if (!id) {
             notify("Admin identity not detected. Open from Telegram admin account.", "error");
+        } else {
+            setLastAction(`Admin identity detected: ${id}`);
         }
         if (!API_BASE) {
             notify("API base URL is missing in config.js", "error");
