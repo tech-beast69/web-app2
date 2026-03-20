@@ -331,6 +331,7 @@
         }
         els.exemptRoleIds.value = (config.exempt_role_ids || []).join("\n");
         els.exemptChannelIds.value = (config.exempt_channel_ids || []).join("\n");
+        syncRoleSelectionFromTextarea();
         els.antiLinkEnabled.checked = !!(features.anti_link && features.anti_link.enabled);
         els.antiLinkAction.value = (features.anti_link && features.anti_link.action) || "delete_warn";
         els.allowDomains.value = ((features.anti_link && features.anti_link.allow_domains) || []).join("\n");
@@ -379,6 +380,16 @@
         updateChecklist();
     }
 
+    function readIdLines(node) {
+        if (!node) {
+            return [];
+        }
+        return String(node.value || "")
+            .split("\n")
+            .map((value) => String(value || "").trim())
+            .filter(Boolean);
+    }
+
     function buildConfigPatch() {
         const words = els.bannedWords.value
             .split("\n")
@@ -388,13 +399,11 @@
             .split("\n")
             .map((w) => w.trim().toLowerCase())
             .filter(Boolean);
-        const exemptRoleIds = els.exemptRoleIds.value
-            .split("\n")
-            .map((v) => Number(String(v).trim()))
+        const exemptRoleIds = readIdLines(els.exemptRoleIds)
+            .map((v) => Number(v))
             .filter((v) => Number.isFinite(v) && v > 0);
-        const exemptChannelIds = els.exemptChannelIds.value
-            .split("\n")
-            .map((v) => Number(String(v).trim()))
+        const exemptChannelIds = readIdLines(els.exemptChannelIds)
+            .map((v) => Number(v))
             .filter((v) => Number.isFinite(v) && v > 0);
 
         return {
@@ -588,6 +597,8 @@
         try {
             const res = await api(`/api/discord/moderation/config/${encodeURIComponent(gid)}`);
             applyConfig(res.data || {});
+            fetchRolesForSelectedServer();
+            fetchChannelsForSelectedServer();
             notify("Moderation config loaded", "success");
             setConnectionStatus("Connected", true);
         } catch (err) {
@@ -601,59 +612,76 @@
     async function fetchChannelsForSelectedServer() {
         const gid = selectedGuildId();
         const id = getAdminId();
-        if (!gid || !id || !els.logChannelSelect) {
+        if (!gid || !els.logChannelSelect) {
             return;
         }
-        try {
-            const url = `${API_BASE}${appendAdminId(`/api/discord/channels/${encodeURIComponent(gid)}`)}`;
-            const res = await fetch(url);
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
+        if (!id) {
+            if (els.channelsSourceHint) {
+                els.channelsSourceHint.textContent = "Open this page from an authorized Telegram admin account to load channels.";
             }
-            const payload = await res.json();
+            return;
+        }
+        const savedInput = String(els.logChannelId.value || "").trim();
+        els.logChannelSelect.innerHTML = "";
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "-- Loading channels --";
+        els.logChannelSelect.appendChild(placeholder);
+        if (els.channelsSourceHint) {
+            els.channelsSourceHint.textContent = "Loading Discord channels...";
+        }
+        try {
+            const payload = await api(`/api/discord/channels/${encodeURIComponent(gid)}`);
             let channels = (payload && payload.data && payload.data.channels) || [];
-            // If no live channels, fall back to saved log_channel_id only
             els.logChannelSelect.innerHTML = "";
             const placeholder = document.createElement("option");
             placeholder.value = "";
             placeholder.textContent = "-- Select a channel --";
             els.logChannelSelect.appendChild(placeholder);
-            if (!channels || channels.length === 0) {
-                try {
-                    const cfgRes = await fetch(`${API_BASE}${appendAdminId(`/api/discord/moderation/config/${encodeURIComponent(gid)}`)}`);
-                    if (cfgRes.ok) {
-                        const cfgPayload = await cfgRes.json();
-                        const cfg = (cfgPayload && cfgPayload.data) || {};
-                        const saved = String(cfg.log_channel_id || "");
-                        if (saved) {
-                            const opt = document.createElement("option");
-                            opt.value = saved;
-                            opt.textContent = `Saved (${saved})`;
-                            els.logChannelSelect.appendChild(opt);
-                        }
-                    }
-                } catch (_) {}
-            } else {
+            if (channels && channels.length > 0) {
                 channels.forEach((ch) => {
                     const opt = document.createElement("option");
                     opt.value = String(ch.id || "");
                     opt.textContent = `${ch.name || "channel"} (${ch.id || ""})`;
                     els.logChannelSelect.appendChild(opt);
                 });
+            } else if (savedInput) {
+                const opt = document.createElement("option");
+                opt.value = savedInput;
+                opt.textContent = `Saved (${savedInput})`;
+                els.logChannelSelect.appendChild(opt);
             }
-            // if saved input matches an option, mark it
-            const savedInput = String(els.logChannelId.value || "");
             if (savedInput) {
                 const match = els.logChannelSelect.querySelector(`option[value=\"${savedInput}\"]`);
-                if (match) els.logChannelSelect.value = savedInput;
-            }
-            try {
-                const source = (payload && payload.data && payload.data.source) || "";
-                if (els.channelsSourceHint) {
-                    els.channelsSourceHint.textContent = source ? `Source: ${source}` : "";
+                if (match) {
+                    els.logChannelSelect.value = savedInput;
                 }
-            } catch (_) {}
+            }
+            const source = (payload && payload.data && payload.data.source) || "";
+            if (els.channelsSourceHint) {
+                if (channels && channels.length > 0) {
+                    els.channelsSourceHint.textContent = source ? `Source: ${source}` : "";
+                } else if (savedInput) {
+                    els.channelsSourceHint.textContent = source
+                        ? `No live channels returned. Using saved channel ID. Source: ${source}`
+                        : "No live channels returned. Using saved channel ID.";
+                } else {
+                    els.channelsSourceHint.textContent = source
+                        ? `No eligible text channels returned. Source: ${source}`
+                        : "No eligible text channels returned for this server.";
+                }
+            }
         } catch (err) {
+            if (savedInput) {
+                const opt = document.createElement("option");
+                opt.value = savedInput;
+                opt.textContent = `Saved (${savedInput})`;
+                els.logChannelSelect.appendChild(opt);
+                els.logChannelSelect.value = savedInput;
+            }
+            if (els.channelsSourceHint) {
+                els.channelsSourceHint.textContent = "Channel lookup failed.";
+            }
             notify(`Could not load server channels: ${err.message}`, "error");
         }
     }
@@ -1043,48 +1071,74 @@
     async function fetchRolesForSelectedServer() {
         const gid = selectedGuildId();
         const id = getAdminId();
-        if (!gid || !id || !els.serverRolesSelect) {
+        if (!gid || !els.serverRolesSelect) {
             return;
         }
-        try {
-            const url = `${API_BASE}${appendAdminId(`/api/discord/roles/${encodeURIComponent(gid)}`)}`;
-            const res = await fetch(url);
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
+        if (!id) {
+            if (els.rolesSourceHint) {
+                els.rolesSourceHint.textContent = "Open this page from an authorized Telegram admin account to load roles.";
             }
-            const payload = await res.json();
+            return;
+        }
+        els.serverRolesSelect.innerHTML = "";
+        const loadingOpt = document.createElement("option");
+        loadingOpt.value = "";
+        loadingOpt.textContent = "Loading roles...";
+        loadingOpt.disabled = true;
+        els.serverRolesSelect.appendChild(loadingOpt);
+        if (els.rolesSourceHint) {
+            els.rolesSourceHint.textContent = "Loading Discord roles...";
+        }
+        try {
+            const payload = await api(`/api/discord/roles/${encodeURIComponent(gid)}`);
             let roles = (payload && payload.data && payload.data.roles) || [];
-            // If live bot didn't return roles, fall back to moderation config stored on server
+            let usedConfiguredFallback = false;
             if (!roles || roles.length === 0) {
-                try {
-                    const cfgRes = await fetch(`${API_BASE}${appendAdminId(`/api/discord/moderation/config/${encodeURIComponent(gid)}`)}`);
-                    if (cfgRes.ok) {
-                        const cfgPayload = await cfgRes.json();
-                        const cfg = (cfgPayload && cfgPayload.data) || {};
-                        const exemptIds = (cfg.exempt_role_ids && Array.isArray(cfg.exempt_role_ids)) ? cfg.exempt_role_ids : [];
-                        // build placeholder role entries from ids
-                        roles = exemptIds.map((rid) => ({ id: String(rid), name: `Role ${rid}`, position: 0 }));
-                    }
-                } catch (fallbackErr) {
-                    // ignore fallback errors and continue with empty roles
-                }
+                roles = readIdLines(els.exemptRoleIds).map((rid) => ({
+                    id: String(rid),
+                    name: `Configured role ${rid}`,
+                    position: 0
+                }));
+                usedConfiguredFallback = roles.length > 0;
             }
             els.serverRolesSelect.innerHTML = "";
-            roles.forEach((role) => {
-                const opt = document.createElement("option");
-                opt.value = String(role.id || "");
-                opt.textContent = `${role.name || "role"} (${role.id || ""})`;
-                els.serverRolesSelect.appendChild(opt);
-            });
+            if (!roles.length) {
+                const emptyOpt = document.createElement("option");
+                emptyOpt.value = "";
+                emptyOpt.textContent = "No roles found";
+                emptyOpt.disabled = true;
+                els.serverRolesSelect.appendChild(emptyOpt);
+            } else {
+                roles.forEach((role) => {
+                    const opt = document.createElement("option");
+                    opt.value = String(role.id || "");
+                    opt.textContent = `${role.name || "role"} (${role.id || ""})`;
+                    els.serverRolesSelect.appendChild(opt);
+                });
+            }
             syncRoleSelectionFromTextarea();
-            // show source hint if available
-            try {
-                const source = (payload && payload.data && payload.data.source) || "";
-                if (els.rolesSourceHint) {
+            const source = (payload && payload.data && payload.data.source) || "";
+            if (els.rolesSourceHint) {
+                if (usedConfiguredFallback) {
+                    els.rolesSourceHint.textContent = "No live roles returned. Showing configured role IDs only.";
+                } else if (roles.length) {
                     els.rolesSourceHint.textContent = source ? `Source: ${source}` : "";
+                } else {
+                    els.rolesSourceHint.textContent = source
+                        ? `No roles returned. Source: ${source}`
+                        : "No roles returned for this server.";
                 }
-            } catch (_) {}
+            }
         } catch (err) {
+            els.serverRolesSelect.innerHTML = "";
+            const errorOpt = document.createElement("option");
+            errorOpt.value = "";
+            errorOpt.textContent = "Role lookup failed";
+            errorOpt.disabled = true;
+            els.serverRolesSelect.appendChild(errorOpt);
+            if (els.rolesSourceHint) {
+                els.rolesSourceHint.textContent = "Role lookup failed.";
+            }
             notify(`Could not load server roles: ${err.message}`, "error");
         }
     }
@@ -1093,12 +1147,7 @@
         if (!els.serverRolesSelect || !els.exemptRoleIds) {
             return;
         }
-        const selectedIds = new Set(
-            els.exemptRoleIds.value
-                .split("\n")
-                .map((v) => String(v || "").trim())
-                .filter(Boolean)
-        );
+        const selectedIds = new Set(readIdLines(els.exemptRoleIds));
         Array.from(els.serverRolesSelect.options).forEach((opt) => {
             opt.selected = selectedIds.has(String(opt.value));
         });
@@ -1234,6 +1283,9 @@
             const evt = node.tagName === "SELECT" || (node.tagName === "INPUT" && node.type === "checkbox") ? "change" : "input";
             node.addEventListener(evt, updateChecklist);
         });
+        if (els.exemptRoleIds) {
+            els.exemptRoleIds.addEventListener("input", syncRoleSelectionFromTextarea);
+        }
         els.newGuildId.addEventListener("keydown", function (evt) {
             if (evt.key === "Enter") {
                 addServer();
