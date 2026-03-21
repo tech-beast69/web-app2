@@ -248,6 +248,45 @@
                         <button class="btn btn-danger" id="removeServerBtn">Remove Selected</button>
                     </div>
                 </div>
+
+                <div class="discord-card full">
+                    <h3><i class="fas fa-door-open"></i> Join-Gate</h3>
+                    <p class="setting-help">Require new members to verify before receiving the verified role.</p>
+                    <div class="row">
+                        <label class="toggle-chip"><input type="checkbox" id="joinGateEnabled"> Enable Join-Gate</label>
+                        <select id="joinGateMethod">
+                            <option value="button">Button (recommended)</option>
+                            <option value="emoji">React with emoji</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div style="flex:1; min-width:220px;">
+                            <label class="sr-only" for="joinGateChannelSelect">Verification Channel</label>
+                            <select id="joinGateChannelSelect"><option value="">-- Select verification channel --</option></select>
+                            <div id="joinGateChannelsSourceHint" class="muted small" aria-live="polite"></div>
+                            <input type="text" id="joinGateChannelId" class="mono" placeholder="Or paste channel ID manually">
+                        </div>
+                        <div style="flex:1; min-width:220px;">
+                            <label class="sr-only" for="joinGateRoleSelect">Verified Role</label>
+                            <select id="joinGateRoleSelect"><option value="">-- Select verified role --</option></select>
+                            <div id="joinGateRolesSourceHint" class="muted small" aria-live="polite"></div>
+                            <input type="text" id="joinGateRoleId" class="mono" placeholder="Or paste role ID manually">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <input id="joinGateTimeout" type="number" min="30" max="86400" placeholder="Timeout seconds (default 300)">
+                        <label class="toggle-chip"><input type="checkbox" id="joinGateKick"> Kick on fail</label>
+                        <label class="toggle-chip"><input type="checkbox" id="joinGateRemoveOnFail" checked> Remove on fail</label>
+                    </div>
+                    <div class="row">
+                        <button class="btn btn-outline" id="useSelectedChannelBtn" type="button">Use Selected Channel</button>
+                        <button class="btn btn-outline" id="useSelectedRoleBtn" type="button">Use Selected Role</button>
+                        <button class="btn btn-primary" id="applyVerificationBtn" type="button">Apply Verification (send test)</button>
+                    </div>
+                    <div class="row">
+                        <small class="muted">If verification channel is empty, the bot will DM new members. Use role ID to auto-assign a role upon verification.</small>
+                    </div>
+                </div>
                 
             </div>
         </section>
