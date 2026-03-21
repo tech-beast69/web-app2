@@ -11,10 +11,14 @@
         newGuildName: document.getElementById("newGuildName"),
         serverRolesSelect: document.getElementById("serverRolesSelect"),
         rolesSourceHint: document.getElementById("rolesSourceHint"),
+        joinGateRoleSelect: document.getElementById("joinGateRoleSelect"),
+        joinGateRolesSourceHint: document.getElementById("joinGateRolesSourceHint"),
         refreshRolesBtn: document.getElementById("refreshRolesBtn"),
         applySelectedRolesBtn: document.getElementById("applySelectedRolesBtn"),
         logChannelSelect: document.getElementById("logChannelSelect"),
         channelsSourceHint: document.getElementById("channelsSourceHint"),
+        joinGateChannelSelect: document.getElementById("joinGateChannelSelect"),
+        joinGateChannelsSourceHint: document.getElementById("joinGateChannelsSourceHint"),
         enabled: document.getElementById("enabled"),
         exemptAdmins: document.getElementById("exemptAdmins"),
         logChannelId: document.getElementById("logChannelId"),
@@ -44,6 +48,16 @@
         allowDomains: document.getElementById("allowDomains"),
         exemptRoleIds: document.getElementById("exemptRoleIds"),
         exemptChannelIds: document.getElementById("exemptChannelIds"),
+        joinGateEnabled: document.getElementById("joinGateEnabled"),
+        joinGateChannelId: document.getElementById("joinGateChannelId"),
+        joinGateRoleId: document.getElementById("joinGateRoleId"),
+        joinGateMethod: document.getElementById("joinGateMethod"),
+        joinGateTimeout: document.getElementById("joinGateTimeout"),
+        joinGateKick: document.getElementById("joinGateKick"),
+        joinGateRemoveOnFail: document.getElementById("joinGateRemoveOnFail"),
+        useSelectedChannelBtn: document.getElementById("useSelectedChannelBtn"),
+        useSelectedRoleBtn: document.getElementById("useSelectedRoleBtn"),
+        applyVerificationBtn: document.getElementById("applyVerificationBtn"),
         emojiLimit: document.getElementById("emojiLimit"),
         antiEmojiAction: document.getElementById("antiEmojiAction"),
         lineLimit: document.getElementById("lineLimit"),
@@ -374,6 +388,21 @@
                 }
             }
         }
+        // join gate selects
+        if (els.joinGateChannelSelect) {
+            const saved = String((config.features && config.features.join_gate && config.features.join_gate.verification_channel_id) || "");
+            if (saved) {
+                const opt = els.joinGateChannelSelect.querySelector(`option[value=\"${saved}\"]`);
+                if (opt) els.joinGateChannelSelect.value = saved;
+            }
+        }
+        if (els.joinGateRoleSelect) {
+            const saved = String((config.features && config.features.join_gate && config.features.join_gate.verified_role_id) || "");
+            if (saved) {
+                const opt = els.joinGateRoleSelect.querySelector(`option[value=\"${saved}\"]`);
+                if (opt) els.joinGateRoleSelect.value = saved;
+            }
+        }
         els.exemptRoleIds.value = (config.exempt_role_ids || []).join("\n");
         els.exemptChannelIds.value = (config.exempt_channel_ids || []).join("\n");
         syncRoleSelectionFromTextarea();
@@ -422,6 +451,15 @@
         els.raidQuarantineRoleId.value = (features.raid_mode && features.raid_mode.quarantine_role_id) || "";
         const words = (features.banned_words && features.banned_words.words) || [];
         els.bannedWords.value = words.join("\n");
+        // Join-gate
+        const joinGate = features.join_gate || {};
+        if (els.joinGateEnabled) els.joinGateEnabled.checked = !!joinGate.enabled;
+        if (els.joinGateChannelId) els.joinGateChannelId.value = joinGate.verification_channel_id || "";
+        if (els.joinGateRoleId) els.joinGateRoleId.value = joinGate.verified_role_id || "";
+        if (els.joinGateMethod) els.joinGateMethod.value = joinGate.method || "button";
+        if (els.joinGateTimeout) els.joinGateTimeout.value = joinGate.timeout_seconds || 300;
+        if (els.joinGateKick) els.joinGateKick.checked = !!joinGate.kick_on_fail;
+        if (els.joinGateRemoveOnFail) els.joinGateRemoveOnFail.checked = joinGate.remove_on_fail !== false;
         updateChecklist();
     }
 
@@ -526,6 +564,15 @@
                 raid_mode: {
                     enabled: !!els.raidModeEnabled.checked,
                     quarantine_role_id: els.raidQuarantineRoleId.value ? numberOrDefault(els.raidQuarantineRoleId.value, null, 1) : null,
+                },
+                join_gate: {
+                    enabled: !!(els.joinGateEnabled && els.joinGateEnabled.checked),
+                    verification_channel_id: els.joinGateChannelId && els.joinGateChannelId.value ? numberOrDefault(els.joinGateChannelId.value, null, 1) : null,
+                    verified_role_id: els.joinGateRoleId && els.joinGateRoleId.value ? numberOrDefault(els.joinGateRoleId.value, null, 1) : null,
+                    method: (els.joinGateMethod && els.joinGateMethod.value) || 'button',
+                    timeout_seconds: numberOrDefault(els.joinGateTimeout && els.joinGateTimeout.value, 300, 30, 86400),
+                    kick_on_fail: !!(els.joinGateKick && els.joinGateKick.checked),
+                    remove_on_fail: (els.joinGateRemoveOnFail ? !!els.joinGateRemoveOnFail.checked : true)
                 },
                 banned_words: {
                     words: words,
@@ -689,6 +736,13 @@
                     opt.value = String(ch.id || "");
                     opt.textContent = `${ch.name || "channel"} (${ch.id || ""})`;
                     els.logChannelSelect.appendChild(opt);
+                    // also populate joinGateChannelSelect if present
+                    if (els.joinGateChannelSelect) {
+                        const opt2 = document.createElement("option");
+                        opt2.value = String(ch.id || "");
+                        opt2.textContent = `${ch.name || "channel"} (${ch.id || ""})`;
+                        els.joinGateChannelSelect.appendChild(opt2);
+                    }
                 });
             } else if (savedInput) {
                 const opt = document.createElement("option");
@@ -700,6 +754,14 @@
                 const match = els.logChannelSelect.querySelector(`option[value=\"${savedInput}\"]`);
                 if (match) {
                     els.logChannelSelect.value = savedInput;
+                }
+            }
+            // set joinGateChannelSelect value if present
+            if (els.joinGateChannelSelect) {
+                const savedJoin = String(els.joinGateChannelId && els.joinGateChannelId.value ? els.joinGateChannelId.value : "");
+                if (savedJoin) {
+                    const match2 = els.joinGateChannelSelect.querySelector(`option[value=\"${savedJoin}\"]`);
+                    if (match2) els.joinGateChannelSelect.value = savedJoin;
                 }
             }
             const source = (payload && payload.data && payload.data.source) || "";
@@ -716,6 +778,9 @@
                         : "No eligible text channels returned for this server.";
                 }
             }
+            if (els.joinGateChannelsSourceHint) {
+                els.joinGateChannelsSourceHint.textContent = els.channelsSourceHint ? els.channelsSourceHint.textContent : (source ? `Source: ${source}` : "");
+            }
         } catch (err) {
             if (savedInput) {
                 const opt = document.createElement("option");
@@ -726,6 +791,9 @@
             }
             if (els.channelsSourceHint) {
                 els.channelsSourceHint.textContent = "Channel lookup failed.";
+            }
+            if (els.joinGateChannelsSourceHint) {
+                els.joinGateChannelsSourceHint.textContent = "Channel lookup failed.";
             }
             notify(`Could not load server channels: ${err.message}`, "error");
         }
@@ -1153,12 +1221,25 @@
                 emptyOpt.textContent = "No roles found";
                 emptyOpt.disabled = true;
                 els.serverRolesSelect.appendChild(emptyOpt);
+                if (els.joinGateRoleSelect) {
+                    const emptyOpt2 = document.createElement("option");
+                    emptyOpt2.value = "";
+                    emptyOpt2.textContent = "No roles found";
+                    emptyOpt2.disabled = true;
+                    els.joinGateRoleSelect.appendChild(emptyOpt2);
+                }
             } else {
                 roles.forEach((role) => {
                     const opt = document.createElement("option");
                     opt.value = String(role.id || "");
                     opt.textContent = `${role.name || "role"} (${role.id || ""})`;
                     els.serverRolesSelect.appendChild(opt);
+                    if (els.joinGateRoleSelect) {
+                        const opt2 = document.createElement("option");
+                        opt2.value = String(role.id || "");
+                        opt2.textContent = `${role.name || "role"} (${role.id || ""})`;
+                        els.joinGateRoleSelect.appendChild(opt2);
+                    }
                 });
             }
             syncRoleSelectionFromTextarea();
@@ -1174,6 +1255,9 @@
                         : "No roles returned for this server.";
                 }
             }
+                if (els.joinGateRolesSourceHint) {
+                    els.joinGateRolesSourceHint.textContent = els.rolesSourceHint ? els.rolesSourceHint.textContent : "";
+                }
         } catch (err) {
             els.serverRolesSelect.innerHTML = "";
             const errorOpt = document.createElement("option");
@@ -1181,6 +1265,14 @@
             errorOpt.textContent = "Role lookup failed";
             errorOpt.disabled = true;
             els.serverRolesSelect.appendChild(errorOpt);
+                if (els.joinGateRoleSelect) {
+                    els.joinGateRoleSelect.innerHTML = "";
+                    const errorOpt2 = document.createElement("option");
+                    errorOpt2.value = "";
+                    errorOpt2.textContent = "Role lookup failed";
+                    errorOpt2.disabled = true;
+                    els.joinGateRoleSelect.appendChild(errorOpt2);
+                }
             if (els.rolesSourceHint) {
                 els.rolesSourceHint.textContent = "Role lookup failed.";
             }
@@ -1314,6 +1406,73 @@
             fetchRolesForSelectedServer();
             fetchChannelsForSelectedServer();
         });
+
+        if (els.useSelectedChannelBtn) {
+            els.useSelectedChannelBtn.addEventListener("click", function () {
+                // prefer the logChannelSelect if available, otherwise use first channel in list
+                try {
+                    const val = (els.logChannelSelect && els.logChannelSelect.value) || "";
+                    if (val) {
+                        els.joinGateChannelId.value = String(val);
+                        notify(`Set verification channel to ${val}`, "success");
+                    } else {
+                        notify("No channel selected to use", "error");
+                    }
+                } catch (e) {
+                    notify("Failed to apply selected channel", "error");
+                }
+            });
+        }
+
+        if (els.useSelectedRoleBtn) {
+            els.useSelectedRoleBtn.addEventListener("click", function () {
+                try {
+                    const sel = (els.serverRolesSelect && els.serverRolesSelect.value) || "";
+                    if (sel) {
+                        els.joinGateRoleId.value = String(sel);
+                        notify(`Set verified role to ${sel}`, "success");
+                    } else {
+                        notify("No role selected to use", "error");
+                    }
+                } catch (e) {
+                    notify("Failed to apply selected role", "error");
+                }
+            });
+        }
+
+        if (els.applyVerificationBtn) {
+            els.applyVerificationBtn.addEventListener("click", async function () {
+                const gid = selectedGuildId();
+                if (!gid) {
+                    notify("Select a server first", "error");
+                    return;
+                }
+
+                // prefer explicit joinGateChannelSelect, then joinGateChannelId
+                const channelId = (els.joinGateChannelSelect && els.joinGateChannelSelect.value) || (els.joinGateChannelId && els.joinGateChannelId.value) || "";
+                const roleId = (els.joinGateRoleSelect && els.joinGateRoleSelect.value) || (els.joinGateRoleId && els.joinGateRoleId.value) || "";
+
+                if (!window.confirm("Send a preview verification message to the configured channel (or DM fallback)?")) {
+                    return;
+                }
+
+                setBusy(els.applyVerificationBtn, true, "Sending...");
+                try {
+                    await api(`/api/discord/moderation/send_verification/${encodeURIComponent(gid)}`, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            channel_id: channelId || null,
+                            role_id: roleId || null,
+                        }),
+                    });
+                    notify("Verification preview sent (check the selected channel or DMs).", "success");
+                } catch (err) {
+                    notify(`Failed to send verification preview: ${err.message}`, "error");
+                } finally {
+                    setBusy(els.applyVerificationBtn, false);
+                }
+            });
+        }
         [
             els.enabled,
             els.exemptAdmins,
