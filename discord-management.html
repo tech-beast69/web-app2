@@ -7,613 +7,854 @@
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self' https://tech-beast69.github.io https://telegram.org;
         script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://cdnjs.cloudflare.com;
-        style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+        style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
         connect-src 'self' https://tech-beast69.github.io https://*.glacierhosting.org https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org;
         img-src 'self' data: https:;
-        font-src 'self' https://cdnjs.cloudflare.com data:;
+        font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com data:;
     ">
-    <link rel="stylesheet" href="dashboard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://telegram.org/js/telegram-web-app.js?61"></script>
     <style>
-        .discord-wrap { max-width: 1240px; margin: 0 auto; }
-        .summary-grid { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(180px, 1fr)); }
-        .summary-card { background: rgba(255,255,255,0.92); border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08); }
-        .summary-label { color: #64748b; font-size: 0.82rem; margin-bottom: 6px; }
-        .summary-value { color: #0f172a; font-size: 1.02rem; font-weight: 700; }
-        .discord-grid { display: grid; grid-template-columns: repeat(2, minmax(300px, 1fr)); gap: 18px; }
-        .discord-card { background: rgba(255,255,255,0.9); border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; box-shadow: 0 6px 18px rgba(15,23,42,0.08); }
-        .discord-card h3 { margin-bottom: 12px; font-size: 1.04rem; display: flex; gap: 8px; align-items: center; }
-        .row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
-        .row input:not([type="checkbox"]), .row select, .row textarea {
-            flex: 1;
-            min-width: 220px;
-            padding: 10px 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 10px;
-            background: #fff;
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface-2: #22263a;
+            --border: #2d3148;
+            --border-light: #363b5e;
+            --accent: #5865f2;
+            --accent-hover: #4752c4;
+            --accent-glow: rgba(88,101,242,0.25);
+            --success: #3ba55d;
+            --success-bg: rgba(59,165,93,0.12);
+            --danger: #ed4245;
+            --danger-bg: rgba(237,66,69,0.12);
+            --warn: #faa61a;
+            --warn-bg: rgba(250,166,26,0.12);
+            --text: #e3e5e8;
+            --text-muted: #8e9297;
+            --text-dim: #5d626d;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 8px 24px rgba(0,0,0,0.4);
+            --transition: 0.18s ease;
         }
-        .row input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            margin: 0;
-            flex: 0 0 auto;
-            accent-color: #2563eb;
-            vertical-align: middle;
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.5;
+            padding-bottom: 60px;
         }
-        .row textarea { min-height: 110px; }
-        .btn {
-            border: none;
-            border-radius: 10px;
-            padding: 10px 14px;
-            cursor: pointer;
-            font-weight: 600;
-            min-height: 42px;
-        }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-primary { background: #2563eb; color: #fff; }
-        .btn-secondary { background: #e2e8f0; color: #0f172a; }
-        .btn-danger { background: #dc2626; color: #fff; }
-        .btn-outline { background: #fff; border: 1px solid #cbd5e1; color: #0f172a; }
-        .muted { color: #64748b; font-size: 0.92rem; }
-        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-        .full { grid-column: 1 / -1; }
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            border-radius: 999px;
-            padding: 7px 11px;
-            background: #e2e8f0;
-            font-size: 0.85rem;
-        }
-        .pill-success { background: #dcfce7; color: #166534; }
-        .pill-danger { background: #fee2e2; color: #991b1b; }
-        .filters-line { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
-        .toggle-chip {
-            display: inline-flex;
-            gap: 6px;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 8px 10px;
-            border-radius: 999px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            font-size: 0.88rem;
-            min-height: 44px;
-        }
-        .preset-group { display: flex; flex-wrap: wrap; gap: 8px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border-bottom: 1px solid #e2e8f0; padding: 8px; text-align: left; font-size: 0.9rem; }
-        .warnings-item { padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
-        .actions-row { display: flex; gap: 10px; flex-wrap: wrap; }
-        .subgrid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 12px; margin-bottom: 12px; }
-        .mini-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; }
-        .mini-title { font-weight: 700; color: #1e293b; margin-bottom: 8px; font-size: 0.92rem; }
-        .mini-card .row { margin-bottom: 8px; }
-        .field-label { font-size: 0.82rem; color: #475569; min-width: 120px; }
-        .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 12px; }
-        .setting-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #f8fafc; }
-        .setting-title { font-weight: 700; color: #111827; margin-bottom: 4px; }
-        .setting-help { color: #64748b; font-size: 0.84rem; margin-bottom: 10px; }
-        .guide-list { margin: 0; padding-left: 20px; color: #334155; line-height: 1.5; }
-        .guide-list li { margin-bottom: 6px; }
-        .quick-setup {
-            border: 1px solid #bfdbfe;
-            background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
-        }
-        .quick-setup h3 { color: #1d4ed8; }
-        .inline-help {
-            margin-top: 8px;
-            color: #334155;
-            font-size: 0.88rem;
-            line-height: 1.45;
-        }
-        .action-note {
-            padding: 10px 12px;
-            border-radius: 10px;
-            background: #eef2ff;
-            color: #312e81;
-            border: 1px solid #c7d2fe;
-            font-size: 0.86rem;
-        }
-        .checklist-box {
-            margin-top: 10px;
-            border: 1px solid #dbeafe;
-            background: #f8fbff;
-            border-radius: 12px;
-            padding: 10px 12px;
-        }
-        .checklist-title {
-            font-size: 0.87rem;
-            font-weight: 700;
-            color: #1e3a8a;
-            margin-bottom: 6px;
-        }
-        .checklist-item {
-            font-size: 0.85rem;
-            color: #1e293b;
-            margin-bottom: 4px;
-        }
-        .checklist-item.warn { color: #92400e; }
-        .checklist-item.good { color: #166534; }
-        .collapsed-advanced .advanced-setting {
-            display: none;
-        }
-        .advanced-state {
-            font-size: 0.85rem;
-            color: #475569;
-            margin-left: 8px;
-        }
-        .toast-wrap {
-            position: fixed;
-            right: 16px;
-            bottom: 16px;
-            z-index: 1500;
+
+        /* ── Layout ── */
+        .wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+
+        header {
+            background: linear-gradient(135deg, #1a1d27 0%, #1e213a 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
             display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-width: 340px;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+        header .brand { display: flex; align-items: center; gap: 10px; }
+        header .brand i { color: var(--accent); font-size: 1.4rem; }
+        header h1 { font-size: 1.1rem; font-weight: 700; color: #fff; }
+        header p { font-size: 0.8rem; color: var(--text-muted); }
+        .back-btn {
+            display: flex; align-items: center; gap: 6px;
+            text-decoration: none; color: var(--text-muted);
+            font-size: 0.88rem; font-weight: 600;
+            padding: 8px 14px; border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            transition: color var(--transition), border-color var(--transition), background var(--transition);
+        }
+        .back-btn:hover { color: var(--text); border-color: var(--border-light); background: var(--surface-2); }
+
+        section { padding: 20px 0 0; }
+        .section-title {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 0.95rem; font-weight: 700;
+            color: var(--text-muted); text-transform: uppercase;
+            letter-spacing: 0.06em; margin-bottom: 12px;
+        }
+        .section-title i { color: var(--accent); font-size: 0.9rem; }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            margin-bottom: 12px;
+            transition: border-color var(--transition);
+        }
+        .card:hover { border-color: var(--border-light); }
+        .card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 14px; gap: 10px; flex-wrap: wrap;
+        }
+        .card-title {
+            font-size: 0.9rem; font-weight: 700; color: #fff;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .card-title i { color: var(--accent); }
+        .card-help { font-size: 0.82rem; color: var(--text-muted); margin-top: 2px; }
+
+        /* ── Grid layouts ── */
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .full { grid-column: 1 / -1; }
+
+        /* ── Stat cards ── */
+        .stat-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px;
+        }
+        .stat-label { font-size: 0.77rem; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
+        .stat-value { font-size: 1rem; font-weight: 700; color: #fff; }
+        .stat-value.ok { color: var(--success); }
+        .stat-value.bad { color: var(--danger); }
+
+        /* ── Form inputs ── */
+        label.field-label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; font-weight: 500; }
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            padding: 9px 12px;
+            font-size: 0.88rem;
+            font-family: inherit;
+            transition: border-color var(--transition), box-shadow var(--transition);
+            outline: none;
+        }
+        input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        select option { background: var(--surface-2); }
+        textarea { min-height: 80px; resize: vertical; }
+        input[type="text"].mono, input[type="number"].mono, textarea.mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.84rem;
+        }
+        select[multiple] { min-height: 110px; }
+        .source-hint { font-size: 0.77rem; color: var(--text-muted); margin-top: 4px; }
+
+        /* ── Toggle switch ── */
+        .toggle-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 0; border-bottom: 1px solid var(--border);
+            justify-content: space-between;
+        }
+        .toggle-row:last-child { border-bottom: none; }
+        .toggle-label { font-size: 0.88rem; color: var(--text); font-weight: 500; flex: 1; }
+        .toggle-sublabel { font-size: 0.78rem; color: var(--text-muted); }
+        .toggle {
+            position: relative; display: inline-block;
+            width: 40px; height: 22px; flex-shrink: 0;
+        }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; cursor: pointer; inset: 0;
+            background: var(--border-light); border-radius: 22px;
+            transition: background var(--transition);
+        }
+        .toggle-slider::before {
+            content: ''; position: absolute;
+            width: 16px; height: 16px; left: 3px; top: 3px;
+            background: #fff; border-radius: 50%;
+            transition: transform var(--transition);
+        }
+        .toggle input:checked + .toggle-slider { background: var(--accent); }
+        .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 14px; border-radius: var(--radius-sm);
+            font-size: 0.85rem; font-weight: 600; cursor: pointer;
+            border: none; transition: all var(--transition);
+            white-space: nowrap;
+        }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover:not(:disabled) { background: var(--accent-hover); box-shadow: 0 4px 12px var(--accent-glow); }
+        .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover:not(:disabled) { border-color: var(--border-light); background: var(--border); }
+        .btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(237,66,69,0.3); }
+        .btn-danger:hover:not(:disabled) { background: rgba(237,66,69,0.25); }
+        .btn-success { background: var(--success-bg); color: var(--success); border: 1px solid rgba(59,165,93,0.3); }
+        .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+        .btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--border-light); }
+        .btn-sm { padding: 6px 10px; font-size: 0.8rem; }
+        .btn-icon { padding: 8px; }
+        .btn-save {
+            background: var(--accent); color: #fff;
+            padding: 7px 14px; font-size: 0.82rem; border-radius: var(--radius-sm);
+            cursor: pointer; border: none; font-weight: 600;
+            transition: all var(--transition);
+        }
+        .btn-save:hover:not(:disabled) { background: var(--accent-hover); }
+        .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── Row utilities ── */
+        .row { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 12px; }
+        .row:last-child { margin-bottom: 0; }
+        .row > * { flex: 1; min-width: 160px; }
+        .field-group { flex: 1; min-width: 160px; }
+        .actions-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+        /* ── Section save status ── */
+        .save-status {
+            font-size: 0.78rem; font-weight: 500; padding: 3px 8px;
+            border-radius: 99px; display: none; align-items: center; gap: 4px;
+        }
+        .save-status.ok { background: var(--success-bg); color: var(--success); display: inline-flex; }
+        .save-status.err { background: var(--danger-bg); color: var(--danger); display: inline-flex; }
+
+        /* ── Filter chips ── */
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+            gap: 10px;
+        }
+        .feature-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            transition: border-color var(--transition);
+        }
+        .feature-card:hover { border-color: var(--border-light); }
+        .feature-card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px;
+        }
+        .feature-name { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+        .feature-fields { display: flex; flex-direction: column; gap: 6px; }
+
+        /* ── Preset pills ── */
+        .preset-group { display: flex; gap: 6px; flex-wrap: wrap; }
+        .preset-btn {
+            padding: 5px 12px; border-radius: 99px;
+            border: 1px solid var(--border); background: var(--surface-2);
+            color: var(--text-muted); font-size: 0.8rem; font-weight: 600;
+            cursor: pointer; transition: all var(--transition);
+        }
+        .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .preset-btn.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+
+        /* ── Advanced toggle ── */
+        .advanced-toggle {
+            display: flex; align-items: center; gap: 8px;
+            cursor: pointer; font-size: 0.82rem; color: var(--text-muted);
+            user-select: none; padding: 8px 0; width: fit-content;
+        }
+        .advanced-toggle i { transition: transform var(--transition); }
+        .advanced-toggle.open i { transform: rotate(90deg); }
+        .advanced-section { display: none; }
+        .advanced-section.open { display: block; }
+
+        /* ── Health checklist ── */
+        .health-box {
+            background: var(--surface-2);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+        }
+        .health-item { display: flex; align-items: flex-start; gap: 7px; font-size: 0.83rem; margin-bottom: 5px; }
+        .health-item:last-child { margin-bottom: 0; }
+        .health-item i { margin-top: 2px; }
+        .health-item.ok { color: var(--success); }
+        .health-item.warn { color: var(--warn); }
+
+        /* ── Cases table ── */
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 8px 10px; text-align: left; font-size: 0.76rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+        td { padding: 9px 10px; font-size: 0.84rem; border-bottom: 1px solid var(--border); color: var(--text); }
+        tr:last-child td { border-bottom: none; }
+        .pill {
+            display: inline-flex; padding: 2px 8px; border-radius: 99px;
+            font-size: 0.76rem; font-weight: 600;
+        }
+        .pill-ban, .pill-kick { background: var(--danger-bg); color: var(--danger); }
+        .pill-warn { background: var(--warn-bg); color: var(--warn); }
+        .pill-timeout { background: rgba(88,101,242,0.15); color: var(--accent); }
+        .pill-delete_warn { background: var(--warn-bg); color: var(--warn); }
+        .pill-auto { background: rgba(255,255,255,0.06); color: var(--text-muted); }
+
+        /* ── Toast ── */
+        .toast-wrap {
+            position: fixed; right: 16px; bottom: 20px;
+            z-index: 9999; display: flex; flex-direction: column; gap: 8px;
+            max-width: 320px; pointer-events: none;
         }
         .toast {
-            background: #0f172a;
-            color: #fff;
-            border-radius: 10px;
-            padding: 10px 12px;
-            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.35);
-            animation: toastIn 180ms ease-out;
-            font-size: 0.92rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 14px;
+            box-shadow: var(--shadow);
+            font-size: 0.88rem;
+            animation: toastIn 200ms ease-out;
+            display: flex; align-items: center; gap: 8px;
         }
-        .toast.success { background: #166534; }
-        .toast.error { background: #991b1b; }
-        @keyframes toastIn {
-            from { transform: translateY(8px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        .toast.success { border-color: rgba(59,165,93,0.4); }
+        .toast.success i { color: var(--success); }
+        .toast.error { border-color: rgba(237,66,69,0.4); }
+        .toast.error i { color: var(--danger); }
+        .toast.info i { color: var(--accent); }
+        @keyframes toastIn { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* ── Quick guided setup ── */
+        .guided-card {
+            background: linear-gradient(135deg, rgba(88,101,242,0.1) 0%, var(--surface-2) 100%);
+            border: 1px solid rgba(88,101,242,0.3);
         }
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
+
+        /* ── Collapsible feature panels ── */
+        .collapse-panel { overflow: hidden; }
+        .collapse-panel.collapsed { max-height: 0; }
+
+        /* ── Vertical sub-card ── */
+        .sub-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px; margin-bottom: 10px;
         }
-        @media (max-width: 1000px) {
-            .discord-grid { grid-template-columns: 1fr; }
-            .summary-grid { grid-template-columns: 1fr; }
-            .subgrid { grid-template-columns: 1fr; }
-            .settings-grid { grid-template-columns: 1fr; }
+        .sub-card:last-child { margin-bottom: 0; }
+        .sub-title { font-size: 0.83rem; font-weight: 700; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+
+        @media (max-width: 720px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .filter-grid { grid-template-columns: 1fr; }
+            header { flex-direction: column; align-items: flex-start; }
+        }
+        @media (max-width: 480px) {
+            body { font-size: 13px; }
+            .card { padding: 14px; }
         }
     </style>
 </head>
 <body>
-    <div class="container discord-wrap">
-        <header>
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;">
-                <div>
-                    <h1><i class="fab fa-discord"></i> Discord Management</h1>
-                    <p class="subtitle">Manage Discord server moderation settings, cases, and warnings</p>
-                </div>
-                <a href="index.html" class="btn-secondary" style="text-decoration:none; padding:10px 14px; border-radius:10px; font-weight:700;">
-                    <i class="fas fa-arrow-left"></i> Back
-                </a>
+    <header>
+        <div class="brand">
+            <i class="fab fa-discord"></i>
+            <div>
+                <h1>Discord Management</h1>
+                <p>Moderation · AutoMod · Verification</p>
             </div>
-        </header>
+        </div>
+        <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
+    </header>
 
+    <div class="wrap">
+
+        <!-- ── Overview ── -->
         <section>
-            <h2><i class="fas fa-gauge-high"></i> Session Overview</h2>
-            <div class="summary-grid">
-                <div class="summary-card">
-                    <div class="summary-label">Connection</div>
-                    <div class="summary-value" id="connectionStatus">Not tested</div>
+            <div class="section-title"><i class="fas fa-gauge-high"></i> Overview</div>
+            <div class="grid-3">
+                <div class="stat-card">
+                    <div class="stat-label">Connection</div>
+                    <div class="stat-value" id="connectionStatus">Not tested</div>
                 </div>
-                <div class="summary-card">
-                    <div class="summary-label">Selected Server</div>
-                    <div class="summary-value mono" id="selectedServerLabel">None</div>
+                <div class="stat-card">
+                    <div class="stat-label">Selected Server</div>
+                    <div class="stat-value mono" id="selectedServerLabel">None</div>
                 </div>
-                <div class="summary-card">
-                    <div class="summary-label">Last Action</div>
-                    <div class="summary-value" id="lastActionLabel">No actions yet</div>
+                <div class="stat-card">
+                    <div class="stat-label">Last Action</div>
+                    <div class="stat-value" id="lastActionLabel">—</div>
                 </div>
             </div>
         </section>
 
+        <!-- ── Server Selection ── -->
         <section>
-            <h2><i class="fas fa-server"></i> Server Selection</h2>
-            <div class="discord-grid">
-                <div class="discord-card">
-                    <h3>Managed Servers</h3>
-                    <div class="row">
-                        <label class="sr-only" for="serverSelect">Managed Discord Servers</label>
+            <div class="section-title"><i class="fas fa-server"></i> Server</div>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title"><i class="fas fa-list"></i> Managed Servers</div>
+                            <div class="card-help">Select a server and load its config</div>
+                        </div>
+                    </div>
+                    <div class="field-group" style="margin-bottom:10px;">
+                        <label class="field-label" for="serverSelect">Server</label>
                         <select id="serverSelect"></select>
-                        <button class="btn btn-outline" id="syncServersBtn" type="button">Sync Servers</button>
-                        <button class="btn btn-outline" id="testConnectionBtn" type="button">Test Connection</button>
-                        <button class="btn btn-secondary" id="loadConfigBtn">Load Config</button>
                     </div>
-                    <p class="muted">Select a server from your saved list, then load moderation config.</p>
+                    <div class="actions-row" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+                        <button class="btn btn-ghost btn-sm" id="syncServersBtn"><i class="fas fa-rotate"></i> Sync</button>
+                        <button class="btn btn-ghost btn-sm" id="testConnectionBtn"><i class="fas fa-plug"></i> Test</button>
+                        <button class="btn btn-primary" id="loadConfigBtn"><i class="fas fa-download"></i> Load Config</button>
+                    </div>
                 </div>
-                <div class="discord-card">
-                    <h3>Add Server</h3>
-                    <div class="row">
-                        <label class="sr-only" for="newGuildId">Guild ID</label>
-                        <input id="newGuildId" class="mono" placeholder="Guild ID (e.g. 123456789012345678)">
-                        <label class="sr-only" for="newGuildName">Guild label</label>
-                        <input id="newGuildName" placeholder="Label (optional)">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-plus-circle"></i> Add Server</div>
                     </div>
-                    <div class="row">
-                        <button class="btn btn-primary" id="addServerBtn">Add Server</button>
-                        <button class="btn btn-danger" id="removeServerBtn">Remove Selected</button>
+                    <div class="field-group" style="margin-bottom:8px;">
+                        <label class="field-label" for="newGuildId">Guild ID</label>
+                        <input id="newGuildId" class="mono" placeholder="e.g. 123456789012345678">
+                    </div>
+                    <div class="field-group" style="margin-bottom:10px;">
+                        <label class="field-label" for="newGuildName">Label (optional)</label>
+                        <input id="newGuildName" placeholder="My Server">
+                    </div>
+                    <div class="actions-row" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+                        <button class="btn btn-primary" id="addServerBtn"><i class="fas fa-plus"></i> Add</button>
+                        <button class="btn btn-danger" id="removeServerBtn"><i class="fas fa-trash"></i> Remove</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Quick Setup ── -->
+        <section>
+            <div class="section-title"><i class="fas fa-wand-magic-sparkles"></i> Quick Setup</div>
+            <div class="card guided-card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title"><i class="fas fa-wand-magic-sparkles"></i> Protection Profile</div>
+                        <div class="card-help">Pick a preset profile, then customise individual sections below</div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="field-group">
+                        <label class="field-label" for="guidedMode">Profile</label>
+                        <select id="guidedMode">
+                            <option value="starter">Starter — fewer false positives</option>
+                            <option value="balanced" selected>Balanced — recommended</option>
+                            <option value="high_security">High Security — raid-focused</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="enforcementMode">Enforcement</label>
+                        <select id="enforcementMode">
+                            <option value="learning" selected>Learning — warn only</option>
+                            <option value="standard">Standard — mixed actions</option>
+                            <option value="aggressive">Aggressive — timeout-heavy</option>
+                        </select>
+                    </div>
+                    <div style="flex:0; display:flex; align-items:flex-end;">
+                        <button class="btn btn-primary" id="applyGuidedBtn"><i class="fas fa-check"></i> Apply Profile</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Core Controls ── -->
+        <section>
+            <div class="section-title"><i class="fas fa-sliders"></i> Core Controls</div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-scroll"></i> Log Channel</div>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="save-status" id="logSaveStatus"></span>
+                        <button class="btn-save" id="saveLogBtn"><i class="fas fa-floppy-disk"></i> Save</button>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="field-group">
+                        <label class="field-label" for="logChannelSelect">Log Channel</label>
+                        <select id="logChannelSelect"><option value="">— Select a channel —</option></select>
+                        <div class="source-hint" id="channelsSourceHint"></div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="logChannelId">Or paste channel ID</label>
+                        <input type="text" id="logChannelId" class="mono" placeholder="e.g. 1234567890123456">
                     </div>
                 </div>
 
-                <div class="discord-card full">
-                    <h3><i class="fas fa-door-open"></i> Join-Gate</h3>
-                    <p class="setting-help">Require new members to verify before receiving the verified role.</p>
-                    <div class="row">
-                        <label class="toggle-chip"><input type="checkbox" id="joinGateEnabled"> Enable Join-Gate</label>
+                <div class="sub-card">
+                    <div class="sub-title"><i class="fas fa-toggle-on"></i> Moderation Switches</div>
+                    <div class="toggle-row">
+                        <div>
+                            <div class="toggle-label">Moderation Enabled</div>
+                            <div class="toggle-sublabel">Master switch — disabling this stops all automod actions</div>
+                        </div>
+                        <label class="toggle"><input type="checkbox" id="enabled"><span class="toggle-slider"></span></label>
+                    </div>
+                    <div class="toggle-row">
+                        <div>
+                            <div class="toggle-label">Exempt Administrators</div>
+                            <div class="toggle-sublabel">Admins are never affected by automod (recommended)</div>
+                        </div>
+                        <label class="toggle"><input type="checkbox" id="exemptAdmins" checked><span class="toggle-slider"></span></label>
+                    </div>
+                    <div class="toggle-row">
+                        <div>
+                            <div class="toggle-label">Raid Quarantine Mode</div>
+                            <div class="toggle-sublabel">Extra-strict mode during suspected raids</div>
+                        </div>
+                        <label class="toggle"><input type="checkbox" id="raidModeEnabled"><span class="toggle-slider"></span></label>
+                    </div>
+                </div>
+
+                <div class="health-box" id="configChecklist" style="margin-top:10px;"></div>
+            </div>
+
+            <!-- Exemptions -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-user-shield"></i> Exemptions</div>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="save-status" id="exemptSaveStatus"></span>
+                        <button class="btn-save" id="saveExemptionsBtn"><i class="fas fa-floppy-disk"></i> Save</button>
+                    </div>
+                </div>
+                <div class="card-help" style="margin-bottom:12px;">Users with these roles or in these channels are never punished by automod.</div>
+                <div class="grid-2">
+                    <div class="field-group">
+                        <label class="field-label" for="serverRolesSelect">Server Roles <span style="color:var(--text-muted);font-weight:400;">(click to select multiple)</span></label>
+                        <select id="serverRolesSelect" multiple size="6"></select>
+                        <div class="source-hint" id="rolesSourceHint"></div>
+                        <div style="display:flex;gap:8px;margin-top:8px;">
+                            <button class="btn btn-ghost btn-sm" id="refreshRolesBtn"><i class="fas fa-rotate"></i></button>
+                            <button class="btn btn-secondary btn-sm" id="applySelectedRolesBtn">Use Selected As Exemptions</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="field-group" style="margin-bottom:8px;">
+                            <label class="field-label" for="exemptRoleIds">Exempt Role IDs <span style="color:var(--text-muted);font-weight:400;">(one per line)</span></label>
+                            <textarea id="exemptRoleIds" class="mono" placeholder="1234567890&#10;9876543210"></textarea>
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" for="exemptChannelIds">Exempt Channel IDs <span style="color:var(--text-muted);font-weight:400;">(one per line)</span></label>
+                            <textarea id="exemptChannelIds" class="mono" placeholder="1234567890&#10;9876543210"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Filter Settings ── -->
+        <section>
+            <div class="section-title"><i class="fas fa-filter"></i> Filter Settings</div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-boxes-stacked"></i> AutoMod Rules</div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                        <div class="preset-group">
+                            <button class="preset-btn" id="presetRelaxedBtn">Relaxed</button>
+                            <button class="preset-btn" id="presetBalancedBtn">Balanced</button>
+                            <button class="preset-btn" id="presetStrictBtn">Strict</button>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <span class="save-status" id="filterSaveStatus"></span>
+                            <button class="btn-save" id="saveFiltersBtn"><i class="fas fa-floppy-disk"></i> Save All Filters</button>
+                        </div>
+                    </div>
+                </div>
+                <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px;">
+                    <strong style="color:var(--text);">warn</strong> = warn only &nbsp;·&nbsp;
+                    <strong style="color:var(--text);">delete_warn</strong> = delete + warn &nbsp;·&nbsp;
+                    <strong style="color:var(--text);">delete_timeout</strong> = delete + timeout
+                </p>
+
+                <div class="filter-grid">
+
+                    <!-- Anti-Spam -->
+                    <div class="feature-card">
+                        <div class="feature-card-header">
+                            <div class="feature-name"><i class="fas fa-forward-fast" style="color:var(--warn);margin-right:5px;"></i> Anti-Spam</div>
+                            <label class="toggle"><input type="checkbox" id="antiSpamEnabled"><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="feature-fields">
+                            <select id="antiSpamAction"><option value="warn">warn</option><option value="delete_warn">delete_warn</option><option value="delete_timeout">delete_timeout</option><option value="timeout">timeout</option><option value="kick">kick</option><option value="ban">ban</option></select>
+                            <input id="antiSpamLimit" type="number" min="2" max="30" placeholder="Max msgs (default 6)">
+                            <input id="antiSpamWindow" type="number" min="3" max="120" placeholder="Window secs (default 10)">
+                            <input id="duplicateLimit" type="number" min="2" max="20" placeholder="Duplicate limit (default 4)">
+                            <input id="spamTimeoutSeconds" type="number" min="60" max="2419200" placeholder="Timeout secs">
+                        </div>
+                    </div>
+
+                    <!-- Mention Spam -->
+                    <div class="feature-card">
+                        <div class="feature-card-header">
+                            <div class="feature-name"><i class="fas fa-at" style="color:var(--accent);margin-right:5px;"></i> Mention Spam</div>
+                            <label class="toggle"><input type="checkbox" id="antiMentionEnabled"><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="feature-fields">
+                            <select id="antiMentionAction"><option value="warn">warn</option><option value="delete_warn">delete_warn</option><option value="delete_timeout">delete_timeout</option><option value="timeout">timeout</option></select>
+                            <input id="mentionLimit" type="number" min="1" max="50" placeholder="Max mentions (default 5)">
+                            <input id="mentionTimeoutSeconds" type="number" min="60" max="2419200" placeholder="Timeout secs">
+                        </div>
+                    </div>
+
+                    <!-- @everyone Guard -->
+                    <div class="feature-card">
+                        <div class="feature-card-header">
+                            <div class="feature-name"><i class="fas fa-bullhorn" style="color:var(--danger);margin-right:5px;"></i> @everyone Guard</div>
+                            <label class="toggle"><input type="checkbox" id="antiEveryoneEnabled"><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="feature-fields">
+                            <select id="antiEveryoneAction"><option value="warn">warn</option><option value="delete_warn">delete_warn</option><option value="delete_timeout">delete_timeout</option></select>
+                            <input id="everyoneMentionLimit" type="number" min="0" max="10" placeholder="Allowed @everyone (0=none)">
+                        </div>
+                    </div>
+
+                    <!-- Anti-Link -->
+                    <div class="feature-card">
+                        <div class="feature-card-header">
+                            <div class="feature-name"><i class="fas fa-link" style="color:var(--accent);margin-right:5px;"></i> Anti-Link</div>
+                            <label class="toggle"><input type="checkbox" id="antiLinkEnabled"><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="feature-fields">
+                            <select id="antiLinkAction"><option value="warn">warn</option><option value="delete_warn">delete_warn</option><option value="delete_timeout">delete_timeout</option><option value="timeout">timeout</option></select>
+                            <textarea id="allowDomains" class="mono" placeholder="Allowed domains (one per line)&#10;e.g. discord.com"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Anti-Invite -->
+                    <div class="feature-card">
+                        <div class="feature-card-header">
+                            <div class="feature-name"><i class="fas fa-envelope-open-text" style="color:var(--warn);margin-right:5px;"></i> Anti-Invite</div>
+                            <label class="toggle"><input type="checkbox" id="antiInviteEnabled"><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="feature-fields">
+                            <select id="antiInviteAction"><option value="warn">warn</option><option value="delete_warn">delete_warn</option><option value="delete_timeout">delete_timeout</option><option value="timeout">timeout</option></select>
+                        </div>
+                    </div>
+
+                    <!-- Warn Escalation -->
+                    <div class="feature-card">
+                        <div class="feature-card-header">
+                            <div class="feature-name"><i class="fas fa-arrow-trend-up" style="color:var(--danger);margin-right:5px;"></i> Warn Escalation</div>
+                            <label class="toggle"><input type="checkbox" id="warnEscalationEnabled"><span class="toggle-slider"></span></label>
+                        </div>
+                        <div class="feature-fields">
+                            <select id="warnEscalationAction"><option value="timeout">timeout</option><option value="kick">kick</option><option value="ban">ban</option></select>
+                            <input id="warnMax" type="number" min="2" max="20" placeholder="Warn cap (default 3)">
+                            <input id="warnEscalationTimeoutSeconds" type="number" min="60" max="2419200" placeholder="Timeout secs">
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Advanced filters -->
+                <div class="advanced-toggle" id="advancedToggle" style="margin-top:16px;">
+                    <i class="fas fa-chevron-right"></i>
+                    <span>Advanced Filters</span>
+                    <span id="advancedStateLabel" style="color:var(--text-dim);font-size:0.78rem;">(hidden)</span>
+                </div>
+                <div class="advanced-section" id="advancedSection">
+                    <div class="filter-grid" style="margin-top:12px;">
+
+                        <!-- Emoji Spam -->
+                        <div class="feature-card">
+                            <div class="feature-card-header">
+                                <div class="feature-name"><i class="fas fa-face-laugh-squint" style="color:var(--warn);margin-right:5px;"></i> Emoji Spam</div>
+                                <label class="toggle"><input type="checkbox" id="antiEmojiEnabled"><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="feature-fields">
+                                <select id="antiEmojiAction"><option value="warn">warn</option><option value="delete_warn">delete_warn</option><option value="delete_timeout">delete_timeout</option></select>
+                                <input id="emojiLimit" type="number" min="1" max="200" placeholder="Max emojis (default 14)">
+                            </div>
+                        </div>
+
+                        <!-- Line Spam -->
+                        <div class="feature-card">
+                            <div class="feature-card-header">
+                                <div class="feature-name"><i class="fas fa-bars" style="color:var(--text-muted);margin-right:5px;"></i> Line Spam</div>
+                                <label class="toggle"><input type="checkbox" id="antiLineEnabled"><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="feature-fields">
+                                <select id="antiLineAction"><option value="warn">warn</option><option value="delete_warn">delete_warn</option><option value="delete_timeout">delete_timeout</option></select>
+                                <input id="lineLimit" type="number" min="2" max="100" placeholder="Max lines (default 12)">
+                            </div>
+                        </div>
+
+                        <!-- Long Message -->
+                        <div class="feature-card">
+                            <div class="feature-card-header">
+                                <div class="feature-name"><i class="fas fa-align-left" style="color:var(--text-muted);margin-right:5px;"></i> Long Message</div>
+                                <label class="toggle"><input type="checkbox" id="antiLongEnabled"><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="feature-fields">
+                                <select id="antiLongAction"><option value="warn">warn</option><option value="delete_warn">delete_warn</option><option value="delete_timeout">delete_timeout</option></select>
+                                <input id="charLimit" type="number" min="100" max="4000" placeholder="Max chars (default 1400)">
+                            </div>
+                        </div>
+
+                        <!-- CAPS Guard -->
+                        <div class="feature-card">
+                            <div class="feature-card-header">
+                                <div class="feature-name"><i class="fas fa-font" style="color:var(--text-muted);margin-right:5px;"></i> CAPS Guard</div>
+                                <label class="toggle"><input type="checkbox" id="antiCapsEnabled"><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="feature-fields">
+                                <select id="antiCapsAction"><option value="warn">warn</option><option value="delete_warn">delete_warn</option><option value="delete_timeout">delete_timeout</option></select>
+                                <input id="capsRatio" type="number" min="0.1" max="1" step="0.05" placeholder="Ratio 0.8">
+                                <input id="capsMinLength" type="number" min="5" max="200" placeholder="Min length (default 14)">
+                            </div>
+                        </div>
+
+                        <!-- Attachment Spam -->
+                        <div class="feature-card">
+                            <div class="feature-card-header">
+                                <div class="feature-name"><i class="fas fa-paperclip" style="color:var(--text-muted);margin-right:5px;"></i> Attachment Spam</div>
+                                <label class="toggle"><input type="checkbox" id="antiAttachmentEnabled"><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="feature-fields">
+                                <select id="antiAttachmentAction"><option value="warn">warn</option><option value="delete_warn">delete_warn</option><option value="delete_timeout">delete_timeout</option></select>
+                                <input id="attachmentLimit" type="number" min="1" max="20" placeholder="Max attachments (default 3)">
+                            </div>
+                        </div>
+
+                        <!-- New Account Guard -->
+                        <div class="feature-card">
+                            <div class="feature-card-header">
+                                <div class="feature-name"><i class="fas fa-user-clock" style="color:var(--accent);margin-right:5px;"></i> New Account</div>
+                                <label class="toggle"><input type="checkbox" id="newAccountGuardEnabled"><span class="toggle-slider"></span></label>
+                            </div>
+                            <div class="feature-fields">
+                                <select id="newAccountAction"><option value="log">log</option><option value="warn">warn</option><option value="delete_warn">delete_warn</option><option value="delete_timeout">delete_timeout</option><option value="kick">kick</option><option value="ban">ban</option></select>
+                                <input id="newAccountAgeMinutes" type="number" min="1" max="10080" placeholder="Min age minutes (default 60)">
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="field-group" style="margin-top:12px;">
+                        <label class="field-label" for="bannedWords">Banned Words <span style="color:var(--text-muted);font-weight:400;">(one per line)</span></label>
+                        <textarea id="bannedWords" class="mono" placeholder="badword1&#10;badword2"></textarea>
+                    </div>
+                    <div class="field-group" style="margin-top:10px;">
+                        <label class="field-label" for="raidQuarantineRoleId">Raid Quarantine Role ID</label>
+                        <input type="text" id="raidQuarantineRoleId" class="mono" placeholder="Role ID applied in quarantine mode">
+                    </div>
+                </div>
+
+                <div class="actions-row">
+                    <button class="btn btn-ghost btn-sm" id="refreshConfigBtn"><i class="fas fa-rotate"></i> Refresh</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Join-Gate / Verification ── -->
+        <section>
+            <div class="section-title"><i class="fas fa-door-open"></i> Join-Gate & Verification</div>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title"><i class="fas fa-shield-check"></i> Join-Gate</div>
+                        <div class="card-help">Require new members to verify before accessing the server</div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="save-status" id="joinGateSaveStatus"></span>
+                        <button class="btn-save" id="saveJoinGateBtn"><i class="fas fa-floppy-disk"></i> Save</button>
+                    </div>
+                </div>
+
+                <div class="toggle-row" style="margin-bottom:12px;">
+                    <div class="toggle-label">Enable Join-Gate</div>
+                    <label class="toggle"><input type="checkbox" id="joinGateEnabled"><span class="toggle-slider"></span></label>
+                </div>
+
+                <div class="grid-2">
+                    <div class="field-group">
+                        <label class="field-label" for="joinGateChannelSelect">Verification Channel</label>
+                        <select id="joinGateChannelSelect"><option value="">— Select a channel —</option></select>
+                        <div class="source-hint" id="joinGateChannelsSourceHint"></div>
+                        <input type="text" id="joinGateChannelId" class="mono" placeholder="Or paste channel ID" style="margin-top:6px;">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="joinGateRoleSelect">Verified Role</label>
+                        <select id="joinGateRoleSelect"><option value="">— Select a role —</option></select>
+                        <div class="source-hint" id="joinGateRolesSourceHint"></div>
+                        <input type="text" id="joinGateRoleId" class="mono" placeholder="Or paste role ID" style="margin-top:6px;">
+                    </div>
+                </div>
+                <div class="row" style="margin-top:10px;">
+                    <div class="field-group">
+                        <label class="field-label" for="joinGateMethod">Method</label>
                         <select id="joinGateMethod">
                             <option value="button">Button (recommended)</option>
                             <option value="emoji">React with emoji</option>
                         </select>
                     </div>
-                    <div class="row">
-                        <div style="flex:1; min-width:220px;">
-                            <label class="sr-only" for="joinGateChannelSelect">Verification Channel</label>
-                            <select id="joinGateChannelSelect"><option value="">-- Select verification channel --</option></select>
-                            <div id="joinGateChannelsSourceHint" class="muted small" aria-live="polite"></div>
-                            <input type="text" id="joinGateChannelId" class="mono" placeholder="Or paste channel ID manually">
-                        </div>
-                        <div style="flex:1; min-width:220px;">
-                            <label class="sr-only" for="joinGateRoleSelect">Verified Role</label>
-                            <select id="joinGateRoleSelect"><option value="">-- Select verified role --</option></select>
-                            <div id="joinGateRolesSourceHint" class="muted small" aria-live="polite"></div>
-                            <input type="text" id="joinGateRoleId" class="mono" placeholder="Or paste role ID manually">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <input id="joinGateTimeout" type="number" min="30" max="86400" placeholder="Timeout seconds (default 300)">
-                        <label class="toggle-chip"><input type="checkbox" id="joinGateKick"> Kick on fail</label>
-                        <label class="toggle-chip"><input type="checkbox" id="joinGateRemoveOnFail" checked> Remove on fail</label>
-                    </div>
-                    <div class="row">
-                        <button class="btn btn-outline" id="useSelectedChannelBtn" type="button">Use Selected Channel</button>
-                        <button class="btn btn-outline" id="useSelectedRoleBtn" type="button">Use Selected Role</button>
-                        <button class="btn btn-primary" id="applyVerificationBtn" type="button">Apply Verification (send test)</button>
-                    </div>
-                    <div class="row">
-                        <small class="muted">If verification channel is empty, the bot will DM new members. Use role ID to auto-assign a role upon verification.</small>
+                    <div class="field-group">
+                        <label class="field-label" for="joinGateTimeout">Timeout (seconds)</label>
+                        <input id="joinGateTimeout" type="number" min="30" max="86400" placeholder="Default 300">
                     </div>
                 </div>
-                
-            </div>
-        </section>
-
-        <section>
-            <h2><i class="fas fa-shield-alt"></i> Moderation Settings</h2>
-            <div class="discord-card full">
-                <h3><i class="fas fa-circle-info"></i> How To Use Settings Correctly</h3>
-                <ol class="guide-list">
-                    <li>Step 1: Pick a profile in <strong>Quick Setup</strong> and click <strong>Apply Profile</strong>.</li>
-                    <li>Step 2: Set <strong>Log Channel ID</strong>, then enable <strong>Moderation Enabled</strong>.</li>
-                    <li>Step 3: Add <strong>Exempt Role IDs</strong> and <strong>Exempt Channel IDs</strong> for trusted staff/bot channels.</li>
-                    <li>Step 4: Save config, monitor cases for a day, then open <strong>Advanced Settings</strong> only if needed.</li>
-                </ol>
-            </div>
-
-            <div class="discord-card full quick-setup">
-                <h3><i class="fas fa-wand-magic-sparkles"></i> Quick Setup (Recommended)</h3>
-                <div class="row">
-                    <label class="field-label" for="guidedMode">Protection Profile</label>
-                    <select id="guidedMode" aria-label="Protection profile">
-                        <option value="starter">Starter: low-risk, fewer false positives</option>
-                        <option value="balanced" selected>Balanced: recommended for most servers</option>
-                        <option value="high_security">High Security: raid-focused and stricter</option>
-                    </select>
-                    <label class="field-label" for="enforcementMode">Enforcement</label>
-                    <select id="enforcementMode" aria-label="Enforcement mode">
-                        <option value="learning" selected>Learning: warn/delete_warn only</option>
-                        <option value="standard">Standard: mixed actions</option>
-                        <option value="aggressive">Aggressive: timeout-heavy</option>
-                    </select>
-                    <button class="btn btn-primary" id="applyGuidedBtn" type="button">Apply Profile</button>
-                    <button class="btn btn-outline" id="toggleAdvancedBtn" type="button">Show Advanced Settings</button>
-                </div>
-                <div class="inline-help">
-                    Profiles configure common values automatically. You can still customize any field later.
-                    <span class="advanced-state" id="advancedStateLabel">Advanced settings are hidden</span>
-                </div>
-            </div>
-
-            <div class="discord-grid">
-                <div class="discord-card full">
-                    <h3><i class="fas fa-sliders"></i> Core Controls</h3>
-                    <div class="row">
-                            <label class="sr-only" for="logChannelSelect">Log Channel</label>
-                            <select class="form-control" id="logChannelSelect">
-                                <option value="">-- Select a channel --</option>
-                            </select>
-                            <div id="channelsSourceHint" class="muted small" aria-live="polite"></div>
-                            <small class="form-text text-muted">If your bot is offline, you can paste a channel ID manually below.</small>
-                            <input type="text" class="form-control mt-2" id="logChannelId" placeholder="Or paste channel ID manually">
+                <div class="sub-card" style="margin-top:10px;">
+                    <div class="toggle-row">
+                        <div class="toggle-label">Kick on verification failure</div>
+                        <label class="toggle"><input type="checkbox" id="joinGateKick"><span class="toggle-slider"></span></label>
                     </div>
-                    <div class="filters-line">
-                        <label class="toggle-chip"><input type="checkbox" id="enabled"> Moderation Enabled</label>
-                        <label class="toggle-chip"><input type="checkbox" id="exemptAdmins" checked> Exempt Admins (recommended)</label>
-                        <label class="toggle-chip"><input type="checkbox" id="raidModeEnabled"> Raid Quarantine Mode</label>
-                    </div>
-                    <div class="checklist-box" id="configChecklist" aria-live="polite"></div>
-                </div>
-
-                <div class="discord-card full">
-                    <h3><i class="fas fa-user-shield"></i> Exemptions</h3>
-                    <p class="setting-help">IDs here are never punished by automod in normal operation.</p>
-                    <div class="row">
-                        <select id="serverRolesSelect" multiple size="8" aria-label="Server roles"></select>
-                        <div id="rolesSourceHint" class="muted small" aria-live="polite"></div>
-                    </div>
-                    <div class="row">
-                        <button class="btn btn-outline" id="refreshRolesBtn" type="button">Refresh Roles</button>
-                        <button class="btn btn-secondary" id="applySelectedRolesBtn" type="button">Use Selected Roles as Exemptions</button>
-                    </div>
-                    <div class="row">
-                        <textarea id="exemptRoleIds" class="mono" placeholder="Exempt Role IDs (one per line)"></textarea>
-                    </div>
-                    <div class="row">
-                        <textarea id="exemptChannelIds" class="mono" placeholder="Exempt Channel IDs (one per line)"></textarea>
+                    <div class="toggle-row">
+                        <div class="toggle-label">Remove pending role on failure</div>
+                        <label class="toggle"><input type="checkbox" id="joinGateRemoveOnFail" checked><span class="toggle-slider"></span></label>
                     </div>
                 </div>
-
-                <div class="discord-card full collapsed-advanced" id="moderationSettingsBlock">
-                    <h3><i class="fas fa-boxes-stacked"></i> Filter Settings (Separated)</h3>
-                    <p class="action-note">Action meaning: <strong>warn</strong> = warning only, <strong>delete_warn</strong> = remove message + warning, <strong>delete_timeout</strong> = remove message + timeout.</p>
-                    <div class="settings-grid">
-                        <div class="setting-card">
-                            <div class="setting-title">Anti-Spam</div>
-                            <div class="setting-help">Stops flooding and repeated message spam.</div>
-                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiSpamEnabled"> Enable Anti-Spam</label></div>
-                            <div class="row"><input id="antiSpamLimit" type="number" min="2" max="30" placeholder="How many messages are allowed"></div>
-                            <div class="row"><input id="antiSpamWindow" type="number" min="3" max="120" placeholder="In how many seconds"></div>
-                            <div class="row"><input id="duplicateLimit" type="number" min="2" max="20" placeholder="How many duplicate messages"></div>
-                            <div class="row"><input id="spamTimeoutSeconds" type="number" min="60" max="2419200" placeholder="Timeout seconds"></div>
-                            <div class="row">
-                                <select id="antiSpamAction">
-                                    <option value="warn">warn</option>
-                                    <option value="delete_warn">delete_warn</option>
-                                    <option value="delete_timeout">delete_timeout</option>
-                                    <option value="timeout">timeout</option>
-                                    <option value="kick">kick</option>
-                                    <option value="ban">ban</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="setting-card">
-                            <div class="setting-title">Mention Spam</div>
-                            <div class="setting-help">Controls too many user/role mentions in one message.</div>
-                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiMentionEnabled"> Enable Mention Guard</label></div>
-                            <div class="row"><input id="mentionLimit" type="number" min="1" max="50" placeholder="Max mentions per message"></div>
-                            <div class="row"><input id="mentionTimeoutSeconds" type="number" min="60" max="2419200" placeholder="Timeout seconds"></div>
-                            <div class="row">
-                                <select id="antiMentionAction">
-                                    <option value="warn">warn</option>
-                                    <option value="delete_warn">delete_warn</option>
-                                    <option value="delete_timeout">delete_timeout</option>
-                                    <option value="timeout">timeout</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="setting-card">
-                            <div class="setting-title">@everyone / @here Guard</div>
-                            <div class="setting-help">Blocks public role ping abuse.</div>
-                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiEveryoneEnabled"> Enable Public Ping Guard</label></div>
-                            <div class="row"><input id="everyoneMentionLimit" type="number" min="0" max="10" placeholder="Allowed @everyone/@here (0=none)"></div>
-                            <div class="row">
-                                <select id="antiEveryoneAction">
-                                    <option value="warn">warn</option>
-                                    <option value="delete_warn">delete_warn</option>
-                                    <option value="delete_timeout">delete_timeout</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="setting-card">
-                            <div class="setting-title">Anti-Link</div>
-                            <div class="setting-help">Filters external links except allow-listed domains.</div>
-                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiLinkEnabled"> Enable Anti-Link</label></div>
-                            <div class="row">
-                                <select id="antiLinkAction">
-                                    <option value="warn">warn</option>
-                                    <option value="delete_warn">delete_warn</option>
-                                    <option value="delete_timeout">delete_timeout</option>
-                                    <option value="timeout">timeout</option>
-                                </select>
-                            </div>
-                            <div class="row"><textarea id="allowDomains" placeholder="Allowed domains for anti-link (one per line)"></textarea></div>
-                        </div>
-
-                        <div class="setting-card">
-                            <div class="setting-title">Anti-Invite</div>
-                            <div class="setting-help">Blocks Discord invite links and ad spam.</div>
-                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiInviteEnabled"> Enable Anti-Invite</label></div>
-                            <div class="row">
-                                <select id="antiInviteAction">
-                                    <option value="warn">warn</option>
-                                    <option value="delete_warn">delete_warn</option>
-                                    <option value="delete_timeout">delete_timeout</option>
-                                    <option value="timeout">timeout</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="setting-card advanced-setting">
-                            <div class="setting-title">Emoji Spam</div>
-                            <div class="setting-help">Restricts excessive emoji usage per message.</div>
-                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiEmojiEnabled"> Enable Emoji Guard</label></div>
-                            <div class="row"><input id="emojiLimit" type="number" min="1" max="200" placeholder="Max emojis"></div>
-                            <div class="row">
-                                <select id="antiEmojiAction">
-                                    <option value="warn">warn</option>
-                                    <option value="delete_warn">delete_warn</option>
-                                    <option value="delete_timeout">delete_timeout</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="setting-card advanced-setting">
-                            <div class="setting-title">Line Spam</div>
-                            <div class="setting-help">Limits large newline floods and wall text.</div>
-                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiLineEnabled"> Enable Line Guard</label></div>
-                            <div class="row"><input id="lineLimit" type="number" min="2" max="100" placeholder="Max lines"></div>
-                            <div class="row">
-                                <select id="antiLineAction">
-                                    <option value="warn">warn</option>
-                                    <option value="delete_warn">delete_warn</option>
-                                    <option value="delete_timeout">delete_timeout</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="setting-card advanced-setting">
-                            <div class="setting-title">Long Message Guard</div>
-                            <div class="setting-help">Controls very long messages to reduce spam load.</div>
-                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiLongEnabled"> Enable Long Message Guard</label></div>
-                            <div class="row"><input id="charLimit" type="number" min="100" max="4000" placeholder="Max characters"></div>
-                            <div class="row">
-                                <select id="antiLongAction">
-                                    <option value="warn">warn</option>
-                                    <option value="delete_warn">delete_warn</option>
-                                    <option value="delete_timeout">delete_timeout</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="setting-card advanced-setting">
-                            <div class="setting-title">CAPS Guard</div>
-                            <div class="setting-help">Flags all-caps shouting behavior.</div>
-                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiCapsEnabled"> Enable CAPS Guard</label></div>
-                            <div class="row"><input id="capsRatio" type="number" min="0.1" max="1" step="0.05" placeholder="Caps ratio (0.8)"></div>
-                            <div class="row"><input id="capsMinLength" type="number" min="5" max="200" placeholder="Minimum letters"></div>
-                            <div class="row">
-                                <select id="antiCapsAction">
-                                    <option value="warn">warn</option>
-                                    <option value="delete_warn">delete_warn</option>
-                                    <option value="delete_timeout">delete_timeout</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="setting-card advanced-setting">
-                            <div class="setting-title">Attachment Spam Guard</div>
-                            <div class="setting-help">Limits excessive file/image upload bursts.</div>
-                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="antiAttachmentEnabled"> Enable Attachment Guard</label></div>
-                            <div class="row"><input id="attachmentLimit" type="number" min="1" max="20" placeholder="Max attachments"></div>
-                            <div class="row">
-                                <select id="antiAttachmentAction">
-                                    <option value="warn">warn</option>
-                                    <option value="delete_warn">delete_warn</option>
-                                    <option value="delete_timeout">delete_timeout</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="setting-card advanced-setting">
-                            <div class="setting-title">New Account Guard</div>
-                            <div class="setting-help">Applies policy to very new accounts (anti-raid).</div>
-                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="newAccountGuardEnabled"> Enable New Account Guard</label></div>
-                            <div class="row"><input id="newAccountAgeMinutes" type="number" min="1" max="10080" placeholder="Minimum account age (minutes)"></div>
-                            <div class="row">
-                                <select id="newAccountAction">
-                                    <option value="log">log</option>
-                                    <option value="warn">warn</option>
-                                    <option value="delete_warn">delete_warn</option>
-                                    <option value="delete_timeout">delete_timeout</option>
-                                    <option value="kick">kick</option>
-                                    <option value="ban">ban</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="setting-card">
-                            <div class="setting-title">Warn Escalation</div>
-                            <div class="setting-help">Automatically escalates repeat offenders after warn cap.</div>
-                            <div class="row"><label class="toggle-chip"><input type="checkbox" id="warnEscalationEnabled"> Enable Warn Escalation</label></div>
-                            <div class="row"><input id="warnMax" type="number" min="2" max="20" placeholder="Warn cap"></div>
-                            <div class="row">
-                                <select id="warnEscalationAction">
-                                    <option value="timeout">timeout</option>
-                                    <option value="kick">kick</option>
-                                    <option value="ban">ban</option>
-                                </select>
-                            </div>
-                            <div class="row"><input id="warnEscalationTimeoutSeconds" type="number" min="60" max="2419200" placeholder="Escalation timeout seconds"></div>
-                        </div>
-
-                        <div class="setting-card advanced-setting">
-                            <div class="setting-title">Raid Quarantine Role</div>
-                            <div class="setting-help">Role applied when raid mode action is quarantine.</div>
-                            <div class="row"><input id="raidQuarantineRoleId" class="mono" placeholder="Raid quarantine role ID"></div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="preset-group" role="group" aria-label="Moderation presets">
-                            <button class="btn btn-outline" id="presetRelaxedBtn" type="button">Preset: Relaxed</button>
-                            <button class="btn btn-outline" id="presetBalancedBtn" type="button">Preset: Balanced</button>
-                            <button class="btn btn-outline" id="presetStrictBtn" type="button">Preset: Strict</button>
-                        </div>
-                    </div>
-                    <div class="row advanced-setting">
-                        <label class="sr-only" for="bannedWords">Banned words</label>
-                        <textarea id="bannedWords" placeholder="Banned words (one per line)"></textarea>
-                    </div>
-                    <div class="actions-row">
-                        <button class="btn btn-primary" id="saveConfigBtn">Save Moderation Config</button>
-                        <button class="btn btn-secondary" id="refreshConfigBtn">Refresh</button>
-                    </div>
+                <div class="actions-row">
+                    <button class="btn btn-ghost btn-sm" id="useSelectedChannelBtn"><i class="fas fa-arrow-down"></i> Use Selected Channel</button>
+                    <button class="btn btn-ghost btn-sm" id="useSelectedRoleBtn"><i class="fas fa-arrow-down"></i> Use Selected Role</button>
+                    <button class="btn btn-primary btn-sm" id="applyVerificationBtn"><i class="fas fa-paper-plane"></i> Send Test Message</button>
                 </div>
             </div>
         </section>
 
+        <!-- ── Cases & Warnings ── -->
         <section>
-            <h2><i class="fas fa-folder-open"></i> Cases and Warnings</h2>
-            <div class="discord-grid">
-                <div class="discord-card">
-                    <h3>Recent Cases</h3>
-                    <div class="row">
-                        <label class="sr-only" for="casesLimit">Cases limit</label>
-                        <input id="casesLimit" type="number" value="100" min="1" max="500" placeholder="Limit">
-                        <button class="btn btn-secondary" id="loadCasesBtn">Load Cases</button>
+            <div class="section-title"><i class="fas fa-folder-open"></i> Cases & Warnings</div>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-gavel"></i> Recent Cases</div>
+                        <div style="display:flex;gap:8px;">
+                            <input id="casesLimit" type="number" value="100" min="1" max="500" style="width:72px;padding:6px 8px;font-size:0.82rem;">
+                            <button class="btn btn-secondary btn-sm" id="loadCasesBtn"><i class="fas fa-rotate"></i> Load</button>
+                        </div>
                     </div>
-                    <div style="max-height: 320px; overflow: auto;">
+                    <div style="max-height: 280px; overflow: auto; margin-top:4px;">
                         <table>
-                            <thead><tr><th>Case</th><th>Action</th><th>User</th><th>Rule</th><th>Auto</th></tr></thead>
+                            <thead><tr><th>Case</th><th>Action</th><th>User</th><th>Rule</th></tr></thead>
                             <tbody id="casesBody"></tbody>
                         </table>
                     </div>
                 </div>
-                <div class="discord-card">
-                    <h3>User Warnings</h3>
-                    <div class="row">
-                        <label class="sr-only" for="warningsUserId">Warnings user ID</label>
-                        <input id="warningsUserId" class="mono" placeholder="User ID">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-triangle-exclamation"></i> User Warnings</div>
                     </div>
-                    <div class="row">
-                        <button class="btn btn-secondary" id="loadWarningsBtn">Load Warnings</button>
-                        <button class="btn btn-danger" id="clearWarningsBtn">Clear Warnings</button>
+                    <div class="field-group" style="margin-bottom:10px;">
+                        <label class="field-label" for="warningsUserId">User ID</label>
+                        <input id="warningsUserId" class="mono" placeholder="Discord User ID">
                     </div>
-                    <div id="warningsList" style="max-height: 320px; overflow: auto;"></div>
+                    <div style="display:flex;gap:8px;margin-bottom:12px;">
+                        <button class="btn btn-secondary btn-sm" id="loadWarningsBtn"><i class="fas fa-eye"></i> Load</button>
+                        <button class="btn btn-danger btn-sm" id="clearWarningsBtn"><i class="fas fa-trash"></i> Clear</button>
+                    </div>
+                    <div id="warningsList" style="max-height: 200px; overflow: auto;"></div>
                 </div>
             </div>
         </section>
-    </div>
+
+    </div><!-- /wrap -->
 
     <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
 
     <script src="config.js?v=3.2"></script>
-    <script src="discord-management.js?v=3.6"></script>
+    <script src="discord-management.js?v=4.0"></script>
 </body>
 </html>
