@@ -41,7 +41,12 @@
         newAccountAgeMinutes: $("newAccountAgeMinutes"), newAccountAction: $("newAccountAction"),
         warnMax: $("warnMax"), warnEscalationAction: $("warnEscalationAction"),
         warnEscalationTimeoutSeconds: $("warnEscalationTimeoutSeconds"),
-        raidQuarantineRoleId: $("raidQuarantineRoleId"), bannedWords: $("bannedWords"),
+        raidQuarantineRoleId: $("raidQuarantineRoleId"),
+        bannedWords: $("bannedWords"),
+        antiProfileEnabled: $("antiProfileEnabled"), antiProfileCheckBioLinks: $("antiProfileCheckBioLinks"),
+        antiProfileBlockedNames: $("antiProfileBlockedNames"), antiProfileAction: $("antiProfileAction"),
+        antiProfileQuarantineRoleId: $("antiProfileQuarantineRoleId"),
+        unquarantineBtn: $("unquarantineBtn"),
         casesLimit: $("casesLimit"), casesBody: $("casesBody"),
         warningsUserId: $("warningsUserId"), warningsList: $("warningsList"),
         addServerBtn: $("addServerBtn"), removeServerBtn: $("removeServerBtn"),
@@ -286,6 +291,13 @@
         val(els.raidQuarantineRoleId, (f.raid_mode && f.raid_mode.quarantine_role_id) || "");
         val(els.bannedWords, ((f.banned_words && f.banned_words.words) || []).join("\n"));
 
+        const ap = f.anti_profile || {};
+        check(els.antiProfileEnabled, ap.enabled);
+        check(els.antiProfileCheckBioLinks, ap.check_bio_links);
+        val(els.antiProfileBlockedNames, (ap.blocked_names && Array.isArray(ap.blocked_names) ? ap.blocked_names.join("\n") : (ap.blocked_names || []).join("\n")));
+        val(els.antiProfileAction, ap.action || "quarantine");
+        val(els.antiProfileQuarantineRoleId, ap.quarantine_role_id || "");
+
         const jg = f.join_gate || {};
         check(els.joinGateEnabled, jg.enabled);
         val(els.joinGateChannelId, jg.verification_channel_id);
@@ -346,6 +358,7 @@
                 new_account_guard: { enabled: !!els.newAccountGuardEnabled.checked, min_account_age_minutes: numOrDef(els.newAccountAgeMinutes.value, 60, 1, 10080), action: els.newAccountAction.value },
                 warn_escalation: { enabled: !!els.warnEscalationEnabled.checked, max_warns: numOrDef(els.warnMax.value, 3, 2, 20), action: els.warnEscalationAction.value, timeout_seconds: numOrDef(els.warnEscalationTimeoutSeconds.value, 1800, 60, 2419200) },
                 raid_mode: { enabled: !!els.raidModeEnabled.checked, quarantine_role_id: els.raidQuarantineRoleId && els.raidQuarantineRoleId.value ? numOrDef(els.raidQuarantineRoleId.value, null, 1) : null },
+                anti_profile: { enabled: !!(els.antiProfileEnabled && els.antiProfileEnabled.checked), check_bio_links: !!(els.antiProfileCheckBioLinks && els.antiProfileCheckBioLinks.checked), blocked_names: String((els.antiProfileBlockedNames && els.antiProfileBlockedNames.value) || "").split("\n").map(w => w.trim()).filter(Boolean), action: (els.antiProfileAction && els.antiProfileAction.value) || "quarantine", quarantine_role_id: (els.antiProfileQuarantineRoleId && els.antiProfileQuarantineRoleId.value) ? numOrDef(els.antiProfileQuarantineRoleId.value, null, 1) : null },
                 banned_words: { words, enabled: true }
             }
         };
@@ -759,6 +772,19 @@
                 if (els.warningsList) els.warningsList.innerHTML = '<div style="color:var(--text-muted);padding:10px 0;font-size:0.84rem;">Warnings cleared</div>';
                 notify("Warnings cleared", "success");
             } catch (err) { notify(`Clear failed: ${err.message}`, "error"); }
+        });
+
+        if (els.unquarantineBtn) els.unquarantineBtn.addEventListener("click", async () => {
+            const gid = selectedGuildId();
+            const uid = String(els.warningsUserId && els.warningsUserId.value || "").trim();
+            if (!gid || !uid) { notify("Select a server and enter a User ID", "error"); return; }
+            if (!confirm(`Restore roles for user ${uid}? This will remove quarantine role and attempt to restore saved roles.`)) return;
+            setBusy(els.unquarantineBtn, true, "Restoring…");
+            try {
+                await api(`/api/discord/moderation/unquarantine/${encodeURIComponent(gid)}/${encodeURIComponent(uid)}`, { method: "POST" });
+                notify("Unquarantine requested (bot will process shortly)", "success");
+            } catch (err) { notify(`Unquarantine failed: ${err.message}`, "error"); }
+            finally { setBusy(els.unquarantineBtn, false); }
         });
     }
 
