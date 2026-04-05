@@ -516,6 +516,31 @@
         if (!rCount && !cCount) issues.push("No exemptions set — consider adding staff roles.");
         else goods.push(`Exemptions: ${rCount} role(s), ${cCount} channel(s).`);
 
+        const antiProfileEnabled = !!(els.antiProfileEnabled && els.antiProfileEnabled.checked);
+        const antiProfileBioLinks = !!(els.antiProfileCheckBioLinks && els.antiProfileCheckBioLinks.checked);
+        const antiProfileBlockedNames = String((els.antiProfileBlockedNames && els.antiProfileBlockedNames.value) || "")
+            .split("\n")
+            .map(w => w.trim())
+            .filter(Boolean);
+        const antiProfileAction = String((els.antiProfileAction && els.antiProfileAction.value) || "quarantine").toLowerCase();
+        const antiProfileQRole = String((els.antiProfileQuarantineRoleId && els.antiProfileQuarantineRoleId.value) || "").trim();
+        const raidQRole = String((els.raidQuarantineRoleId && els.raidQuarantineRoleId.value) || "").trim();
+
+        if (antiProfileEnabled) {
+            goods.push("Anti-profile protection enabled.");
+            if (!antiProfileBioLinks && antiProfileBlockedNames.length === 0) {
+                issues.push("Anti-profile is enabled, but no checks are configured.");
+            } else {
+                goods.push(`Anti-profile checks: ${antiProfileBlockedNames.length} blocked-name rule(s)${antiProfileBioLinks ? " + bio link detection" : ""}.`);
+            }
+
+            if (antiProfileAction === "quarantine" && !antiProfileQRole && !raidQRole) {
+                issues.push("Anti-profile action is quarantine, but no quarantine role ID is set.");
+            }
+        } else if (antiProfileBioLinks || antiProfileBlockedNames.length > 0) {
+            issues.push("Anti-profile rules exist but Anti-profile is disabled.");
+        }
+
         let html = "";
         issues.forEach(i => { html += `<div class="health-item warn"><i class="fas fa-triangle-exclamation"></i> ${escapeHtml(i)}</div>`; });
         goods.forEach(g => { html += `<div class="health-item ok"><i class="fas fa-check-circle"></i> ${escapeHtml(g)}</div>`; });
@@ -641,6 +666,18 @@
         if (els.enabled) els.enabled.addEventListener("change", updateChecklist);
         if (els.exemptRoleIds) els.exemptRoleIds.addEventListener("input", updateChecklist);
         if (els.exemptChannelIds) els.exemptChannelIds.addEventListener("input", updateChecklist);
+        [
+            els.antiProfileEnabled,
+            els.antiProfileCheckBioLinks,
+            els.antiProfileBlockedNames,
+            els.antiProfileAction,
+            els.antiProfileQuarantineRoleId,
+            els.raidQuarantineRoleId,
+        ].forEach(el => {
+            if (!el) return;
+            el.addEventListener("change", updateChecklist);
+            el.addEventListener("input", updateChecklist);
+        });
 
         // Role exemption helpers
         if (els.refreshRolesBtn) els.refreshRolesBtn.addEventListener("click", fetchRoles);
