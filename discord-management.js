@@ -1,4 +1,4 @@
-/* Discord Management v4.0 — per-section saves */
+/* Discord Management v4.1 — per-section saves + usability upgrades */
 (function () {
     const API_BASE = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || "";
     const SERVERS_KEY = "discord_managed_servers";
@@ -41,6 +41,10 @@
         newAccountAgeMinutes: $("newAccountAgeMinutes"), newAccountAction: $("newAccountAction"),
         warnMax: $("warnMax"), warnEscalationAction: $("warnEscalationAction"),
         warnEscalationTimeoutSeconds: $("warnEscalationTimeoutSeconds"),
+        antiProfileQuarantineRoleSelect: $("antiProfileQuarantineRoleSelect"),
+        raidQuarantineRoleSelect: $("raidQuarantineRoleSelect"),
+        antiProfileUseSelectedRoleBtn: $("antiProfileUseSelectedRoleBtn"),
+        raidUseSelectedRoleBtn: $("raidUseSelectedRoleBtn"),
         raidQuarantineRoleId: $("raidQuarantineRoleId"),
         bannedWords: $("bannedWords"),
         antiProfileEnabled: $("antiProfileEnabled"), antiProfileCheckBioLinks: $("antiProfileCheckBioLinks"),
@@ -71,6 +75,16 @@
 
     let adminId = "";
     let advancedVisible = false;
+    const ACTION_LABELS = {
+        warn: "Warn only",
+        delete_warn: "Delete message + warn",
+        delete_timeout: "Delete message + timeout",
+        timeout: "Timeout user",
+        kick: "Kick user",
+        ban: "Ban user",
+        log: "Log only",
+        quarantine: "Quarantine user"
+    };
 
     /* ── Admin ID ── */
     function persistAdminId(v) {
@@ -154,6 +168,57 @@
         if (typeof min === "number") out = Math.max(min, out);
         if (typeof max === "number") out = Math.min(max, out);
         return out;
+    }
+
+    function humanizeActionSelects() {
+        [
+            els.antiSpamAction,
+            els.antiMentionAction,
+            els.antiEveryoneAction,
+            els.antiLinkAction,
+            els.antiInviteAction,
+            els.warnEscalationAction,
+            els.antiEmojiAction,
+            els.antiLineAction,
+            els.antiLongAction,
+            els.antiCapsAction,
+            els.antiAttachmentAction,
+            els.newAccountAction,
+            els.antiProfileAction,
+        ].forEach(sel => {
+            if (!sel) return;
+            Array.from(sel.options).forEach(opt => {
+                const key = String(opt.value || "").trim();
+                if (!key) return;
+                opt.textContent = ACTION_LABELS[key] || key.replace(/_/g, " ");
+            });
+        });
+    }
+
+    function setRoleSelectFromInput(selectEl, inputEl) {
+        if (!selectEl || !inputEl) return;
+        const current = String(inputEl.value || "").trim();
+        if (!current) {
+            selectEl.value = "";
+            return;
+        }
+        const hasMatch = Array.from(selectEl.options).some(o => String(o.value || "") === current);
+        selectEl.value = hasMatch ? current : "";
+    }
+
+    function applyRoleSelectToInput(selectEl, inputEl) {
+        if (!selectEl || !inputEl) return false;
+        const selected = String(selectEl.value || "").trim();
+        if (!selected) return false;
+        inputEl.value = selected;
+        updateChecklist();
+        return true;
+    }
+
+    function syncRoleSelectorsFromInputs() {
+        setRoleSelectFromInput(els.joinGateRoleSelect, els.joinGateRoleId);
+        setRoleSelectFromInput(els.antiProfileQuarantineRoleSelect, els.antiProfileQuarantineRoleId);
+        setRoleSelectFromInput(els.raidQuarantineRoleSelect, els.raidQuarantineRoleId);
     }
 
     /* ── Servers ── */
@@ -316,6 +381,8 @@
             if (o) els.joinGateRoleSelect.value = String(jg.verified_role_id);
         }
 
+        syncRoleSelectorsFromInputs();
+
         updateChecklist();
     }
 
@@ -477,20 +544,50 @@
             const roles = (payload && payload.data && payload.data.roles) || [];
             const src = (payload && payload.data && payload.data.source) || "";
 
-            function fillRoleSelect(sel, hint) {
-                sel.innerHTML = '<option value="">— no roles loaded —</option>';
+            function fillRoleSelect(sel, hint, selectedRoleId) {
+                if (!sel) return;
+                sel.innerHTML = '<option value="">— Select a role —</option>';
                 roles.forEach(r => {
                     const o = document.createElement("option");
                     o.value = String(r.id || ""); o.textContent = `${r.name || "role"} (${r.id || ""})`;
                     sel.appendChild(o);
                 });
+                if (selectedRoleId) {
+                    const match = sel.querySelector(`option[value="${selectedRoleId}"]`);
+                    if (match) sel.value = String(selectedRoleId);
+                }
                 if (hint) hint.textContent = src ? `Source: ${src}` : "";
             }
 
-            fillRoleSelect(els.serverRolesSelect, els.rolesSourceHint);
-            if (els.joinGateRoleSelect) fillRoleSelect(els.joinGateRoleSelect, els.joinGateRolesSourceHint);
+            if (els.serverRolesSelect) {
+                els.serverRolesSelect.innerHTML = "";
+                if (!roles.length) {
+                    const empty = document.createElement("option");
+                    empty.value = "";
+                    empty.textContent = "— no roles loaded —";
+                    empty.disabled = true;
+                    els.serverRolesSelect.appendChild(empty);
+                }
+                roles.forEach(r => {
+                    const o = document.createElement("option");
+                    o.value = String(r.id || "");
+                    o.textContent = `${r.name || "role"} (${r.id || ""})`;
+                    els.serverRolesSelect.appendChild(o);
+                });
+                if (els.rolesSourceHint) els.rolesSourceHint.textContent = src ? `Source: ${src}` : "";
+            }
+
+            fillRoleSelect(els.joinGateRoleSelect, els.joinGateRolesSourceHint, String((els.joinGateRoleId && els.joinGateRoleId.value) || ""));
+            fillRoleSelect(els.antiProfileQuarantineRoleSelect, null, String((els.antiProfileQuarantineRoleId && els.antiProfileQuarantineRoleId.value) || ""));
+            fillRoleSelect(els.raidQuarantineRoleSelect, null, String((els.raidQuarantineRoleId && els.raidQuarantineRoleId.value) || ""));
             syncRoleSelectionFromTextarea();
-        } catch (_) {}
+            syncRoleSelectorsFromInputs();
+            return true;
+        } catch (_) {
+            if (els.rolesSourceHint) els.rolesSourceHint.textContent = "Role lookup failed.";
+            if (els.joinGateRolesSourceHint) els.joinGateRolesSourceHint.textContent = "Role lookup failed.";
+            return false;
+        }
     }
 
     function syncRoleSelectionFromTextarea() {
@@ -606,7 +703,12 @@
             renderServers(); notify("Server removed", "info");
         });
 
-        if (els.serverSelect) els.serverSelect.addEventListener("change", updateSelectedLabel);
+        if (els.serverSelect) els.serverSelect.addEventListener("change", async () => {
+            updateSelectedLabel();
+            if (!selectedGuildId()) return;
+            await Promise.allSettled([fetchChannels(), fetchRoles()]);
+            updateChecklist();
+        });
 
         if (els.syncServersBtn) els.syncServersBtn.addEventListener("click", async () => {
             setBusy(els.syncServersBtn, true, "Syncing…");
@@ -662,6 +764,50 @@
             if (els.logChannelSelect.value && els.logChannelId) els.logChannelId.value = els.logChannelSelect.value;
             updateChecklist();
         });
+
+        function bindRolePair(selectEl, inputEl, useBtn, missingMessage, successMessage) {
+            if (selectEl && inputEl) {
+                selectEl.addEventListener("change", () => {
+                    applyRoleSelectToInput(selectEl, inputEl);
+                });
+                inputEl.addEventListener("input", () => {
+                    setRoleSelectFromInput(selectEl, inputEl);
+                    updateChecklist();
+                });
+            }
+            if (useBtn && selectEl && inputEl) {
+                useBtn.addEventListener("click", () => {
+                    if (!applyRoleSelectToInput(selectEl, inputEl)) {
+                        notify(missingMessage, "info");
+                        return;
+                    }
+                    notify(successMessage, "success");
+                });
+            }
+        }
+
+        bindRolePair(
+            els.joinGateRoleSelect,
+            els.joinGateRoleId,
+            els.useSelectedRoleBtn,
+            "Select a verified role first.",
+            "Verified role ID updated from selected role."
+        );
+        bindRolePair(
+            els.antiProfileQuarantineRoleSelect,
+            els.antiProfileQuarantineRoleId,
+            els.antiProfileUseSelectedRoleBtn,
+            "Select an anti-profile quarantine role first.",
+            "Anti-profile quarantine role ID updated."
+        );
+        bindRolePair(
+            els.raidQuarantineRoleSelect,
+            els.raidQuarantineRoleId,
+            els.raidUseSelectedRoleBtn,
+            "Select a raid quarantine role first.",
+            "Raid quarantine role ID updated."
+        );
+
         if (els.logChannelId) els.logChannelId.addEventListener("input", updateChecklist);
         if (els.enabled) els.enabled.addEventListener("change", updateChecklist);
         if (els.exemptRoleIds) els.exemptRoleIds.addEventListener("input", updateChecklist);
@@ -680,7 +826,10 @@
         });
 
         // Role exemption helpers
-        if (els.refreshRolesBtn) els.refreshRolesBtn.addEventListener("click", fetchRoles);
+        if (els.refreshRolesBtn) els.refreshRolesBtn.addEventListener("click", async () => {
+            const ok = await fetchRoles();
+            notify(ok ? "Role list refreshed" : "Role lookup failed", ok ? "success" : "error");
+        });
         if (els.applySelectedRolesBtn) els.applySelectedRolesBtn.addEventListener("click", () => {
             const selected = Array.from(els.serverRolesSelect.selectedOptions).map(o => o.value).filter(Boolean);
             if (els.exemptRoleIds) {
@@ -696,10 +845,6 @@
         if (els.useSelectedChannelBtn) els.useSelectedChannelBtn.addEventListener("click", () => {
             if (els.joinGateChannelSelect && els.joinGateChannelSelect.value && els.joinGateChannelId)
                 els.joinGateChannelId.value = els.joinGateChannelSelect.value;
-        });
-        if (els.useSelectedRoleBtn) els.useSelectedRoleBtn.addEventListener("click", () => {
-            if (els.joinGateRoleSelect && els.joinGateRoleSelect.value && els.joinGateRoleId)
-                els.joinGateRoleId.value = els.joinGateRoleSelect.value;
         });
 
         // Send verification preview
@@ -828,8 +973,12 @@
     /* ── Init ── */
     function init() {
         getAdminId();
+        humanizeActionSelects();
         renderServers();
         bindEvents();
+        if (selectedGuildId()) {
+            Promise.allSettled([fetchChannels(), fetchRoles()]);
+        }
         updateChecklist();
     }
 
