@@ -328,6 +328,52 @@
             border: 1px solid rgba(88,101,242,0.3);
         }
 
+        .setup-flow {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        .setup-step {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+        }
+        .setup-step-num {
+            width: 24px;
+            height: 24px;
+            border-radius: 99px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent-glow);
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 0.78rem;
+            margin-bottom: 6px;
+        }
+        .setup-step-title {
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 3px;
+        }
+        .setup-step-desc {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+        .helper-note {
+            margin-top: 8px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+        .field-hint {
+            font-size: 0.76rem;
+            color: var(--text-dim);
+            margin-top: 5px;
+        }
+
         /* ── Collapsible feature panels ── */
         .collapse-panel { overflow: hidden; }
         .collapse-panel.collapsed { max-height: 0; }
@@ -345,6 +391,7 @@
         @media (max-width: 720px) {
             .grid-2, .grid-3 { grid-template-columns: 1fr; }
             .filter-grid { grid-template-columns: 1fr; }
+            .setup-flow { grid-template-columns: 1fr; }
             header { flex-direction: column; align-items: flex-start; }
         }
         @media (max-width: 480px) {
@@ -394,7 +441,7 @@
                     <div class="card-header">
                         <div>
                             <div class="card-title"><i class="fas fa-list"></i> Managed Servers</div>
-                            <div class="card-help">Select a server and load its config</div>
+                            <div class="card-help">Select a server, load settings, then save each section you edit</div>
                         </div>
                     </div>
                     <div class="field-group" style="margin-bottom:10px;">
@@ -422,6 +469,35 @@
                     <div class="actions-row" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
                         <button class="btn btn-primary" id="addServerBtn"><i class="fas fa-plus"></i> Add</button>
                         <button class="btn btn-danger" id="removeServerBtn"><i class="fas fa-trash"></i> Remove</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title"><i class="fas fa-route"></i> Setup Flow</div>
+            <div class="card">
+                <div class="card-help" style="margin-bottom:12px;">Use this order for fastest setup and fewer mistakes.</div>
+                <div class="setup-flow">
+                    <div class="setup-step">
+                        <div class="setup-step-num">1</div>
+                        <div class="setup-step-title">Pick Server</div>
+                        <div class="setup-step-desc">Choose a server and click Load Config.</div>
+                    </div>
+                    <div class="setup-step">
+                        <div class="setup-step-num">2</div>
+                        <div class="setup-step-title">Choose Roles/Channels</div>
+                        <div class="setup-step-desc">Use dropdown lists instead of manually typing IDs.</div>
+                    </div>
+                    <div class="setup-step">
+                        <div class="setup-step-num">3</div>
+                        <div class="setup-step-title">Tune Filters</div>
+                        <div class="setup-step-desc">Start with a preset, then edit only what you need.</div>
+                    </div>
+                    <div class="setup-step">
+                        <div class="setup-step-num">4</div>
+                        <div class="setup-step-title">Save by Section</div>
+                        <div class="setup-step-desc">Save Core Controls, Exemptions, Filters, and Join-Gate separately.</div>
                     </div>
                 </div>
             </div>
@@ -528,9 +604,10 @@
                         <select id="serverRolesSelect" multiple size="6"></select>
                         <div class="source-hint" id="rolesSourceHint"></div>
                         <div style="display:flex;gap:8px;margin-top:8px;">
-                            <button class="btn btn-ghost btn-sm" id="refreshRolesBtn"><i class="fas fa-rotate"></i></button>
+                            <button class="btn btn-ghost btn-sm" id="refreshRolesBtn" aria-label="Refresh role list"><i class="fas fa-rotate"></i></button>
                             <button class="btn btn-secondary btn-sm" id="applySelectedRolesBtn">Use Selected As Exemptions</button>
                         </div>
+                        <div class="helper-note">If the list is empty, click Load Config or Refresh Role List.</div>
                     </div>
                     <div>
                         <div class="field-group" style="margin-bottom:8px;">
@@ -565,9 +642,7 @@
                     </div>
                 </div>
                 <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px;">
-                    <strong style="color:var(--text);">warn</strong> = warn only &nbsp;·&nbsp;
-                    <strong style="color:var(--text);">delete_warn</strong> = delete + warn &nbsp;·&nbsp;
-                    <strong style="color:var(--text);">delete_timeout</strong> = delete + timeout
+                    Action labels use plain language. Internally these map to the same moderation actions.
                 </p>
 
                 <div class="filter-grid">
@@ -754,8 +829,11 @@
                             <label class="toggle"><input type="checkbox" id="antiProfileCheckBioLinks"><span class="toggle-slider"></span></label>
                         </div>
                         <div style="margin-top:8px;">
-                            <label class="field-label" for="antiProfileQuarantineRoleId">Anti-Profile Quarantine Role ID</label>
-                            <input type="text" id="antiProfileQuarantineRoleId" class="mono" placeholder="Role ID to assign for profile quarantine">
+                            <label class="field-label" for="antiProfileQuarantineRoleSelect">Anti-Profile Quarantine Role</label>
+                            <select id="antiProfileQuarantineRoleSelect"><option value="">— Select a role —</option></select>
+                            <button class="btn btn-ghost btn-sm" id="antiProfileUseSelectedRoleBtn" style="margin-top:8px;"><i class="fas fa-arrow-down"></i> Use Selected Role</button>
+                            <input type="text" id="antiProfileQuarantineRoleId" class="mono" placeholder="Or paste role ID" style="margin-top:8px;">
+                            <div class="field-hint">Used when Anti-Profile action is set to quarantine.</div>
                         </div>
                         <div style="margin-top:8px;">
                             <label class="field-label" for="antiProfileAction">Action</label>
@@ -764,8 +842,11 @@
                     </div>
 
                     <div class="field-group" style="margin-top:10px;">
-                        <label class="field-label" for="raidQuarantineRoleId">Raid Quarantine Role ID</label>
-                        <input type="text" id="raidQuarantineRoleId" class="mono" placeholder="Role ID applied in quarantine mode">
+                        <label class="field-label" for="raidQuarantineRoleSelect">Raid Quarantine Role</label>
+                        <select id="raidQuarantineRoleSelect"><option value="">— Select a role —</option></select>
+                        <button class="btn btn-ghost btn-sm" id="raidUseSelectedRoleBtn" style="margin-top:8px;"><i class="fas fa-arrow-down"></i> Use Selected Role</button>
+                        <input type="text" id="raidQuarantineRoleId" class="mono" placeholder="Or paste role ID" style="margin-top:8px;">
+                        <div class="field-hint">Used when Raid Mode is enabled with quarantine action.</div>
                     </div>
                 </div>
 
@@ -882,6 +963,6 @@
     <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
 
     <script src="config.js?v=3.2"></script>
-    <script src="discord-management.js?v=4.0"></script>
+    <script src="discord-management.js?v=4.1"></script>
 </body>
 </html>
