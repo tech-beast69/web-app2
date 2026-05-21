@@ -1,4 +1,4 @@
-/* Discord Management v4.1 — per-section saves + usability upgrades */
+/* Discord Management v4.2 — per-section saves + role search + safer IDs */
 (function () {
     const API_BASE = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || "";
     const SERVERS_KEY = "discord_managed_servers";
@@ -8,8 +8,11 @@
     const els = {
         serverSelect: $("serverSelect"), newGuildId: $("newGuildId"), newGuildName: $("newGuildName"),
         serverRolesSelect: $("serverRolesSelect"), rolesSourceHint: $("rolesSourceHint"),
+        roleSearchInput: $("roleSearchInput"), clearRoleSearchBtn: $("clearRoleSearchBtn"),
+        roleMatchCount: $("roleMatchCount"),
         joinGateRoleSelect: $("joinGateRoleSelect"), joinGateRolesSourceHint: $("joinGateRolesSourceHint"),
         refreshRolesBtn: $("refreshRolesBtn"), applySelectedRolesBtn: $("applySelectedRolesBtn"),
+        replaceSelectedRolesBtn: $("replaceSelectedRolesBtn"), removeSelectedRolesBtn: $("removeSelectedRolesBtn"),
         logChannelSelect: $("logChannelSelect"), channelsSourceHint: $("channelsSourceHint"),
         joinGateChannelSelect: $("joinGateChannelSelect"), joinGateChannelsSourceHint: $("joinGateChannelsSourceHint"),
         enabled: $("enabled"), exemptAdmins: $("exemptAdmins"), logChannelId: $("logChannelId"),
@@ -26,7 +29,8 @@
         mentionTimeoutSeconds: $("mentionTimeoutSeconds"), antiMentionAction: $("antiMentionAction"),
         antiLinkAction: $("antiLinkAction"), antiInviteAction: $("antiInviteAction"),
         allowDomains: $("allowDomains"), exemptRoleIds: $("exemptRoleIds"),
-        exemptChannelIds: $("exemptChannelIds"), joinGateEnabled: $("joinGateEnabled"),
+        exemptChannelIds: $("exemptChannelIds"), sortExemptionsBtn: $("sortExemptionsBtn"),
+        clearExemptionsBtn: $("clearExemptionsBtn"), joinGateEnabled: $("joinGateEnabled"),
         joinGateChannelId: $("joinGateChannelId"), joinGateRoleId: $("joinGateRoleId"),
         joinGateMethod: $("joinGateMethod"), joinGateTimeout: $("joinGateTimeout"),
         joinGateKick: $("joinGateKick"), joinGateRemoveOnFail: $("joinGateRemoveOnFail"),
@@ -75,6 +79,7 @@
 
     let adminId = "";
     let advancedVisible = false;
+    let rolesCache = [];
     const ACTION_LABELS = {
         warn: "Warn only",
         delete_warn: "Delete message + warn",
@@ -145,8 +150,14 @@
 
     function setBusy(btn, busy, txt) {
         if (!btn) return;
-        if (busy) { btn.dataset.orig = btn.textContent; btn.textContent = txt || "Saving…"; btn.disabled = true; }
-        else { btn.disabled = false; if (btn.dataset.orig) btn.textContent = btn.dataset.orig; }
+        if (busy) {
+            if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
+            btn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> ${txt || "Saving..."}`;
+            btn.disabled = true;
+        } else {
+            btn.disabled = false;
+            if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
+        }
     }
 
     function setSaveStatus(el, ok, msg) {
@@ -155,6 +166,29 @@
         el.innerHTML = ok ? `<i class="fas fa-check"></i> ${msg || "Saved"}` : `<i class="fas fa-xmark"></i> ${msg || "Error"}`;
         clearTimeout(el._t);
         el._t = setTimeout(() => { el.className = "save-status"; el.innerHTML = ""; }, 4000);
+    }
+
+    function clearSaveStatus(el) {
+        if (!el) return;
+        clearTimeout(el._t);
+        el.className = "save-status";
+        el.innerHTML = "";
+    }
+
+    function setDirtyStatus(el, msg) {
+        if (!el) return;
+        clearTimeout(el._t);
+        el.className = "save-status warn";
+        el.innerHTML = `<i class="fas fa-pen"></i> ${msg || "Unsaved"}`;
+    }
+
+    function bindDirty(elements, statusEl) {
+        (elements || []).forEach(el => {
+            if (!el) return;
+            ["input", "change"].forEach(evt => {
+                el.addEventListener(evt, () => setDirtyStatus(statusEl));
+            });
+        });
     }
 
     function escapeHtml(s) {
@@ -249,6 +283,61 @@
         });
         if (stored && list.some(s => String(s.guild_id) === stored)) els.serverSelect.value = stored;
         updateSelectedLabel();
+    }
+
+    function getSelectedRoleIds() {
+        if (!els.serverRolesSelect) return [];
+        return Array.from(els.serverRolesSelect.selectedOptions)
+            .map(o => String(o.value || "").trim())
+            .filter(Boolean);
+    }
+
+    function renderServerRoles(list, selectedIds) {
+        if (!els.serverRolesSelect) return;
+        const selected = selectedIds || new Set();
+        els.serverRolesSelect.innerHTML = "";
+        if (!list.length) {
+            const empty = document.createElement("option");
+            empty.value = "";
+            empty.textContent = "- no roles loaded -";
+            empty.disabled = true;
+            els.serverRolesSelect.appendChild(empty);
+            return;
+        }
+        list.forEach(role => {
+            const o = document.createElement("option");
+            const id = String(role.id || "");
+            o.value = id;
+            o.textContent = `${role.name || "role"} (${id})`;
+            if (selected.has(id)) o.selected = true;
+            els.serverRolesSelect.appendChild(o);
+        });
+    }
+
+    function updateRoleMatchCount(visible, total) {
+        if (!els.roleMatchCount) return;
+        const shown = Number(visible) || 0;
+        const all = Number(total) || 0;
+        if (!all) {
+            els.roleMatchCount.textContent = "No roles loaded";
+            return;
+        }
+        els.roleMatchCount.textContent = `Showing ${shown} of ${all} roles`;
+    }
+
+    function filterRoles() {
+        if (!els.serverRolesSelect) return;
+        const term = String((els.roleSearchInput && els.roleSearchInput.value) || "").trim().toLowerCase();
+        const selectedIds = new Set([...getSelectedRoleIds(), ...readIdLines(els.exemptRoleIds)]);
+        const list = term
+            ? rolesCache.filter(role => {
+                const name = String(role.name || "").toLowerCase();
+                const id = String(role.id || "");
+                return name.includes(term) || id.includes(term);
+            })
+            : rolesCache.slice();
+        renderServerRoles(list, selectedIds);
+        updateRoleMatchCount(list.length, rolesCache.length);
     }
 
     function selectedGuildId() { return String(els.serverSelect.value || "").trim(); }
@@ -383,6 +472,11 @@
 
         syncRoleSelectorsFromInputs();
 
+        clearSaveStatus(els.logSaveStatus);
+        clearSaveStatus(els.exemptSaveStatus);
+        clearSaveStatus(els.filterSaveStatus);
+        clearSaveStatus(els.joinGateSaveStatus);
+
         updateChecklist();
     }
 
@@ -390,20 +484,52 @@
         return String((el && el.value) || "").split("\n").map(v => String(v||"").trim()).filter(Boolean);
     }
 
+    function normalizeSnowflakeList(values) {
+        const out = [];
+        const seen = new Set();
+        (values || []).forEach(value => {
+            const token = String(value || "").trim();
+            if (!token || !/^\d+$/.test(token) || seen.has(token)) return;
+            seen.add(token);
+            out.push(token);
+        });
+        return out;
+    }
+
+    function normalizeSnowflake(value) {
+        const token = String(value || "").trim();
+        if (!token || !/^\d+$/.test(token)) return null;
+        return token;
+    }
+
+    function sortSnowflakeList(values) {
+        const normalized = normalizeSnowflakeList(values);
+        return normalized.sort((a, b) => {
+            try {
+                const left = BigInt(a);
+                const right = BigInt(b);
+                if (left === right) return 0;
+                return left < right ? -1 : 1;
+            } catch (_) {
+                return a.localeCompare(b);
+            }
+        });
+    }
+
     /* ── Section-level patch builders ── */
     function buildLogPatch() {
         const chId = els.logChannelId.value.trim() ||
             (els.logChannelSelect && els.logChannelSelect.value) || null;
         return {
-            log_channel_id: chId ? numOrDef(chId, null, 1) : null,
+            log_channel_id: normalizeSnowflake(chId),
             enabled: !!els.enabled.checked,
             exempt_admins: !!els.exemptAdmins.checked,
         };
     }
 
     function buildExemptionsPatch() {
-        const rIds = readIdLines(els.exemptRoleIds).map(v => Number(v)).filter(v => Number.isFinite(v) && v > 0);
-        const cIds = readIdLines(els.exemptChannelIds).map(v => Number(v)).filter(v => Number.isFinite(v) && v > 0);
+        const rIds = normalizeSnowflakeList(readIdLines(els.exemptRoleIds));
+        const cIds = normalizeSnowflakeList(readIdLines(els.exemptChannelIds));
         return { exempt_role_ids: rIds, exempt_channel_ids: cIds };
     }
 
@@ -424,8 +550,18 @@
                 anti_caps: { enabled: !!els.antiCapsEnabled.checked, ratio: numOrDef(els.capsRatio.value, 0.8, 0.1, 1), min_length: numOrDef(els.capsMinLength.value, 14, 5, 200), action: els.antiCapsAction.value },
                 new_account_guard: { enabled: !!els.newAccountGuardEnabled.checked, min_account_age_minutes: numOrDef(els.newAccountAgeMinutes.value, 60, 1, 10080), action: els.newAccountAction.value },
                 warn_escalation: { enabled: !!els.warnEscalationEnabled.checked, max_warns: numOrDef(els.warnMax.value, 3, 2, 20), action: els.warnEscalationAction.value, timeout_seconds: numOrDef(els.warnEscalationTimeoutSeconds.value, 1800, 60, 2419200) },
-                raid_mode: { enabled: !!els.raidModeEnabled.checked, quarantine_role_id: els.raidQuarantineRoleId && els.raidQuarantineRoleId.value ? numOrDef(els.raidQuarantineRoleId.value, null, 1) : null },
-                anti_profile: { enabled: !!(els.antiProfileEnabled && els.antiProfileEnabled.checked), check_bio_links: !!(els.antiProfileCheckBioLinks && els.antiProfileCheckBioLinks.checked), blocked_names: String((els.antiProfileBlockedNames && els.antiProfileBlockedNames.value) || "").split("\n").map(w => w.trim()).filter(Boolean), action: (els.antiProfileAction && els.antiProfileAction.value) || "quarantine", quarantine_role_id: (els.antiProfileQuarantineRoleId && els.antiProfileQuarantineRoleId.value) ? numOrDef(els.antiProfileQuarantineRoleId.value, null, 1) : null },
+                raid_mode: {
+                    enabled: !!els.raidModeEnabled.checked,
+                    quarantine_role_id: normalizeSnowflake(els.raidQuarantineRoleId && els.raidQuarantineRoleId.value),
+                },
+                anti_profile: {
+                    enabled: !!(els.antiProfileEnabled && els.antiProfileEnabled.checked),
+                    check_bio_links: !!(els.antiProfileCheckBioLinks && els.antiProfileCheckBioLinks.checked),
+                    blocked_names: String((els.antiProfileBlockedNames && els.antiProfileBlockedNames.value) || "")
+                        .split("\n").map(w => w.trim()).filter(Boolean),
+                    action: (els.antiProfileAction && els.antiProfileAction.value) || "quarantine",
+                    quarantine_role_id: normalizeSnowflake(els.antiProfileQuarantineRoleId && els.antiProfileQuarantineRoleId.value),
+                },
                 banned_words: { words, enabled: true }
             }
         };
@@ -440,8 +576,8 @@
             features: {
                 join_gate: {
                     enabled: !!(els.joinGateEnabled && els.joinGateEnabled.checked),
-                    verification_channel_id: chId ? numOrDef(chId, null, 1) : null,
-                    verified_role_id: rId ? numOrDef(rId, null, 1) : null,
+                    verification_channel_id: normalizeSnowflake(chId),
+                    verified_role_id: normalizeSnowflake(rId),
                     method: (els.joinGateMethod && els.joinGateMethod.value) || "button",
                     timeout_seconds: numOrDef(els.joinGateTimeout && els.joinGateTimeout.value, 300, 30, 86400),
                     kick_on_fail: !!(els.joinGateKick && els.joinGateKick.checked),
@@ -559,22 +695,13 @@
                 if (hint) hint.textContent = src ? `Source: ${src}` : "";
             }
 
+            rolesCache = Array.isArray(roles) ? roles : [];
+
             if (els.serverRolesSelect) {
-                els.serverRolesSelect.innerHTML = "";
-                if (!roles.length) {
-                    const empty = document.createElement("option");
-                    empty.value = "";
-                    empty.textContent = "— no roles loaded —";
-                    empty.disabled = true;
-                    els.serverRolesSelect.appendChild(empty);
-                }
-                roles.forEach(r => {
-                    const o = document.createElement("option");
-                    o.value = String(r.id || "");
-                    o.textContent = `${r.name || "role"} (${r.id || ""})`;
-                    els.serverRolesSelect.appendChild(o);
-                });
+                filterRoles();
                 if (els.rolesSourceHint) els.rolesSourceHint.textContent = src ? `Source: ${src}` : "";
+            } else {
+                updateRoleMatchCount(0, rolesCache.length);
             }
 
             fillRoleSelect(els.joinGateRoleSelect, els.joinGateRolesSourceHint, String((els.joinGateRoleId && els.joinGateRoleId.value) || ""));
@@ -584,8 +711,12 @@
             syncRoleSelectorsFromInputs();
             return true;
         } catch (_) {
+            rolesCache = [];
+            renderServerRoles([], new Set());
+            updateRoleMatchCount(0, 0);
             if (els.rolesSourceHint) els.rolesSourceHint.textContent = "Role lookup failed.";
             if (els.joinGateRolesSourceHint) els.joinGateRolesSourceHint.textContent = "Role lookup failed.";
+            if (els.roleMatchCount) els.roleMatchCount.textContent = "Role lookup failed";
             return false;
         }
     }
@@ -706,6 +837,7 @@
         if (els.serverSelect) els.serverSelect.addEventListener("change", async () => {
             updateSelectedLabel();
             if (!selectedGuildId()) return;
+            if (els.roleSearchInput) els.roleSearchInput.value = "";
             await Promise.allSettled([fetchChannels(), fetchRoles()]);
             updateChecklist();
         });
@@ -763,16 +895,19 @@
         if (els.logChannelSelect) els.logChannelSelect.addEventListener("change", () => {
             if (els.logChannelSelect.value && els.logChannelId) els.logChannelId.value = els.logChannelSelect.value;
             updateChecklist();
+            setDirtyStatus(els.logSaveStatus);
         });
 
-        function bindRolePair(selectEl, inputEl, useBtn, missingMessage, successMessage) {
+        function bindRolePair(selectEl, inputEl, useBtn, missingMessage, successMessage, dirtyStatusEl) {
             if (selectEl && inputEl) {
                 selectEl.addEventListener("change", () => {
                     applyRoleSelectToInput(selectEl, inputEl);
+                    setDirtyStatus(dirtyStatusEl);
                 });
                 inputEl.addEventListener("input", () => {
                     setRoleSelectFromInput(selectEl, inputEl);
                     updateChecklist();
+                    setDirtyStatus(dirtyStatusEl);
                 });
             }
             if (useBtn && selectEl && inputEl) {
@@ -781,6 +916,7 @@
                         notify(missingMessage, "info");
                         return;
                     }
+                    setDirtyStatus(dirtyStatusEl);
                     notify(successMessage, "success");
                 });
             }
@@ -791,26 +927,32 @@
             els.joinGateRoleId,
             els.useSelectedRoleBtn,
             "Select a verified role first.",
-            "Verified role ID updated from selected role."
+            "Verified role ID updated from selected role.",
+            els.joinGateSaveStatus
         );
         bindRolePair(
             els.antiProfileQuarantineRoleSelect,
             els.antiProfileQuarantineRoleId,
             els.antiProfileUseSelectedRoleBtn,
             "Select an anti-profile quarantine role first.",
-            "Anti-profile quarantine role ID updated."
+            "Anti-profile quarantine role ID updated.",
+            els.filterSaveStatus
         );
         bindRolePair(
             els.raidQuarantineRoleSelect,
             els.raidQuarantineRoleId,
             els.raidUseSelectedRoleBtn,
             "Select a raid quarantine role first.",
-            "Raid quarantine role ID updated."
+            "Raid quarantine role ID updated.",
+            els.filterSaveStatus
         );
 
         if (els.logChannelId) els.logChannelId.addEventListener("input", updateChecklist);
         if (els.enabled) els.enabled.addEventListener("change", updateChecklist);
-        if (els.exemptRoleIds) els.exemptRoleIds.addEventListener("input", updateChecklist);
+        if (els.exemptRoleIds) els.exemptRoleIds.addEventListener("input", () => {
+            syncRoleSelectionFromTextarea();
+            updateChecklist();
+        });
         if (els.exemptChannelIds) els.exemptChannelIds.addEventListener("input", updateChecklist);
         [
             els.antiProfileEnabled,
@@ -826,25 +968,75 @@
         });
 
         // Role exemption helpers
+        if (els.roleSearchInput) els.roleSearchInput.addEventListener("input", filterRoles);
+        if (els.clearRoleSearchBtn) els.clearRoleSearchBtn.addEventListener("click", () => {
+            if (els.roleSearchInput) els.roleSearchInput.value = "";
+            filterRoles();
+        });
         if (els.refreshRolesBtn) els.refreshRolesBtn.addEventListener("click", async () => {
             const ok = await fetchRoles();
             notify(ok ? "Role list refreshed" : "Role lookup failed", ok ? "success" : "error");
         });
         if (els.applySelectedRolesBtn) els.applySelectedRolesBtn.addEventListener("click", () => {
-            const selected = Array.from(els.serverRolesSelect.selectedOptions).map(o => o.value).filter(Boolean);
+            const selected = normalizeSnowflakeList(getSelectedRoleIds());
             if (els.exemptRoleIds) {
-                const existing = new Set(readIdLines(els.exemptRoleIds));
-                selected.forEach(id => existing.add(id));
-                els.exemptRoleIds.value = Array.from(existing).join("\n");
+                const merged = normalizeSnowflakeList([...readIdLines(els.exemptRoleIds), ...selected]);
+                els.exemptRoleIds.value = merged.join("\n");
+                setDirtyStatus(els.exemptSaveStatus);
             }
+            syncRoleSelectionFromTextarea();
             updateChecklist();
             notify(`${selected.length} role(s) added to exemptions`, "success");
+        });
+        if (els.replaceSelectedRolesBtn) els.replaceSelectedRolesBtn.addEventListener("click", () => {
+            const selected = normalizeSnowflakeList(getSelectedRoleIds());
+            if (els.exemptRoleIds) {
+                els.exemptRoleIds.value = selected.join("\n");
+                setDirtyStatus(els.exemptSaveStatus);
+            }
+            syncRoleSelectionFromTextarea();
+            updateChecklist();
+            notify("Exempt roles replaced", "info");
+        });
+        if (els.removeSelectedRolesBtn) els.removeSelectedRolesBtn.addEventListener("click", () => {
+            const selected = new Set(normalizeSnowflakeList(getSelectedRoleIds()));
+            if (els.exemptRoleIds) {
+                const remaining = normalizeSnowflakeList(readIdLines(els.exemptRoleIds))
+                    .filter(id => !selected.has(id));
+                els.exemptRoleIds.value = remaining.join("\n");
+                setDirtyStatus(els.exemptSaveStatus);
+            }
+            syncRoleSelectionFromTextarea();
+            updateChecklist();
+            notify("Selected roles removed", "info");
+        });
+        if (els.sortExemptionsBtn) els.sortExemptionsBtn.addEventListener("click", () => {
+            if (els.exemptRoleIds) {
+                els.exemptRoleIds.value = sortSnowflakeList(readIdLines(els.exemptRoleIds)).join("\n");
+            }
+            if (els.exemptChannelIds) {
+                els.exemptChannelIds.value = sortSnowflakeList(readIdLines(els.exemptChannelIds)).join("\n");
+            }
+            setDirtyStatus(els.exemptSaveStatus);
+            syncRoleSelectionFromTextarea();
+            updateChecklist();
+            notify("Exemptions sorted and deduped", "success");
+        });
+        if (els.clearExemptionsBtn) els.clearExemptionsBtn.addEventListener("click", () => {
+            if (els.exemptRoleIds) els.exemptRoleIds.value = "";
+            if (els.exemptChannelIds) els.exemptChannelIds.value = "";
+            setDirtyStatus(els.exemptSaveStatus);
+            syncRoleSelectionFromTextarea();
+            updateChecklist();
+            notify("Exemptions cleared", "info");
         });
 
         // Join-gate channel/role from dropdowns
         if (els.useSelectedChannelBtn) els.useSelectedChannelBtn.addEventListener("click", () => {
-            if (els.joinGateChannelSelect && els.joinGateChannelSelect.value && els.joinGateChannelId)
+            if (els.joinGateChannelSelect && els.joinGateChannelSelect.value && els.joinGateChannelId) {
                 els.joinGateChannelId.value = els.joinGateChannelSelect.value;
+                setDirtyStatus(els.joinGateSaveStatus);
+            }
         });
 
         // Send verification preview
@@ -868,6 +1060,7 @@
         // Guided + presets
         if (els.applyGuidedBtn) els.applyGuidedBtn.addEventListener("click", () => {
             applyPresetProfile(els.guidedMode && els.guidedMode.value, els.enforcementMode && els.enforcementMode.value);
+            setDirtyStatus(els.filterSaveStatus);
             notify("Profile applied — review settings then save each section", "info");
         });
 
@@ -885,13 +1078,14 @@
             }
         }
 
-        if (els.presetRelaxedBtn) els.presetRelaxedBtn.addEventListener("click", () => { applyPreset(true); notify("Relaxed preset applied", "info"); });
-        if (els.presetBalancedBtn) els.presetBalancedBtn.addEventListener("click", () => { applyPreset(false); notify("Balanced preset applied", "info"); });
+        if (els.presetRelaxedBtn) els.presetRelaxedBtn.addEventListener("click", () => { applyPreset(true); setDirtyStatus(els.filterSaveStatus); notify("Relaxed preset applied", "info"); });
+        if (els.presetBalancedBtn) els.presetBalancedBtn.addEventListener("click", () => { applyPreset(false); setDirtyStatus(els.filterSaveStatus); notify("Balanced preset applied", "info"); });
         if (els.presetStrictBtn) els.presetStrictBtn.addEventListener("click", () => {
             if (els.antiSpamLimit) els.antiSpamLimit.value = 3;
             if (els.mentionLimit) els.mentionLimit.value = 2;
             if (els.warnMax) els.warnMax.value = 2;
             enforceMode("aggressive");
+            setDirtyStatus(els.filterSaveStatus);
             notify("Strict preset applied", "info");
         });
 
@@ -904,6 +1098,50 @@
                 if (els.advancedStateLabel) els.advancedStateLabel.textContent = advancedVisible ? "(shown)" : "(hidden)";
             });
         }
+
+        bindDirty([
+            els.logChannelId,
+            els.logChannelSelect,
+            els.enabled,
+            els.exemptAdmins,
+            els.raidModeEnabled,
+        ], els.logSaveStatus);
+
+        bindDirty([
+            els.exemptRoleIds,
+            els.exemptChannelIds,
+        ], els.exemptSaveStatus);
+
+        bindDirty([
+            els.antiSpamEnabled, els.antiSpamAction, els.antiSpamLimit, els.antiSpamWindow, els.duplicateLimit, els.spamTimeoutSeconds,
+            els.antiMentionEnabled, els.antiMentionAction, els.mentionLimit, els.mentionTimeoutSeconds,
+            els.antiEveryoneEnabled, els.antiEveryoneAction, els.everyoneMentionLimit,
+            els.antiLinkEnabled, els.antiLinkAction, els.allowDomains,
+            els.antiInviteEnabled, els.antiInviteAction,
+            els.antiEmojiEnabled, els.antiEmojiAction, els.emojiLimit,
+            els.antiLineEnabled, els.antiLineAction, els.lineLimit,
+            els.antiLongEnabled, els.antiLongAction, els.charLimit,
+            els.antiAttachmentEnabled, els.antiAttachmentAction, els.attachmentLimit,
+            els.antiCapsEnabled, els.antiCapsAction, els.capsRatio, els.capsMinLength,
+            els.newAccountGuardEnabled, els.newAccountAction, els.newAccountAgeMinutes,
+            els.warnEscalationEnabled, els.warnEscalationAction, els.warnMax, els.warnEscalationTimeoutSeconds,
+            els.bannedWords,
+            els.antiProfileEnabled, els.antiProfileCheckBioLinks, els.antiProfileBlockedNames,
+            els.antiProfileAction, els.antiProfileQuarantineRoleId, els.antiProfileQuarantineRoleSelect,
+            els.raidQuarantineRoleId, els.raidQuarantineRoleSelect,
+        ], els.filterSaveStatus);
+
+        bindDirty([
+            els.joinGateEnabled,
+            els.joinGateChannelId,
+            els.joinGateChannelSelect,
+            els.joinGateRoleId,
+            els.joinGateRoleSelect,
+            els.joinGateMethod,
+            els.joinGateTimeout,
+            els.joinGateKick,
+            els.joinGateRemoveOnFail,
+        ], els.joinGateSaveStatus);
 
         // Cases and warnings
         if (els.loadCasesBtn) els.loadCasesBtn.addEventListener("click", async () => {
