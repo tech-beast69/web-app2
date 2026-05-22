@@ -121,6 +121,12 @@ async function ensureApiBaseReachable() {
             try { window.API_BASE = API_BASE; } catch (_) {}
             persistApiBase(API_BASE);
             console.log('✅ Selected reachable API_BASE:', API_BASE);
+            try {
+                if (typeof API_BASE_URL !== 'undefined') {
+                    API_BASE_URL = API_BASE;
+                    console.log('✅ Synced API_BASE_URL:', API_BASE_URL);
+                }
+            } catch (_) {}
             return true;
         }
     }
