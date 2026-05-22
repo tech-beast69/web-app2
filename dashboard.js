@@ -189,16 +189,32 @@ function updateManagementLinks(userId) {
         return;
     }
 
+    const processed = new Set();
+
+    const applyLinkTarget = (link, target) => {
+        if (!link || !target) {
+            return;
+        }
+        processed.add(link);
+        link.setAttribute('href', withAdminId(target, normalized));
+    };
+
+    // Prefer explicit management targets to avoid accidental link swaps.
+    document.querySelectorAll('a[data-management-target]').forEach((link) => {
+        const target = link.getAttribute('data-management-target');
+        applyLinkTarget(link, target);
+    });
+
     [
-        'a[href="discord-management.html"]',
-        'a[href="group-management.html"]'
-    ].forEach((selector) => {
+        { selector: 'a[href="discord-management.html"]', fallback: 'discord-management.html' },
+        { selector: 'a[href="group-management.html"]', fallback: 'group-management.html' }
+    ].forEach(({ selector, fallback }) => {
         document.querySelectorAll(selector).forEach((link) => {
-            const href = link.getAttribute('href');
-            if (!href) {
+            if (processed.has(link)) {
                 return;
             }
-            link.setAttribute('href', withAdminId(href, normalized));
+            const href = link.getAttribute('href') || fallback;
+            applyLinkTarget(link, href);
         });
     });
 }
