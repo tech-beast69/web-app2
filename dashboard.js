@@ -11,7 +11,7 @@ console.log('DASHBOARDCONFIG:', window.DASHBOARDCONFIG);
 // Initialize API_BASE with proper fallback
 let API_BASE;
 try {
-    API_BASE = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+    API_BASE = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '1e4fecb5.glacierhosting.org';
     console.log('✅ API_BASE initialized from config:', API_BASE);
 } catch (error) {
     console.error('❌ Error initializing API_BASE:', error);
@@ -25,7 +25,7 @@ const DEBUG = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.DEBUG) || false;
 // Expose API base to other scripts/pages if needed
 try { window.API_BASE = API_BASE; } catch (e) { console.error('Failed to expose API_BASE:', e); }
 
-const DEFAULT_API_BASE = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+const DEFAULT_API_BASE = '1e4fecb5.glacierhosting.org';
 const API_BASE_STORAGE_KEY = 'dashboard_last_good_api_base';
 
 function normalizeApiBase(url) {
