@@ -8,7 +8,7 @@ console.log('Current origin:', window.location.origin);
 const DASHBOARDCONFIG = {
     // API endpoint configuration
     // Default to the deployed backend API.
-    APIURL: '1e4fecb5.glacierhosting.org',
+    APIURL: 'https://1e4fecb5.glacierhosting.org',
     
     // Refresh interval in milliseconds (default: 5000ms = 5 seconds)
     REFRESH_INTERVAL: 5000,
