@@ -2568,7 +2568,7 @@ if (!API_BASE_URL) {
     //     API_BASE_URL = 'http://localhost:3027';
     // } else {
         // Fallback to public dashboard API domain
-        API_BASE_URL = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+        API_BASE_URL = 'https://1e4fecb5.glacierhosting.org';
     // }
 }
 
