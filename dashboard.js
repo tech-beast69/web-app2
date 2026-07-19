@@ -15,7 +15,7 @@ try {
     console.log('✅ API_BASE initialized from config:', API_BASE);
 } catch (error) {
     console.error('❌ Error initializing API_BASE:', error);
-    API_BASE = 'https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org';
+    API_BASE = '1e4fecb5.glacierhosting.org';
     console.log('Using fallback API_BASE:', API_BASE);
 }
 
