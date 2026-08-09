@@ -27,10 +27,7 @@ console.log('Default APIURL:', DASHBOARDCONFIG.APIURL);
 // 2) Query-string override: ?api=https://...
 // 3) Safe same-origin mode only when explicitly requested via ?use_same_origin_api=1
 // 4) Otherwise keep fixed deployed backend APIURL
-const runtimeApiOverride = (window.__DASHBOARD_API_URL || '').trim();
-const urlParams = new URLSearchParams(window.location.search || '');
-const queryApiOverride = (urlParams.get('api') || '').trim();
-const useSameOriginApi = ['1', 'true', 'yes'].includes((urlParams.get('use_same_origin_api') || '').toLowerCase());
+const isLocalEnv = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname) || window.location.protocol === 'file:';
 
 if (runtimeApiOverride) {
     DASHBOARDCONFIG.APIURL = runtimeApiOverride;
@@ -38,11 +35,17 @@ if (runtimeApiOverride) {
 } else if (queryApiOverride) {
     DASHBOARDCONFIG.APIURL = queryApiOverride;
     console.log('✅ Query API override detected:', DASHBOARDCONFIG.APIURL);
-} else if (useSameOriginApi) {
-    DASHBOARDCONFIG.APIURL = window.location.origin;
-    console.log('✅ use_same_origin_api enabled - using same-origin API:', DASHBOARDCONFIG.APIURL);
+} else if (useSameOriginApi || isLocalEnv) {
+    if (window.location.protocol === 'file:') {
+        DASHBOARDCONFIG.APIURL = 'http://localhost:3027';
+    } else if (window.location.origin && window.location.origin !== 'null' && !window.location.hostname.includes('telegram.org')) {
+        DASHBOARDCONFIG.APIURL = window.location.origin;
+    } else {
+        DASHBOARDCONFIG.APIURL = 'http://localhost:3027';
+    }
+    console.log('✅ Local/Same-origin environment detected - using API:', DASHBOARDCONFIG.APIURL);
 } else {
-    console.log('✅ Using fixed deployed API:', DASHBOARDCONFIG.APIURL);
+    console.log('✅ Using default backend API:', DASHBOARDCONFIG.APIURL);
 }
 
 // Normalize trailing slash to prevent double-slash URLs.
