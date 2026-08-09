@@ -61,7 +61,22 @@ function buildApiCandidates() {
     const stored = getStoredApiBase();
     const current = normalizeApiBase(API_BASE);
 
-    const candidates = [runtime, stored, current, configured, DEFAULT_API_BASE].filter(Boolean);
+    let originCandidate = '';
+    try {
+        if (window.location.origin && window.location.origin !== 'null' && 
+            !window.location.hostname.includes('telegram.org')) {
+            originCandidate = normalizeApiBase(window.location.origin);
+        }
+    } catch (_) {}
+
+    const localCandidates = [
+        'http://localhost:3027',
+        'http://localhost:8000',
+        'http://127.0.0.1:3027',
+        'http://127.0.0.1:8000'
+    ];
+
+    const candidates = [runtime, stored, current, configured, originCandidate, ...localCandidates, DEFAULT_API_BASE].filter(Boolean);
     return [...new Set(candidates)];
 }
 
@@ -2560,16 +2575,14 @@ window.updateLockForGroup = async function(groupId, key, value, adminId) {
 let API_BASE_URL = (window.API_BASE) || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || null;
 
 if (!API_BASE_URL) {
-    // If running on developer machine, prefer the local dashboard server
-    // if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    //     API_BASE_URL = 'http://localhost:3027';
-    // } else if (window.location.protocol === 'file:') {
-    //     // Opened as a local file - assume local dashboard server
-    //     API_BASE_URL = 'http://localhost:3027';
-    // } else {
-        // Fallback to public dashboard API domain
+    const hostname = window.location.hostname || '';
+    if (['localhost', '127.0.0.1', '0.0.0.0'].includes(hostname) || window.location.protocol === 'file:') {
+        API_BASE_URL = 'http://localhost:3027';
+    } else if (window.location.origin && window.location.origin !== 'null' && !hostname.includes('telegram.org')) {
+        API_BASE_URL = window.location.origin;
+    } else {
         API_BASE_URL = 'https://1e4fecb5.glacierhosting.org';
-    // }
+    }
 }
 
 console.log('DEBUG - Hostname:', window.location.hostname);
@@ -2598,13 +2611,15 @@ if (tg) {
 // Load all groups (filtered by user if userId is available)
 async function loadGroups() {
     try {
+        await ensureApiBaseReachable();
+        const activeApiBase = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) || API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || 'http://localhost:3027';
         const cacheBuster = `_t=${Date.now()}`;
         const managedUrl = userId ? 
-            `${API_BASE_URL}/api/groups/managed?user_id=${userId}&${cacheBuster}` : 
-            `${API_BASE_URL}/api/groups/managed?${cacheBuster}`;
+            `${activeApiBase}/api/groups/managed?user_id=${userId}&${cacheBuster}` : 
+            `${activeApiBase}/api/groups/managed?${cacheBuster}`;
         const legacyUrl = userId ?
-            `${API_BASE_URL}/api/groups?user_id=${userId}&${cacheBuster}` :
-            `${API_BASE_URL}/api/groups?${cacheBuster}`;
+            `${activeApiBase}/api/groups?user_id=${userId}&${cacheBuster}` :
+            `${activeApiBase}/api/groups?${cacheBuster}`;
         
         console.log('=== API Request Debug ===');
         console.log('API Base URL:', API_BASE_URL);
@@ -3752,8 +3767,8 @@ function checkPremiumAccess(userData) {
 
     console.log('🔒 Checking premium access for user:', userData.user_id);
     
-    // Only bot admins and premium members can access
-    if (userData.is_admin || userData.is_premium) {
+    // Only bot admins, premium members, and group owners/admins can access
+    if (userData.is_admin || userData.is_premium || userData.is_group_owner || userData.is_group_admin) {
         const overlay = document.getElementById('premiumOverlay');
         if (overlay) {
             overlay.style.opacity = '0';
