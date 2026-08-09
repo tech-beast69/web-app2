@@ -2601,11 +2601,28 @@ if (tg) {
     tg.expand();
     userId = tg.initDataUnsafe?.user?.id;
     userName = tg.initDataUnsafe?.user?.username || tg.initDataUnsafe?.user?.first_name;
-    
-    // Show user info in header
-    if (userId) {
-        document.querySelector('.subtitle').textContent = `Logged in as: ${userName} (ID: ${userId})`;
-    }
+}
+
+// Fallback to URL query params or localStorage if not available from Telegram WebApp initDataUnsafe
+if (!userId) {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        userId = urlParams.get('user_id') || urlParams.get('admin_id') || localStorage.getItem('dashboard_user_id');
+        if (userId) {
+            userId = String(userId).trim();
+            userName = userName || `User ${userId}`;
+        }
+    } catch (_) {}
+}
+
+if (userId) {
+    try {
+        localStorage.setItem('dashboard_user_id', userId);
+        const sub = document.querySelector('.subtitle');
+        if (sub) {
+            sub.textContent = `Logged in as: ${userName || userId} (ID: ${userId})`;
+        }
+    } catch (_) {}
 }
 
 // Load all groups (filtered by user if userId is available)
