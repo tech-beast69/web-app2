@@ -76,7 +76,13 @@ function buildApiCandidates() {
         'http://127.0.0.1:8000'
     ];
 
-    const candidates = [runtime, stored, current, configured, originCandidate, ...localCandidates, DEFAULT_API_BASE].filter(Boolean);
+    // Never probe http://localhost from an HTTPS page (GitHub Pages / Telegram):
+    // mixed-content requests are blocked and only add noise/latency.
+    const isHttpPage = window.location.protocol === 'http:' || window.location.protocol === 'file:';
+    const candidatesBase = [runtime, stored, current, configured, originCandidate, DEFAULT_API_BASE].filter(Boolean);
+    const candidates = isHttpPage
+        ? [...candidatesBase, ...localCandidates]
+        : candidatesBase.filter((c) => !/^http:\/\/(localhost|127\.)/.test(c));
     return [...new Set(candidates)];
 }
 
@@ -240,6 +246,37 @@ function updateManagementLinks(userId) {
     });
 }
 
+// Apply Telegram themeParams to the page. Dark Telegram clients get a dark
+// base under the translucent glass container instead of a white-on-dark flash.
+function applyTelegramTheme(tg) {
+    try {
+        const params = tg && tg.themeParams;
+        if (!params) return;
+
+        if (params.bg_color) {
+            document.body.style.background = params.bg_color;
+        }
+
+        // Color-scheme hint lets the browser pick matching scrollbars/form controls.
+        const rgb = (params.bg_color || '').replace('#', '');
+        if (rgb.length === 6) {
+            const r = parseInt(rgb.slice(0, 2), 16);
+            const g = parseInt(rgb.slice(2, 4), 16);
+            const b = parseInt(rgb.slice(4, 6), 16);
+            const isDark = (r * 299 + g * 587 + b * 114) / 1000 < 128;
+            document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+            document.body.classList.toggle('tg-dark-theme', isDark);
+        }
+
+        // Match the native Telegram header color when available.
+        if (typeof tg.setHeaderColor === 'function') {
+            try { tg.setHeaderColor(params.bg_color || '#6366f1'); } catch (_) {}
+        }
+    } catch (error) {
+        console.warn('Theme apply failed:', error);
+    }
+}
+
 // Initialize Telegram Web App
 function initTelegramWebApp() {
     console.log('=== Initializing Telegram Web App ===');
@@ -277,10 +314,17 @@ function initTelegramWebApp() {
             }
             
             // Set theme based on Telegram theme
-            if (tg.themeParams && tg.themeParams.bg_color) {
-                document.body.style.background = tg.themeParams.bg_color;
+            applyTelegramTheme(tg);
+
+            // React to Telegram theme changes (dark <-> light while app open)
+            if (typeof tg.onEvent === 'function') {
+                try {
+                    tg.onEvent('themeChanged', function () {
+                        applyTelegramTheme(window.Telegram.WebApp);
+                    });
+                } catch (_) {}
             }
-            
+
             return true; // Successfully initialized
         } else {
             console.log('⚠️ Telegram WebApp not available - running in regular browser');
@@ -297,15 +341,31 @@ function initTelegramWebApp() {
     }
 }
 
-// Create a mock user for testing outside Telegram
+// Create a mock user for LOCAL DEVELOPMENT ONLY.
+// Enabled via ?mock_user=1 (or localhost) — never in the real Telegram Mini App,
+// where a missing initDataUnsafe.user means an unauthenticated visitor.
 function createMockUserForTesting() {
+    const isDevEnvironment = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname)
+        || window.location.protocol === 'file:';
+
+    let mockAllowed = isDevEnvironment;
+    try {
+        mockAllowed = mockAllowed || new URLSearchParams(window.location.search || '').get('mock_user') === '1';
+    } catch (_) {}
+
+    if (!mockAllowed) {
+        console.log('⏭️ Skipping mock user (production Telegram environment)');
+        telegramUser = null;
+        return;
+    }
+
     console.log('Creating mock user for testing...');
-    
+
     // Show a notification that we're in testing mode
     setTimeout(() => {
         showNotification('Running in test mode with mock user (ID: 7054339190)', 'info');
     }, 1000);
-    
+
     telegramUser = {
         id: 7054339190,
         first_name: 'Raw Queen',
@@ -1819,7 +1879,8 @@ async function reportLink(url, title, btnElement) {
     }
     
     // Confirm the report
-    if (!confirm(`Are you sure you want to report this link?\n\n"${title}"\n\nReported links will be hidden from all users and reviewed by admins.`)) {
+    const confirmedReport = await tgConfirm(`Are you sure you want to report this link?\n\n"${title}"\n\nReported links will be hidden from all users and reviewed by admins.`);
+    if (!confirmedReport) {
         return;
     }
     
@@ -1937,29 +1998,57 @@ function showNotification(message, type = 'info') {
     if (existing) {
         existing.remove();
     }
-    
+
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    
+
     const icon = {
         'success': 'fa-check-circle',
         'error': 'fa-exclamation-circle',
         'warning': 'fa-exclamation-triangle',
         'info': 'fa-info-circle'
     }[type] || 'fa-info-circle';
-    
+
     notification.innerHTML = `
         <i class="fas ${icon}"></i>
         <span>${escapeHtml(message)}</span>
     `;
-    
+
     document.body.appendChild(notification);
-    
+
     // Auto remove after 5 seconds
     setTimeout(() => {
         notification.classList.add('fade-out');
         setTimeout(() => notification.remove(), 300);
     }, 5000);
+}
+
+// Telegram-native alert: native alert() is unreliable inside the Telegram
+// WebView (often suppressed) — prefer WebApp popup with browser fallback.
+async function tgAlert(message) {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && typeof tg.showAlert === 'function') {
+        try {
+            await tg.showAlert(message);
+            return;
+        } catch (_) {
+            // showAlert only exists in full-version apps; fall through.
+        }
+    }
+    window.alert(message);
+}
+
+// Telegram-native confirm with a graceful fallback for plain browsers.
+async function tgConfirm(message) {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && typeof tg.showConfirm === 'function') {
+        try {
+            return await tg.showConfirm(message);
+        } catch (_) {
+            // showConfirm unavailable (older Bot API / basic mode) — fall through.
+        }
+    }
+    return window.confirm(message);
 }
 
 // Show loading overlay
@@ -2203,7 +2292,7 @@ async function approvePendingLink(linkUrl, linkName, linkDescription) {
         return;
     }
     
-    if (!confirm(`Approve this link and add it to the database?\n\n"${linkName}"\n\nThis will make it visible to all users.`)) {
+    if (!(await tgConfirm(`Approve this link and add it to the database?\n\n"${linkName}"\n\nThis will make it visible to all users.`))) {
         return;
     }
     
@@ -2267,7 +2356,7 @@ async function rejectPendingLink(linkUrl) {
         return;
     }
     
-    if (!confirm('Reject this link submission?\n\nThis will remove it from the pending list.')) {
+    if (!(await tgConfirm('Reject this link submission?\n\nThis will remove it from the pending list.'))) {
         return;
     }
     
@@ -2424,7 +2513,7 @@ window.verifyLink = async function(linkUrl, status) {
         ? `Mark this link as working?\n\nThe report will be removed and the link will be shown to users again.`
         : `Mark this link as broken?\n\nThis will:\n- Refund 10 tokens to all reporters\n- Remove the link from the database\n- Cannot be undone`;
     
-    if (!confirm(confirmMsg)) {
+    if (!(await tgConfirm(confirmMsg))) {
         return;
     }
     
@@ -2631,11 +2720,23 @@ async function loadGroups() {
         await ensureApiBaseReachable();
         const activeApiBase = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) || API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || 'http://localhost:3027';
         const cacheBuster = `_t=${Date.now()}`;
-        const managedUrl = userId ? 
-            `${activeApiBase}/api/groups/managed?user_id=${userId}&${cacheBuster}` : 
+
+        // Append signed initData when present so the backend can verify this
+        // user via HMAC instead of trusting the client-supplied user_id.
+        let initDataParam = '';
+        try {
+            const tgApp = window.Telegram && window.Telegram.WebApp;
+            const initData = tgApp && tgApp.initData;
+            if (initData) {
+                initDataParam = `&init_data=${encodeURIComponent(initData)}`;
+            }
+        } catch (_) {}
+
+        const managedUrl = userId ?
+            `${activeApiBase}/api/groups/managed?user_id=${userId}${initDataParam}&${cacheBuster}` :
             `${activeApiBase}/api/groups/managed?${cacheBuster}`;
         const legacyUrl = userId ?
-            `${activeApiBase}/api/groups?user_id=${userId}&${cacheBuster}` :
+            `${activeApiBase}/api/groups?user_id=${userId}${initDataParam}&${cacheBuster}` :
             `${activeApiBase}/api/groups?${cacheBuster}`;
         
         console.log('=== API Request Debug ===');
@@ -2824,14 +2925,14 @@ async function openGroupSettings(groupId) {
         } else {
             const errorMsg = data.error || 'Unknown error';
             console.error('API error:', errorMsg);
-            alert(`Failed to load group settings: ${errorMsg}`);
+            await tgAlert(`Failed to load group settings: ${errorMsg}`);
         }
     } catch (error) {
         console.error('=== Error Loading Group Config ===');
         console.error('Error:', error);
         console.error('Error message:', error.message);
         console.error('Error stack:', error.stack);
-        alert(`Failed to load group settings: ${error.message}`);
+        await tgAlert(`Failed to load group settings: ${error.message}`);
     }
 }
 
@@ -3434,7 +3535,7 @@ async function addFilter() {
     const response = document.getElementById('filterResponse').value.trim();
 
     if (!trigger || !response) {
-        alert('Please fill in both trigger and response');
+        await tgAlert('Please fill in both trigger and response');
         return;
     }
 
@@ -3467,7 +3568,7 @@ async function addFilter() {
 }
 
 async function removeFilter(trigger) {
-    if (!confirm(`Remove filter for "${trigger}"?`)) return;
+    if (!(await tgConfirm(`Remove filter for "${trigger}"?`))) return;
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/filters/${encodeURIComponent(trigger)}`, {
@@ -3494,7 +3595,7 @@ async function addBlocklistWord() {
     const word = document.getElementById('blocklistWord').value.trim();
 
     if (!word) {
-        alert('Please enter a word to block');
+        await tgAlert('Please enter a word to block');
         return;
     }
 
@@ -3524,7 +3625,7 @@ async function addBlocklistWord() {
 }
 
 async function removeBlocklistWord(word) {
-    if (!confirm(`Remove blocked word "${word}"?`)) return;
+    if (!(await tgConfirm(`Remove blocked word "${word}"?`))) return;
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/blocklist/${encodeURIComponent(word)}`, {
@@ -3557,7 +3658,7 @@ async function disableCommand() {
     const command = input.value.trim().toLowerCase().replace('/', '');
 
     if (!command) {
-        alert('Please enter a command name');
+        await tgAlert('Please enter a command name');
         return;
     }
 
@@ -3589,7 +3690,7 @@ async function disableCommand() {
 }
 
 async function enableCommand(command) {
-    if (!confirm(`Enable command "/${command}"?`)) return;
+    if (!(await tgConfirm(`Enable command "/${command}"?`))) return;
 
     try {
         const url = `${API_BASE_URL}/api/group/${currentGroupId}/disabled-commands/${encodeURIComponent(command)}?admin_id=${encodeURIComponent(userId || '123456789')}`;
@@ -3687,7 +3788,7 @@ async function joinFederation() {
 async function leaveFederation() {
     if (!currentGroupId) return showNotification('No group selected', 'error');
 
-    if (!confirm('Are you sure you want this group to leave its federation?')) return;
+    if (!(await tgConfirm('Are you sure you want this group to leave its federation?'))) return;
 
     try {
         const resp = await fetch(`${API_BASE_URL}/api/group/${currentGroupId}/federation/leave`, {

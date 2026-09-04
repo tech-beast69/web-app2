@@ -28,7 +28,7 @@
     --light: #f8fafc;
     --gray: #64748b;
     --gray-light: #94a3b8;
-    --gray-dark: # 475569;
+    --gray-dark: #475569;
     --border: #e2e8f0;
     --border-light: #f1f5f9;
     
@@ -3054,4 +3054,128 @@ input:checked + .toggle-slider:before {
     .stat-card, .status-card, .resource-card, .link-card {
         will-change: transform;
     }
+}
+
+/* ============================================================================
+   MOBILE / TELEGRAM MINI APP FIXES (v3.3)
+   - Section padding override (mobile rules previously targeted a nonexistent
+     .section class while real sections use .status-section/.stats-section/etc)
+   - resource-grid cards no longer clipped on ~360px screens
+   - Notifications sized for small screens
+   - 16px inputs to stop iOS auto-zoom on focus
+   - safe-area insets for notched phones after WebApp.expand()
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    section {
+        padding: 20px 14px;
+    }
+
+    .resource-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .stats-grid,
+    .status-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+    }
+
+    .stat-card,
+    .status-card {
+        padding: 16px;
+        gap: 10px;
+    }
+
+    .notification {
+        left: 12px;
+        right: 12px;
+        top: 12px;
+        max-width: none;
+        padding: 14px 16px;
+    }
+
+    /* 16px floor stops iOS Safari zoom-on-focus */
+    .search-box input,
+    .form-group input,
+    .form-group textarea,
+    .user-id-input input,
+    .modal-body input,
+    .modal-body textarea,
+    .modal-body select {
+        font-size: 16px;
+    }
+
+    .header-actions-row {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        margin-top: 12px;
+    }
+
+    .header-actions-row .btn-primary,
+    .header-actions-row > a {
+        width: 100%;
+        justify-content: center;
+        padding: 10px 14px !important;
+        font-size: 0.95em;
+    }
+
+    .pagination-container {
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .links-container {
+        padding: 14px;
+    }
+}
+
+/* Very small phones (iPhone SE class) */
+@media (max-width: 380px) {
+    section {
+        padding: 16px 10px;
+    }
+
+    .stats-grid,
+    .status-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Safe-area handling for notched phones inside Telegram WebApp */
+@supports (padding: max(0px)) {
+    body {
+        padding-left: max(2px, env(safe-area-inset-left));
+        padding-right: max(2px, env(safe-area-inset-right));
+    }
+}
+
+.notification,
+.modal {
+    top: max(0px, env(safe-area-inset-top));
+}
+
+/* Prevent horizontal overflow from long URLs in link cards */
+.link-url {
+    word-break: break-all;
+    min-width: 0;
+}
+
+/* Avoid 100vh URL-bar/keyboard jumps in fixed overlays */
+.premium-overlay,
+.loading-overlay {
+    height: 100dvh;
+}
+
+/* Dark Telegram theme: body goes dark, glass container stays readable.
+   The container keeps its light translucent surface so cards/text remain legible. */
+body.tg-dark-theme {
+    background-attachment: fixed;
+}
+
+body.tg-dark-theme .container {
+    background: rgba(17, 24, 39, 0.92);
+    border-color: rgba(255, 255, 255, 0.08);
 }

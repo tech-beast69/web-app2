@@ -138,6 +138,21 @@
         els.connectionStatus.style.color = ok ? "var(--success)" : "var(--danger)";
     }
 
+    // Telegram-native confirm with browser fallback (native confirm is
+    // unreliable inside the Telegram WebView).
+    function tgConfirm(message) {
+        return new Promise((resolve) => {
+            const tgApp = window.Telegram && window.Telegram.WebApp;
+            if (tgApp && typeof tgApp.showConfirm === "function") {
+                tgApp.showConfirm(message)
+                    .then((ok) => resolve(Boolean(ok)))
+                    .catch(() => resolve(window.confirm(message)));
+            } else {
+                resolve(window.confirm(message));
+            }
+        });
+    }
+
     function notify(msg, type) {
         if (!els.toastWrap) { window.alert(msg); return; }
         const icons = { success: "fa-circle-check", error: "fa-circle-xmark", info: "fa-circle-info" };
@@ -1186,7 +1201,7 @@
             const gid = selectedGuildId();
             const uid = String(els.warningsUserId && els.warningsUserId.value || "").trim();
             if (!gid || !uid) { notify("Select a server and enter a User ID", "error"); return; }
-            if (!confirm(`Clear all warnings for user ${uid}?`)) return;
+            if (!(await tgConfirm(`Clear all warnings for user ${uid}?`))) return;
             try {
                 const res = await api(`/api/discord/moderation/warnings/${encodeURIComponent(gid)}/${encodeURIComponent(uid)}`, { method: "DELETE" });
                 if (els.warningsList) els.warningsList.innerHTML = '<div style="color:var(--text-muted);padding:10px 0;font-size:0.84rem;">Warnings cleared</div>';
@@ -1198,7 +1213,7 @@
             const gid = selectedGuildId();
             const uid = String(els.warningsUserId && els.warningsUserId.value || "").trim();
             if (!gid || !uid) { notify("Select a server and enter a User ID", "error"); return; }
-            if (!confirm(`Restore roles for user ${uid}? This will remove quarantine role and attempt to restore saved roles.`)) return;
+            if (!(await tgConfirm(`Restore roles for user ${uid}? This will remove quarantine role and attempt to restore saved roles.`))) return;
             setBusy(els.unquarantineBtn, true, "Restoring…");
             try {
                 await api(`/api/discord/moderation/unquarantine/${encodeURIComponent(gid)}/${encodeURIComponent(uid)}`, { method: "POST" });

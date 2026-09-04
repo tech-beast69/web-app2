@@ -29,6 +29,19 @@ console.log('Default APIURL:', DASHBOARDCONFIG.APIURL);
 // 4) Otherwise keep fixed deployed backend APIURL
 const isLocalEnv = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname) || window.location.protocol === 'file:';
 
+// Resolve override flags before use (previously referenced but never defined -> ReferenceError).
+let runtimeApiOverride = '';
+let queryApiOverride = '';
+let useSameOriginApi = false;
+try {
+    const params = new URLSearchParams(window.location.search || '');
+    queryApiOverride = (params.get('api') || '').trim();
+    useSameOriginApi = params.get('use_same_origin_api') === '1';
+} catch (_) {}
+try {
+    runtimeApiOverride = (window.__DASHBOARD_API_URL || '').trim();
+} catch (_) {}
+
 if (runtimeApiOverride) {
     DASHBOARDCONFIG.APIURL = runtimeApiOverride;
     console.log('✅ Runtime API override detected:', DASHBOARDCONFIG.APIURL);

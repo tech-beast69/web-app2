@@ -3,17 +3,17 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Group Management - Bot Dashboard</title>
     
     <!-- Content Security Policy for Telegram Web App -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self' https://tech-beast69.github.io https://telegram.org; 
         script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://cdnjs.cloudflare.com; 
-        style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; 
+        style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; 
         connect-src 'self' https://tech-beast69.github.io https://*.glacierhosting.org https://1e4fecb5-5c9e-4fb3-8ace-01c2cc75312b.glacierhosting.org;
         img-src 'self' data: https:; 
-        font-src 'self' https://cdnjs.cloudflare.com data:;
+        font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com data:;
     ">
     
     <link rel="stylesheet" href="dashboard.css">
@@ -25,7 +25,7 @@
 <body>
     <div class="group-management-container">
         <header>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="header-actions-row" style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <h1><i class="fas fa-users-cog"></i> Group Management Dashboard</h1>
                     <p class="subtitle">Manage all your Telegram groups from one place</p>
@@ -723,9 +723,8 @@
         </div>
     </div>
 
-    <script src="https://telegram.org/js/telegram-web-app.js?61"></script>
-    <script src="config.js?v=3.1"></script>
-    <script src="dashboard.js?v=3.1"></script>
+    <script src="config.js?v=3.3"></script>
+    <script src="dashboard.js?v=3.3"></script>
 </body>
 
 </html>
