@@ -492,11 +492,12 @@ h2::after {
 }
 
 .stat-info h3 {
-    font-size: 2.4em;
+    font-size: clamp(1.3em, 3.5vw, 2.2em);
     margin-bottom: 8px;
     font-weight: 800;
     font-family: 'Outfit', sans-serif;
-    line-height: 1;
+    line-height: 1.1;
+    word-break: break-word;
 }
 
 .stat-info p {
@@ -3088,6 +3089,18 @@ input:checked + .toggle-slider:before {
         gap: 10px;
     }
 
+    .stat-info h3 {
+        font-size: 1.35em !important;
+        line-height: 1.15;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .status-indicator {
+        font-size: 1.3em !important;
+    }
+
     .notification {
         left: 12px;
         right: 12px;
@@ -3169,13 +3182,179 @@ input:checked + .toggle-slider:before {
     height: 100dvh;
 }
 
-/* Dark Telegram theme: body goes dark, glass container stays readable.
-   The container keeps its light translucent surface so cards/text remain legible. */
+/* ============================================================================ */
+/* DARK THEME SUPPORT (Telegram WebApp dark mode & system dark theme) */
+/* ============================================================================ */
+
 body.tg-dark-theme {
     background-attachment: fixed;
+    color: #f8fafc;
 }
 
 body.tg-dark-theme .container {
-    background: rgba(17, 24, 39, 0.92);
-    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.96) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+    color: #f8fafc !important;
 }
+
+/* Fix dark-on-dark section headings */
+body.tg-dark-theme h2 {
+    color: #f8fafc !important;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+body.tg-dark-theme h2::after {
+    background: linear-gradient(90deg, #818cf8, transparent) !important;
+}
+
+body.tg-dark-theme section {
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Glassmorphic Dark Cards */
+body.tg-dark-theme .status-card,
+body.tg-dark-theme .stat-card:not(.primary):not(.success):not(.warning):not(.danger):not(.info):not(.purple),
+body.tg-dark-theme .resource-card {
+    background: rgba(30, 41, 59, 0.85) !important;
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+}
+
+body.tg-dark-theme .status-card:hover,
+body.tg-dark-theme .stat-card:not(.primary):not(.success):not(.warning):not(.danger):not(.info):not(.purple):hover,
+body.tg-dark-theme .resource-card:hover {
+    border-color: rgba(99, 102, 241, 0.5) !important;
+    box-shadow: 0 8px 30px rgba(99, 102, 241, 0.25) !important;
+}
+
+body.tg-dark-theme .status-card .status-label,
+body.tg-dark-theme .stat-info p,
+body.tg-dark-theme .resource-card p {
+    color: #94a3b8 !important;
+}
+
+body.tg-dark-theme .stat-info h3,
+body.tg-dark-theme .resource-card h4 {
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .stat-icon {
+    color: #818cf8 !important;
+}
+
+/* Dark theme progress bars */
+body.tg-dark-theme .progress-bar {
+    background: rgba(15, 23, 42, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.tg-dark-theme #cpuDetails,
+body.tg-dark-theme #memoryDetails,
+body.tg-dark-theme #diskDetails {
+    color: #cbd5e1 !important;
+}
+
+/* Telegram Links Browser Dark Mode (replaces blinding white container) */
+body.tg-dark-theme .links-section {
+    background: transparent !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.tg-dark-theme .links-notice {
+    background: rgba(30, 58, 138, 0.3) !important;
+    border: 1px solid rgba(59, 130, 246, 0.35) !important;
+    border-left: 4px solid #3b82f6 !important;
+}
+
+body.tg-dark-theme .links-notice p {
+    color: #bfdbfe !important;
+}
+
+body.tg-dark-theme .links-notice i {
+    color: #60a5fa !important;
+}
+
+body.tg-dark-theme .user-token-info-display {
+    background: rgba(180, 83, 9, 0.22) !important;
+    border: 1px solid rgba(245, 158, 11, 0.45) !important;
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.15) !important;
+}
+
+body.tg-dark-theme .token-details p {
+    color: #fef08a !important;
+}
+
+body.tg-dark-theme .token-cost-info {
+    color: #fde047 !important;
+}
+
+body.tg-dark-theme .search-container {
+    background: transparent !important;
+}
+
+body.tg-dark-theme .search-box {
+    background: rgba(30, 41, 59, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.tg-dark-theme .search-box input {
+    color: #f8fafc !important;
+    background: transparent !important;
+}
+
+body.tg-dark-theme .search-box input::placeholder {
+    color: #64748b !important;
+}
+
+body.tg-dark-theme .search-box i {
+    color: #818cf8 !important;
+}
+
+/* Dark theme link cards */
+body.tg-dark-theme .link-card {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .link-card:hover {
+    border-color: #818cf8 !important;
+    box-shadow: 0 8px 30px rgba(99, 102, 241, 0.25) !important;
+}
+
+body.tg-dark-theme .link-title {
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .link-description {
+    color: #94a3b8 !important;
+}
+
+body.tg-dark-theme .link-meta-item {
+    color: #cbd5e1 !important;
+}
+
+body.tg-dark-theme .link-type {
+    background: rgba(99, 102, 241, 0.25) !important;
+    color: #a5b4fc !important;
+}
+
+body.tg-dark-theme .link-tag {
+    background: rgba(148, 163, 184, 0.15) !important;
+    color: #cbd5e1 !important;
+}
+
+body.tg-dark-theme .link-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.tg-dark-theme footer {
+    background: rgba(15, 23, 42, 0.98) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #64748b !important;
+}
+
