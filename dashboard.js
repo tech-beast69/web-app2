@@ -1947,14 +1947,21 @@ async function accessLink(url, title, btnElement) {
             showNotification(message, 'success');
             
             // Open the link with robust handling for Telegram and Browsers
+            const openTarget = data.link || url;
             if (window.Telegram && window.Telegram.WebApp) {
                 // Telegram Web App
-                console.log('Opening link via Telegram WebApp:', url);
-                window.Telegram.WebApp.openLink(url);
+                console.log('Opening link via Telegram WebApp:', openTarget);
+                if ((openTarget.includes('t.me') || openTarget.startsWith('tg://')) && typeof window.Telegram.WebApp.openTelegramLink === 'function') {
+                    window.Telegram.WebApp.openTelegramLink(openTarget);
+                } else if (typeof window.Telegram.WebApp.openLink === 'function') {
+                    window.Telegram.WebApp.openLink(openTarget);
+                } else {
+                    window.open(openTarget, '_blank');
+                }
             } else {
                 // Regular Browser
-                console.log('Opening link via window.open:', url);
-                const newWindow = window.open(url, '_blank');
+                console.log('Opening link via window.open:', openTarget);
+                const newWindow = window.open(openTarget, '_blank');
                 if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
                     showNotification('Popup blocked! Please allow popups to open links.', 'error');
                 }
