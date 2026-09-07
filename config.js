@@ -3,12 +3,24 @@
 
 console.log('🔧 Config.js initializing...');
 
+const INJECTED_API_URL = '__BACKEND_API_URL__';
+const INJECTED_SECRET_KEY = '__WEBAPP_SECRET_KEY__';
+
+const isLocalEnv = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname) || window.location.protocol === 'file:';
+
+let defaultApiUrl = '';
+if (INJECTED_API_URL && INJECTED_API_URL.startsWith('http')) {
+    defaultApiUrl = INJECTED_API_URL;
+} else if (isLocalEnv) {
+    defaultApiUrl = 'http://localhost:3027';
+}
+
 const DASHBOARDCONFIG = {
     // API endpoint injected via GitHub Actions Secret BACKEND_API_URL
-    APIURL: window.__ENV_BACKEND_API_URL__ || '__BACKEND_API_URL__',
+    APIURL: window.__ENV_BACKEND_API_URL__ || defaultApiUrl,
     
     // Secret access key injected via GitHub Actions Secret WEBAPP_SECRET_KEY
-    WEBAPP_SECRET_KEY: window.__ENV_WEBAPP_KEY__ || '__WEBAPP_SECRET_KEY__',
+    WEBAPP_SECRET_KEY: window.__ENV_WEBAPP_KEY__ || (INJECTED_SECRET_KEY.startsWith('__') ? '' : INJECTED_SECRET_KEY),
 
     // Refresh interval in milliseconds (default: 5000ms = 5 seconds)
     REFRESH_INTERVAL: 5000,
@@ -25,8 +37,6 @@ const DASHBOARDCONFIG = {
 // 2) Query-string override: ?api=https://...
 // 3) Local development environment: http://localhost:3027
 // 4) Deployed backend API (injected secret)
-const isLocalEnv = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname) || window.location.protocol === 'file:';
-
 let runtimeApiOverride = '';
 let queryApiOverride = '';
 let useSameOriginApi = false;
@@ -46,16 +56,11 @@ if (runtimeApiOverride) {
 } else if (useSameOriginApi || isLocalEnv) {
     if (window.location.protocol === 'file:') {
         DASHBOARDCONFIG.APIURL = 'http://localhost:3027';
-    } else if (window.location.origin && window.location.origin !== 'null' && !window.location.hostname.includes('telegram.org')) {
+    } else if (window.location.origin && window.location.origin !== 'null' && !window.location.hostname.includes('telegram.org') && !window.location.hostname.includes('github.io')) {
         DASHBOARDCONFIG.APIURL = window.location.origin;
     } else {
         DASHBOARDCONFIG.APIURL = 'http://localhost:3027';
     }
-}
-
-// Clean placeholder if not injected (e.g. running uncompiled raw git files)
-if (DASHBOARDCONFIG.APIURL === '__BACKEND_API_URL__' && !isLocalEnv) {
-    DASHBOARDCONFIG.APIURL = '';
 }
 
 // Normalize trailing slash
@@ -65,6 +70,7 @@ if (DASHBOARDCONFIG.APIURL) {
 
 // Export config to window
 window.DASHBOARDCONFIG = DASHBOARDCONFIG;
+window.API_BASE = DASHBOARDCONFIG.APIURL;
 
 // Auto-attach X-Webapp-Key header to all outgoing requests towards backend API
 (function() {
@@ -78,7 +84,8 @@ window.DASHBOARDCONFIG = DASHBOARDCONFIG;
             const apiBase = (cfg && cfg.APIURL) || window.API_BASE || '';
             const secretKey = (cfg && cfg.WEBAPP_SECRET_KEY) || '';
             
-            if (secretKey && secretKey !== '__WEBAPP_SECRET_KEY__' && apiBase && urlStr.startsWith(apiBase)) {
+            // Attach X-Webapp-Key if configured and request is going to our backend API
+            if (secretKey && !secretKey.startsWith('__') && apiBase && urlStr.startsWith(apiBase)) {
                 if (options.headers instanceof Headers) {
                     if (!options.headers.has('X-Webapp-Key')) {
                         options.headers.set('X-Webapp-Key', secretKey);

@@ -61,7 +61,8 @@ function buildApiCandidates() {
     let originCandidate = '';
     try {
         if (window.location.origin && window.location.origin !== 'null' && 
-            !window.location.hostname.includes('telegram.org')) {
+            !window.location.hostname.includes('telegram.org') &&
+            !window.location.hostname.includes('github.io')) {
             originCandidate = normalizeApiBase(window.location.origin);
         }
     } catch (_) {}
