@@ -38,6 +38,18 @@ function getRuntimeApiOverride() {
     }
 }
 
+function getWebappHeaders(customHeaders = {}) {
+    const headers = { 'Accept': 'application/json', ...customHeaders };
+    const secretKey = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.WEBAPP_SECRET_KEY) || '';
+    if (secretKey && !secretKey.startsWith('__')) {
+        headers['X-Webapp-Key'] = secretKey;
+    }
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+        headers['X-Telegram-Init-Data'] = window.Telegram.WebApp.initData;
+    }
+    return headers;
+}
+
 function getStoredApiBase() {
     try {
         const stored = normalizeApiBase(localStorage.getItem(API_BASE_STORAGE_KEY) || '');
@@ -1880,11 +1892,12 @@ async function accessLink(url, title, btnElement) {
         console.log('Accessing link for user:', currentUserId);
         console.log('Current balance before:', currentUserBalance);
         
-        const response = await fetch(`${API_BASE}/api/links/access`, {
+        const targetBase = API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
+        const response = await fetch(`${targetBase}/api/links/access`, {
             method: 'POST',
-            headers: {
+            headers: getWebappHeaders({
                 'Content-Type': 'application/json'
-            },
+            }),
             body: JSON.stringify({
                 user_id: currentUserId,
                 link: url
@@ -1892,7 +1905,14 @@ async function accessLink(url, title, btnElement) {
         });
         
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+            try {
+                const errData = await response.json();
+                if (errData && (errData.error || errData.detail)) {
+                    errorMsg = errData.error || errData.detail;
+                }
+            } catch (_) {}
+            throw new Error(errorMsg);
         }
         
         const data = await response.json();
@@ -1987,11 +2007,12 @@ async function reportLink(url, title, btnElement) {
     if (!btnElement) showLoading('Reporting link...');
     
     try {
-        const response = await fetch(`${API_BASE}/api/links/report`, {
+        const targetBase = API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
+        const response = await fetch(`${targetBase}/api/links/report`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: getWebappHeaders({
+                'Content-Type': 'application/json'
+            }),
             body: JSON.stringify({
                 user_id: currentUserId,
                 link: url,
@@ -2230,11 +2251,12 @@ async function submitNewLink() {
     showLoading('Submitting link...');
     
     try {
-        const response = await fetch(`${API_BASE}/api/links/submit`, {
+        const targetBase = API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
+        const response = await fetch(`${targetBase}/api/links/submit`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: getWebappHeaders({
+                'Content-Type': 'application/json'
+            }),
             body: JSON.stringify({
                 user_id: currentUserId,
                 name: name,
@@ -2273,7 +2295,10 @@ async function submitNewLink() {
 // Load pending links for admin
 async function loadPendingLinks(adminId) {
     try {
-        const response = await fetch(`${API_BASE}/api/links/pending?admin_id=${adminId}`);
+        const targetBase = API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
+        const response = await fetch(`${targetBase}/api/links/pending?admin_id=${adminId}`, {
+            headers: getWebappHeaders()
+        });
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -2391,11 +2416,12 @@ async function approvePendingLink(linkUrl, linkName, linkDescription) {
     showLoading('Approving link...');
     
     try {
-        const response = await fetch(`${API_BASE}/api/links/approve`, {
+        const targetBase = API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
+        const response = await fetch(`${targetBase}/api/links/approve`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: getWebappHeaders({
+                'Content-Type': 'application/json'
+            }),
             body: JSON.stringify({
                 admin_id: currentUserId,
                 link: linkUrl,
@@ -2455,11 +2481,12 @@ async function rejectPendingLink(linkUrl) {
     showLoading('Rejecting link...');
     
     try {
-        const response = await fetch(`${API_BASE}/api/links/reject`, {
+        const targetBase = API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
+        const response = await fetch(`${targetBase}/api/links/reject`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: getWebappHeaders({
+                'Content-Type': 'application/json'
+            }),
             body: JSON.stringify({
                 admin_id: currentUserId,
                 link: linkUrl
@@ -2494,7 +2521,10 @@ async function rejectPendingLink(linkUrl) {
 // Load reported links for admin
 async function loadReportedLinks(adminId) {
     try {
-        const response = await fetch(`${API_BASE}/api/links/reported?admin_id=${adminId}`);
+        const targetBase = API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
+        const response = await fetch(`${targetBase}/api/links/reported?admin_id=${adminId}`, {
+            headers: getWebappHeaders()
+        });
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -2612,11 +2642,12 @@ window.verifyLink = async function(linkUrl, status) {
     showLoading(`Verifying link as ${statusText}...`);
     
     try {
-        const response = await fetch(`${API_BASE}/api/links/verify`, {
+        const targetBase = API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
+        const response = await fetch(`${targetBase}/api/links/verify`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: getWebappHeaders({
+                'Content-Type': 'application/json'
+            }),
             body: JSON.stringify({
                 admin_id: currentUserId,
                 link: linkUrl,
