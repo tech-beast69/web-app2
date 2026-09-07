@@ -1521,20 +1521,71 @@ function escapeRegex(str) {
 
 // Create a link card element
 function createLinkCard(linkData, index) {
+    if (typeof linkData === 'string') {
+        try {
+            linkData = JSON.parse(linkData);
+        } catch (e) {
+            linkData = { link: linkData, title: linkData };
+        }
+    }
+
     const card = document.createElement('div');
     card.className = 'link-card';
     card.dataset.index = index;
     
     // Extract proper title and username
     let title = linkData.title || linkData.name || 'Untitled';
-    const description = linkData.description || 'No description available';
-    const url = linkData.link || '#';
+    const description = linkData.description || linkData.extra || 'No description available';
+    let url = linkData.link || linkData.url || '#';
+
+    // Defensive: in case url contains serialized JSON string
+    if (typeof url === 'string' && url.trim().startsWith('{')) {
+        try {
+            const parsedObj = JSON.parse(url);
+            if (parsedObj && (parsedObj.link || parsedObj.url)) {
+                url = parsedObj.link || parsedObj.url;
+                if (!linkData.title || linkData.title === linkData.link) {
+                    title = parsedObj.title || parsedObj.name || title;
+                }
+            }
+        } catch (e) {}
+    }
+
+    // Defensive: in case title contains serialized JSON or trailing JSON fragment
+    if (typeof title === 'string' && (title.includes('", "title":') || title.trim().startsWith('{'))) {
+        try {
+            const parsedTitle = JSON.parse(title);
+            if (parsedTitle && (parsedTitle.title || parsedTitle.name)) {
+                title = parsedTitle.title || parsedTitle.name;
+            }
+        } catch (e) {
+            if (title.includes('", "title":')) {
+                const parts = title.split('", "title":');
+                if (parts.length > 1) {
+                    title = parts[1].replace(/^[ "]+|[ "}]+$/g, '');
+                }
+            }
+        }
+    }
+
+    // Normalize URL
+    if (typeof url === 'string') {
+        url = url.trim();
+        if (url && (url.startsWith('t.me/') || url.startsWith('telegram.me/'))) {
+            url = 'https://' + url;
+        } else if (url && url.startsWith('@')) {
+            url = 'https://t.me/' + url.substring(1);
+        }
+    }
     
     // Get username from username_display field
     let username = linkData.username_display || linkData.username || null;
+    if (username && username.startsWith('@')) {
+        username = username.substring(1);
+    }
     
-    // Check if title is an invite code (starts with + or is alphanumeric hash)
-    const isInviteCode = title.startsWith('+') || (title.length > 15 && /^[a-zA-Z0-9_-]+$/.test(title));
+    // Check if title is literally an invite code slug (starts with + or equals url slug)
+    const isInviteCode = title.startsWith('+') || (url && url.includes('/+' + title));
     
     // If title is invite code, try to use username or extract from URL
     if (isInviteCode) {
@@ -1545,37 +1596,42 @@ function createLinkCard(linkData, index) {
             if (username) {
                 title = username;
             } else {
-                // Last resort: make invite code more readable
-                title = 'Invite Link';
+                title = 'Telegram Community';
             }
         }
     }
     
     // If title starts with @, it's a username - extract it
     if (title.startsWith('@')) {
-        username = title.substring(1); // Store username without @
-        title = username; // Display name without @
+        username = title.substring(1);
+        title = username;
     } else if (title.includes('@')) {
-        // Extract username from title if it contains @
         const usernameMatch = title.match(/@(\w+)/);
         if (usernameMatch) {
             username = usernameMatch[1];
-            // Clean title by removing @username
             title = title.replace(/@\w+/g, '').trim();
         }
     }
     
-    // If no username yet, try to extract from URL
     if (!username) {
         username = extractUsername(url);
     }
     
-    // Clean up title - remove "Group" and "Channel" keywords
-    title = title.replace(/\s*(Group|Channel)\s*/gi, '').trim();
+    // If title is generic placeholder, use username or community fallback
+    if (/^(telegram\s+)?(group|channel)$/i.test(title.trim())) {
+        if (username) {
+            title = username;
+        } else {
+            title = 'Telegram Community';
+        }
+    }
     
     // If title is empty after cleanup, use username
     if (!title && username) {
         title = username;
+    }
+    if (!title) {
+        title = 'Telegram Link';
     }
     
     // Capitalize first letter of title
@@ -1752,10 +1808,33 @@ async function accessLink(url, title, btnElement) {
         btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
         btnElement.disabled = true;
     }
+
+    // Defensive: resolve JSON or relative URL
+    if (typeof url === 'string' && url.trim().startsWith('{')) {
+        try {
+            const parsed = JSON.parse(url);
+            if (parsed && (parsed.link || parsed.url)) {
+                url = parsed.link || parsed.url;
+            }
+        } catch (e) {}
+    }
+    if (url && (url.startsWith('t.me/') || url.startsWith('telegram.me/'))) {
+        url = 'https://' + url;
+    } else if (url && url.startsWith('@')) {
+        url = 'https://t.me/' + url.substring(1);
+    }
     
     // Auto-load user if Telegram user is available but currentUserId not set
-    if (!currentUserId && telegramUser && telegramUser.id) {
-        await loadUserForLinks(telegramUser.id);
+    if (!currentUserId) {
+        if (telegramUser && telegramUser.id) {
+            await loadUserForLinks(telegramUser.id);
+        } else {
+            const urlParams = new URLSearchParams(window.location.search);
+            const fallbackUserId = urlParams.get('user_id') || urlParams.get('admin_id') || localStorage.getItem('telegram_user_id');
+            if (fallbackUserId) {
+                await loadUserForLinks(fallbackUserId);
+            }
+        }
     }
     
     if (!currentUserId) {
@@ -1777,7 +1856,7 @@ async function accessLink(url, title, btnElement) {
         return;
     }
 
-    if (currentUserBalance < 10) {
+    if (currentUserBalance < 10 && !isUserAdmin) {
         showNotification('Insufficient tokens! You need 10 tokens to access a link.', 'error');
         if (btnElement) {
             btnElement.innerHTML = originalBtnContent;
