@@ -3023,7 +3023,7 @@ function updateBlocklistDisplay(words) {
 
     blocklistItems.innerHTML = words.map(word => `
         <li class="blocklist-item">
-            <span>${escapeHtml(word)}</span>
+            <span class="blocklist-word">${escapeHtml(word)}</span>
             <button class="delete-btn" onclick='removeBlocklistWord(${JSON.stringify(word)})'>
                 <i class="fas fa-trash"></i>
             </button>
@@ -3046,11 +3046,11 @@ function updateBansDisplay(bans) {
     bansList.innerHTML = Object.entries(bans).map(([userId, banInfo]) => `
         <li class="ban-item">
             <div>
-                <div><strong>User ID:</strong> ${userId}</div>
-                <div style="color: #666; margin-top: 5px;">
+                <div class="ban-user-id"><strong>User ID:</strong> ${userId}</div>
+                <div class="ban-reason" style="margin-top: 5px;">
                     <strong>Reason:</strong> ${escapeHtml(banInfo.reason || 'No reason')}
                 </div>
-                <div style="color: #999; font-size: 0.85em; margin-top: 3px;">
+                <div class="ban-date" style="font-size: 0.85em; margin-top: 3px;">
                     Banned: ${new Date(banInfo.banned_at).toLocaleDateString()}
                 </div>
             </div>
@@ -3078,12 +3078,12 @@ function updateWarnsDisplay(warns) {
         return `
         <li class="ban-item">
             <div>
-                <div><strong>User ID:</strong> ${userId}</div>
-                <div style="color: #666; margin-top: 5px;">
+                <div class="ban-user-id"><strong>User ID:</strong> ${userId}</div>
+                <div class="ban-reason" style="margin-top: 5px;">
                     <strong>Warnings:</strong> ${warnInfo.count} / ${warnLimit}
                 </div>
                 ${lastReason ? `
-                    <div style="color: #999; font-size: 0.85em; margin-top: 5px;">
+                    <div class="ban-date" style="font-size: 0.85em; margin-top: 5px;">
                         Last reason: ${lastReason}
                     </div>
                 ` : ''}
