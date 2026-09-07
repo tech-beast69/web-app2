@@ -95,6 +95,7 @@ function buildApiCandidates() {
     // mixed-content requests are blocked and only add noise/latency.
     // Priority: 1. configured (from GitHub Secrets), 2. runtime override, 3. stored last good, 4. current
     const candidatesBase = [configured, runtime, stored, current, originCandidate, DEFAULT_API_BASE].filter(Boolean);
+    const isHttpPage = window.location.protocol === 'http:';
     const candidates = isHttpPage
         ? [...candidatesBase, ...localCandidates]
         : candidatesBase.filter((c) => !/^http:\/\/(localhost|127\.)/.test(c));
@@ -223,6 +224,9 @@ function withAdminId(url, userId) {
         const resolved = new URL(url, window.location.href);
         if (!resolved.searchParams.get('admin_id') && !resolved.searchParams.get('user_id')) {
             resolved.searchParams.set('admin_id', normalized);
+        }
+        if (window.location.hash && !resolved.hash) {
+            resolved.hash = window.location.hash;
         }
         return resolved.toString();
     } catch (_) {
@@ -2793,14 +2797,14 @@ window.updateLockForGroup = async function(groupId, key, value, adminId) {
 // otherwise fall back to environment-detection with a localhost default.
 let API_BASE_URL = (window.API_BASE) || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || null;
 
-if (!API_BASE_URL) {
+if (!API_BASE_URL || API_BASE_URL.includes('github.io')) {
     const hostname = window.location.hostname || '';
     if (['localhost', '127.0.0.1', '0.0.0.0'].includes(hostname) || window.location.protocol === 'file:') {
         API_BASE_URL = 'http://localhost:3027';
-    } else if (window.location.origin && window.location.origin !== 'null' && !hostname.includes('telegram.org')) {
+    } else if (window.location.origin && window.location.origin !== 'null' && !hostname.includes('telegram.org') && !hostname.includes('github.io')) {
         API_BASE_URL = window.location.origin;
     } else {
-        API_BASE_URL = window.API_BASE || '';
+        API_BASE_URL = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || window.API_BASE || '';
     }
 }
 
@@ -2848,7 +2852,9 @@ if (userId) {
 async function loadGroups() {
     try {
         await ensureApiBaseReachable();
-        const activeApiBase = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) || API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || 'http://localhost:3027';
+        const activeApiBase = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL && !API_BASE_URL.includes('github.io')) 
+            ? API_BASE_URL 
+            : (API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '');
         const cacheBuster = `_t=${Date.now()}`;
 
         // Append signed initData when present so the backend can verify this
@@ -2877,13 +2883,14 @@ async function loadGroups() {
         console.log('Current location:', window.location.href);
         console.log('Protocol:', window.location.protocol);
 
-        let response = await fetch(managedUrl);
+        const requestHeaders = getWebappHeaders();
+        let response = await fetch(managedUrl, { headers: requestHeaders });
         console.log('Managed response status:', response.status);
 
         // Backward compatibility: older servers may not expose /api/groups/managed yet.
         if (!response.ok && (response.status === 404 || response.status === 405)) {
             console.warn('Managed groups endpoint unavailable, trying legacy endpoint:', legacyUrl);
-            response = await fetch(legacyUrl);
+            response = await fetch(legacyUrl, { headers: requestHeaders });
             console.log('Legacy response status:', response.status);
         }
         
@@ -3033,7 +3040,12 @@ async function openGroupSettings(groupId) {
     try {
         // Add cache buster to prevent browser caching
         const cacheBuster = `?_t=${Date.now()}`;
-        const response = await fetch(`${API_BASE_URL}/api/group/${groupId}/config${cacheBuster}`);
+        const targetBase = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL && !API_BASE_URL.includes('github.io')) 
+            ? API_BASE_URL 
+            : (API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '');
+        const response = await fetch(`${targetBase}/api/group/${groupId}/config${cacheBuster}`, {
+            headers: getWebappHeaders()
+        });
 
         console.log('Response status:', response.status);
         console.log('Response OK:', response.ok);
