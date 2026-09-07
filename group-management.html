@@ -30,7 +30,7 @@
                     <h1><i class="fas fa-users-cog"></i> Group Management Dashboard</h1>
                     <p class="subtitle">Manage all your Telegram groups from one place</p>
                 </div>
-                <a href="index.html" class="btn-secondary" style="text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s ease; background: white; color: #0f172a; border: 2px solid rgba(255, 255, 255, 0.3); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);">
+                <a href="index.html" class="btn-secondary" style="text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);">
                     <i class="fas fa-arrow-left"></i> Back to Dashboard
                 </a>
             </div>
@@ -497,11 +497,10 @@
                     <div class="settings-section">
                         <h3><i class="fas fa-slash"></i> Disabled Commands</h3>
                         <p style="color: #666;">Prevent specific bot commands from working in this group</p>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0;">
-                            <div>
-                                <div style="font-weight:600;">Disable all commands for normal users</div>
-                                <div style="color:#666;font-size:0.9em;">When enabled, only admins can use bot commands
-                                    in this group</div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label">Disable all commands for normal users</div>
+                                <div class="setting-description">When enabled, only admins can use bot commands in this group</div>
                             </div>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="disableAllCommandsToggle"
