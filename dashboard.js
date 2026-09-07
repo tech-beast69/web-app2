@@ -8,24 +8,21 @@ console.log('window.location.hostname:', window.location.hostname);
 console.log('DASHBOARDCONFIG available:', !!(window.DASHBOARDCONFIG));
 console.log('DASHBOARDCONFIG:', window.DASHBOARDCONFIG);
 
-// Initialize API_BASE with proper fallback
+// Initialize API_BASE with proper fallback from injected config
 let API_BASE;
 try {
-    API_BASE = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || 'https://1e4fecb5.glacierhosting.org';
-    console.log('✅ API_BASE initialized from config:', API_BASE);
+    API_BASE = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
 } catch (error) {
-    console.error('❌ Error initializing API_BASE:', error);
-    API_BASE = 'https://1e4fecb5.glacierhosting.org';
-    console.log('Using fallback API_BASE:', API_BASE);
+    API_BASE = '';
 }
 
-const REFRESH_INTERVAL = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.REFRESH_INTERVAL) || 5000; // 5 seconds (matching config.js default)
+const REFRESH_INTERVAL = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.REFRESH_INTERVAL) || 5000;
 const DEBUG = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.DEBUG) || false;
 
 // Expose API base to other scripts/pages if needed
-try { window.API_BASE = API_BASE; } catch (e) { console.error('Failed to expose API_BASE:', e); }
+try { window.API_BASE = API_BASE; } catch (e) {}
 
-const DEFAULT_API_BASE = 'https://1e4fecb5.glacierhosting.org';
+const DEFAULT_API_BASE = API_BASE;
 const API_BASE_STORAGE_KEY = 'dashboard_last_good_api_base';
 
 function normalizeApiBase(url) {
@@ -2754,7 +2751,7 @@ if (!API_BASE_URL) {
     } else if (window.location.origin && window.location.origin !== 'null' && !hostname.includes('telegram.org')) {
         API_BASE_URL = window.location.origin;
     } else {
-        API_BASE_URL = 'https://1e4fecb5.glacierhosting.org';
+        API_BASE_URL = window.API_BASE || '';
     }
 }
 
