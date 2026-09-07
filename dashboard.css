@@ -1866,22 +1866,38 @@ mark {
     color: var(--dark);
 }
 
-/* Enhanced Notifications with Better Animation */
+/* Enhanced Notifications with Better Animation & Contrast */
 .notification {
     position: fixed;
     top: 20px;
     right: 20px;
-    background: white;
-    padding: 20px 28px;
+    background: #ffffff;
+    color: #0f172a !important;
+    padding: 18px 24px;
     border-radius: 16px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18), 0 4px 12px rgba(0, 0, 0, 0.08);
     display: flex;
     align-items: center;
-    gap: 15px;
-    max-width: 420px;
+    gap: 16px;
+    max-width: 440px;
     z-index: 10000;
     animation: notificationSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    border: 1px solid var(--border);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(8px);
+}
+
+.notification span {
+    color: #0f172a !important;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.45;
+    word-break: break-word;
+    flex: 1;
+}
+
+.notification i {
+    font-size: 1.4em;
+    flex-shrink: 0;
 }
 
 @keyframes notificationSlideIn {
@@ -1969,51 +1985,46 @@ mark {
     }
 }
 
-.notification.fade-out {
-    animation: fadeOut 0.3s ease-out forwards;
-}
-
-@keyframes fadeOut {
-    to {
-        opacity: 0;
-        transform: translateX(100px);
-    }
-}
-
 .notification-success {
-    border-left: 4px solid var(--success);
+    border-left: 6px solid #10b981 !important;
 }
 
 .notification-success i {
-    color: var(--success);
-    font-size: 1.3em;
+    color: #10b981 !important;
 }
 
 .notification-error {
-    border-left: 4px solid var(--danger);
+    border-left: 6px solid #ef4444 !important;
 }
 
 .notification-error i {
-    color: var(--danger);
-    font-size: 1.3em;
+    color: #ef4444 !important;
 }
 
 .notification-warning {
-    border-left: 4px solid var(--warning);
+    border-left: 6px solid #f59e0b !important;
 }
 
 .notification-warning i {
-    color: var(--warning);
-    font-size: 1.3em;
+    color: #f59e0b !important;
 }
 
 .notification-info {
-    border-left: 4px solid var(--info);
+    border-left: 6px solid #3b82f6 !important;
 }
 
 .notification-info i {
-    color: var(--info);
-    font-size: 1.3em;
+    color: #3b82f6 !important;
+}
+
+@media (max-width: 600px) {
+    .notification {
+        top: 16px;
+        left: 16px;
+        right: 16px;
+        max-width: calc(100% - 32px);
+        padding: 16px 20px;
+    }
 }
 
 /* Enhanced Loading Overlay with Glassmorphism */
@@ -3616,6 +3627,69 @@ body.tg-dark-theme .group-management-container header a.btn-secondary {
 
 body.tg-dark-theme .empty-state p {
     color: #94a3b8 !important;
+}
+
+/* Dark Theme Notification Overrides */
+body.tg-dark-theme .notification {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.65), 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.tg-dark-theme .notification span {
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .notification-success {
+    border-left: 6px solid #10b981 !important;
+    background: #0f241d !important;
+}
+
+body.tg-dark-theme .notification-success i {
+    color: #34d399 !important;
+}
+
+body.tg-dark-theme .notification-error {
+    border-left: 6px solid #ef4444 !important;
+    background: #271418 !important;
+}
+
+body.tg-dark-theme .notification-error i {
+    color: #f87171 !important;
+}
+
+body.tg-dark-theme .notification-warning {
+    border-left: 6px solid #f59e0b !important;
+    background: #271e11 !important;
+}
+
+body.tg-dark-theme .notification-warning i {
+    color: #fbbf24 !important;
+}
+
+body.tg-dark-theme .notification-info {
+    border-left: 6px solid #3b82f6 !important;
+    background: #121e33 !important;
+}
+
+body.tg-dark-theme .notification-info i {
+    color: #60a5fa !important;
+}
+
+/* Dark Theme Error Banner */
+body.tg-dark-theme .error-banner {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.3) 100%) !important;
+    border-left: 5px solid #ef4444 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+body.tg-dark-theme .error-content span {
+    color: #fecaca !important;
+}
+
+body.tg-dark-theme .error-content i {
+    color: #f87171 !important;
 }
 
 
