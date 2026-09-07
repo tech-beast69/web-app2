@@ -2438,6 +2438,7 @@ mark {
 
 .modal-content {
     background: white;
+    color: var(--dark, #0f172a);
     border-radius: 24px;
     max-width: 920px;
     width: 92%;
@@ -2505,6 +2506,7 @@ mark {
     padding: 25px;
     overflow-y: auto;
     flex: 1;
+    color: var(--dark, #0f172a);
 }
 
 .settings-section {
@@ -2518,6 +2520,17 @@ mark {
     align-items: center;
     gap: 10px;
     font-size: 1.2em;
+}
+
+.settings-section h4,
+.modal-body h4,
+.add-form h4,
+.group-management-container h4 {
+    color: var(--dark, #0f172a);
+    font-size: 1.1em;
+    font-weight: 700;
+    margin-top: 20px;
+    margin-bottom: 12px;
 }
 
 .setting-item {
@@ -2604,6 +2617,8 @@ input:checked + .toggle-slider:before {
     border: 2px solid #e9ecef;
     border-radius: 8px;
     font-size: 1em;
+    background: white;
+    color: var(--dark, #0f172a);
     transition: all 0.3s ease;
 }
 
@@ -2622,6 +2637,8 @@ input:checked + .toggle-slider:before {
     font-size: 1em;
     font-family: inherit;
     resize: vertical;
+    background: white;
+    color: var(--dark, #0f172a);
     transition: all 0.3s ease;
 }
 
@@ -2650,12 +2667,29 @@ input:checked + .toggle-slider:before {
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     border: 1px solid rgba(0,0,0,0.05);
     transition: all 0.2s ease;
+    color: var(--dark, #0f172a);
 }
 
 .filter-item:hover, .blocklist-item:hover, .ban-item:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0,0,0,0.08);
     border-color: rgba(102, 126, 234, 0.2);
+}
+
+.blocklist-item span,
+.blocklist-word {
+    font-weight: 600;
+    color: var(--dark, #0f172a);
+    font-size: 1.05em;
+    letter-spacing: 0.2px;
+}
+
+.ban-item div {
+    color: var(--dark, #0f172a);
+}
+
+.ban-item strong {
+    color: #1e293b;
 }
 
 .filter-trigger {
@@ -3357,4 +3391,231 @@ body.tg-dark-theme footer {
     border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
     color: #64748b !important;
 }
+
+/* ============================================================================ */
+/* DARK THEME GROUP MANAGEMENT & MODAL ENHANCEMENTS */
+/* ============================================================================ */
+
+body.tg-dark-theme .modal-content {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7) !important;
+}
+
+body.tg-dark-theme .modal-body {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .settings-section h3 {
+    color: #818cf8 !important;
+}
+
+body.tg-dark-theme .settings-section h4,
+body.tg-dark-theme .modal-body h4,
+body.tg-dark-theme .add-form h4,
+body.tg-dark-theme .group-management-container h4,
+body.tg-dark-theme h4 {
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .settings-section p,
+body.tg-dark-theme .settings-section p[style*="color"] {
+    color: #94a3b8 !important;
+}
+
+body.tg-dark-theme .setting-item {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+}
+
+body.tg-dark-theme .setting-item:hover {
+    background: rgba(51, 65, 85, 0.85) !important;
+    border-color: rgba(99, 102, 241, 0.4) !important;
+}
+
+body.tg-dark-theme .setting-label {
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .setting-description {
+    color: #94a3b8 !important;
+}
+
+/* Dark Theme List Cards (Blocklist, Filters, Bans, Warnings) */
+body.tg-dark-theme .filter-item,
+body.tg-dark-theme .blocklist-item,
+body.tg-dark-theme .ban-item {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .filter-item:hover,
+body.tg-dark-theme .blocklist-item:hover,
+body.tg-dark-theme .ban-item:hover {
+    background: rgba(51, 65, 85, 0.9) !important;
+    border-color: rgba(99, 102, 241, 0.5) !important;
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.2) !important;
+}
+
+body.tg-dark-theme .blocklist-item span,
+body.tg-dark-theme .blocklist-word {
+    color: #f8fafc !important;
+    font-weight: 600;
+}
+
+body.tg-dark-theme .filter-trigger {
+    color: #818cf8 !important;
+}
+
+body.tg-dark-theme .filter-response {
+    color: #cbd5e1 !important;
+}
+
+body.tg-dark-theme .ban-item div {
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .ban-item strong {
+    color: #818cf8 !important;
+}
+
+body.tg-dark-theme .ban-item div[style*="color: #666"],
+body.tg-dark-theme .ban-item div[style*="color:#666"] {
+    color: #94a3b8 !important;
+}
+
+body.tg-dark-theme .ban-item div[style*="color: #999"],
+body.tg-dark-theme .ban-item div[style*="color:#999"] {
+    color: #64748b !important;
+}
+
+/* Dark Theme Forms & Inputs */
+body.tg-dark-theme .add-form {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35) !important;
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .form-label {
+    color: #cbd5e1 !important;
+}
+
+body.tg-dark-theme .input-field,
+body.tg-dark-theme .textarea-field {
+    background: rgba(15, 23, 42, 0.85) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .input-field:focus,
+body.tg-dark-theme .textarea-field:focus {
+    border-color: #818cf8 !important;
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25) !important;
+}
+
+body.tg-dark-theme .input-field::placeholder,
+body.tg-dark-theme .textarea-field::placeholder {
+    color: #64748b !important;
+}
+
+/* Dark Theme Tabs */
+body.tg-dark-theme .tab {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #94a3b8 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+body.tg-dark-theme .tab:hover {
+    color: #818cf8 !important;
+    border-color: #818cf8 !important;
+    background: rgba(51, 65, 85, 0.85) !important;
+}
+
+body.tg-dark-theme .tab.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+}
+
+/* Dark Theme Delete / Danger Buttons */
+body.tg-dark-theme .delete-btn {
+    background: rgba(239, 68, 68, 0.18) !important;
+    color: #f87171 !important;
+    border: 1px solid rgba(239, 68, 68, 0.35) !important;
+}
+
+body.tg-dark-theme .delete-btn:hover {
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Dark Theme Federation, Reactions, and Cards */
+body.tg-dark-theme #federationInfo {
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme #federationInfo div {
+    color: #cbd5e1 !important;
+}
+
+body.tg-dark-theme #federationInfo strong {
+    color: #818cf8 !important;
+}
+
+body.tg-dark-theme #federationInfo span {
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .emoji-preview {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body.tg-dark-theme .emoji-preview h4 {
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .emoji-item {
+    background: rgba(15, 23, 42, 0.85) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .user-info-card {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .pending-card {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border-color: rgba(196, 181, 253, 0.35) !important;
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .reported-card {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border-color: rgba(252, 165, 165, 0.35) !important;
+    color: #f8fafc !important;
+}
+
+body.tg-dark-theme .group-management-container header a.btn-secondary {
+    background: rgba(30, 41, 59, 0.85) !important;
+    color: #f8fafc !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+body.tg-dark-theme .empty-state p {
+    color: #94a3b8 !important;
+}
+
 
