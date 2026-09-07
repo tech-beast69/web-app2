@@ -72,20 +72,27 @@ if (DASHBOARDCONFIG.APIURL) {
 window.DASHBOARDCONFIG = DASHBOARDCONFIG;
 window.API_BASE = DASHBOARDCONFIG.APIURL;
 
-// Auto-attach X-Webapp-Key header to all outgoing requests towards backend API
+// Auto-attach X-Webapp-Key header and resolve API URLs for all outgoing backend requests
 (function() {
     const originalFetch = window.fetch;
     if (typeof originalFetch !== 'function') return;
     window.fetch = function(url, options) {
         options = options || {};
         try {
-            const urlStr = (typeof url === 'string') ? url : (url && url.url ? url.url : '');
+            let urlStr = (typeof url === 'string') ? url : (url && url.url ? url.url : '');
             const cfg = window.DASHBOARDCONFIG;
             const apiBase = (cfg && cfg.APIURL) || window.API_BASE || '';
             const secretKey = (cfg && cfg.WEBAPP_SECRET_KEY) || '';
             
-            // Attach X-Webapp-Key if configured and request is going to our backend API
-            if (secretKey && !secretKey.startsWith('__') && apiBase && urlStr.startsWith(apiBase)) {
+            // If relative /api/* path is fetched, rewrite it to full backend API base URL
+            if (apiBase && urlStr.startsWith('/api/')) {
+                urlStr = `${apiBase}${urlStr}`;
+                url = urlStr;
+            }
+
+            // Attach X-Webapp-Key if configured and request targets our backend API
+            const isBackendCall = (apiBase && urlStr.startsWith(apiBase)) || urlStr.includes('/api/');
+            if (secretKey && !secretKey.startsWith('__') && isBackendCall) {
                 if (options.headers instanceof Headers) {
                     if (!options.headers.has('X-Webapp-Key')) {
                         options.headers.set('X-Webapp-Key', secretKey);

@@ -40,7 +40,12 @@ function getRuntimeApiOverride() {
 
 function getStoredApiBase() {
     try {
-        return normalizeApiBase(localStorage.getItem(API_BASE_STORAGE_KEY) || '');
+        const stored = normalizeApiBase(localStorage.getItem(API_BASE_STORAGE_KEY) || '');
+        if (stored.includes('github.io') || stored.includes('telegram.org')) {
+            try { localStorage.removeItem(API_BASE_STORAGE_KEY); } catch (_) {}
+            return '';
+        }
+        return stored;
     } catch (_) {
         return '';
     }
@@ -76,8 +81,8 @@ function buildApiCandidates() {
 
     // Never probe http://localhost from an HTTPS page (GitHub Pages / Telegram):
     // mixed-content requests are blocked and only add noise/latency.
-    const isHttpPage = window.location.protocol === 'http:' || window.location.protocol === 'file:';
-    const candidatesBase = [runtime, stored, current, configured, originCandidate, DEFAULT_API_BASE].filter(Boolean);
+    // Priority: 1. configured (from GitHub Secrets), 2. runtime override, 3. stored last good, 4. current
+    const candidatesBase = [configured, runtime, stored, current, originCandidate, DEFAULT_API_BASE].filter(Boolean);
     const candidates = isHttpPage
         ? [...candidatesBase, ...localCandidates]
         : candidatesBase.filter((c) => !/^http:\/\/(localhost|127\.)/.test(c));
@@ -117,10 +122,15 @@ async function probeApiBase(candidate) {
     }
 
     try {
+        const headers = { 'Accept': 'application/json' };
+        const secretKey = (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.WEBAPP_SECRET_KEY) || '';
+        if (secretKey && !secretKey.startsWith('__')) {
+            headers['X-Webapp-Key'] = secretKey;
+        }
         const res = await fetchWithTimeout(`${base}/api/status`, {
             method: 'GET',
             cache: 'no-store',
-            headers: { 'Accept': 'application/json' }
+            headers: headers
         }, 15000);
         return res.ok;
     } catch (err) {
