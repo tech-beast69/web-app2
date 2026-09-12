@@ -107,6 +107,9 @@
                     <button class="tab" onclick="switchTab('mediaReactions', event)">
                         <i class="fas fa-heart"></i> Media Reactions
                     </button>
+                    <button class="tab" onclick="switchTab('vipReminders', event)" id="vipRemindersTabBtn">
+                        <i class="fas fa-crown" style="color: #ffd700;"></i> VIP Reminders
+                    </button>
                 </div>
 
                 <!-- General Settings Tab -->
@@ -715,6 +718,199 @@
                         <div class="emoji-preview">
                             <h4>Current Emojis:</h4>
                             <div id="emojiList" class="emoji-grid"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIP Reminders & Member Tracking Tab -->
+                <div id="vipRemindersTab" class="tab-content">
+                    <div class="settings-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+                            <div>
+                                <h3 style="margin: 0; color: #ffd700;"><i class="fas fa-crown"></i> VIP Membership & Expiry Reminders</h3>
+                                <p class="setting-description" style="margin-top: 4px;">Track VIP group members and configure automated renewal reminder notices</p>
+                            </div>
+                            <span class="vip-badge" id="vipBadgeStatus" style="background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; font-weight: 700; padding: 4px 12px; border-radius: 20px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-gem"></i> Premium Feature
+                            </span>
+                        </div>
+
+                        <!-- Locked Banner for Free-Tier Users -->
+                        <div id="vipLockedBanner" class="vip-locked-card" style="display: none; background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 14px; padding: 20px; margin-bottom: 20px; text-align: center;">
+                            <i class="fas fa-lock" style="font-size: 36px; color: #ffd700; margin-bottom: 12px;"></i>
+                            <h4 style="margin: 0 0 8px 0; color: #fff;">Bot Premium Required</h4>
+                            <p style="color: #aaa; font-size: 14px; margin: 0 0 16px 0;">This feature allows you to track VIP subscribers in your group, configure reminder alert schedules (e.g. 3 days, 1 day before expiry), and send automated notifications.</p>
+                            <a href="https://t.me/the_witcher88" target="_blank" class="btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 10px; background: linear-gradient(135deg, #ffd700, #ff9900); color: #000; font-weight: 700;">
+                                <i class="fas fa-arrow-up"></i> Upgrade to Bot Premium
+                            </a>
+                        </div>
+
+                        <!-- VIP Management Container (Visible to Premium Users) -->
+                        <div id="vipActiveContainer">
+                            <!-- Card 1: Reminder Timing & Delivery Config -->
+                            <div class="vip-subcard" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+                                <h4 style="margin: 0 0 14px 0; display: flex; align-items: center; gap: 8px; color: #e0e0e0;">
+                                    <i class="fas fa-bell" style="color: #4da6ff;"></i> Automated Reminder Schedule
+                                </h4>
+
+                                <div class="setting-item" style="border: none; padding: 0 0 12px 0;">
+                                    <div class="setting-info">
+                                        <div class="setting-label">Enable Automated Expiry Reminders</div>
+                                        <div class="setting-description">Automatically notify group members when their premium is close to expiration</div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="vipReminderEnabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+
+                                <div style="margin-top: 12px; margin-bottom: 16px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #bbb;">
+                                        Send Reminders On (Days Before Expiry):
+                                    </label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                        <label class="alert-day-chip" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.06); padding: 8px 14px; border-radius: 8px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); font-size: 13px;">
+                                            <input type="checkbox" id="alertDay7" value="7"> 7 Days Before
+                                        </label>
+                                        <label class="alert-day-chip" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.06); padding: 8px 14px; border-radius: 8px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); font-size: 13px;">
+                                            <input type="checkbox" id="alertDay3" value="3" checked> 3 Days Before
+                                        </label>
+                                        <label class="alert-day-chip" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.06); padding: 8px 14px; border-radius: 8px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); font-size: 13px;">
+                                            <input type="checkbox" id="alertDay2" value="2"> 2 Days Before
+                                        </label>
+                                        <label class="alert-day-chip" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.06); padding: 8px 14px; border-radius: 8px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); font-size: 13px;">
+                                            <input type="checkbox" id="alertDay1" value="1" checked> 1 Day Before (Tomorrow)
+                                        </label>
+                                        <label class="alert-day-chip" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.06); padding: 8px 14px; border-radius: 8px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); font-size: 13px;">
+                                            <input type="checkbox" id="alertDay0" value="0" checked> Final Day (Today)
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px;">
+                                    <div>
+                                        <label for="vipDeliveryMode" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #bbb;">Notification Delivery Method</label>
+                                        <select id="vipDeliveryMode" class="input-field" style="width: 100%; padding: 10px; border-radius: 8px; background: #1a1a24; color: #fff; border: 1px solid rgba(255,255,255,0.15);">
+                                            <option value="group">📢 Group Chat Only (Tag Member)</option>
+                                            <option value="dm">📩 Private DM Only (Direct Message)</option>
+                                            <option value="both">⚡ Both (Group Mention + Private DM)</option>
+                                        </select>
+                                    </div>
+                                    <div class="setting-item" style="border: none; padding: 0;">
+                                        <div class="setting-info">
+                                            <div class="setting-label">Auto-Revoke on Expiry</div>
+                                            <div class="setting-description">Automatically revoke VIP access once membership expires</div>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="vipAutoRemoveExpired">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="margin-bottom: 14px;">
+                                    <label for="vipCustomMessage" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #bbb;">
+                                        Custom Message Template (Optional)
+                                    </label>
+                                    <textarea id="vipCustomMessage" rows="3" class="input-field" style="width: 100%; padding: 10px; border-radius: 8px; background: #1a1a24; color: #fff; border: 1px solid rgba(255,255,255,0.15); font-family: inherit; font-size: 13px; resize: vertical;" placeholder="Leave empty for default reminder. Available variables: {user}, {days_left}, {expiry_date}, {group_title}"></textarea>
+                                    <div style="font-size: 12px; color: #888; margin-top: 4px;">
+                                        Placeholders: <code style="color: #4da6ff;">{user}</code> <code style="color: #4da6ff;">{days_left}</code> <code style="color: #4da6ff;">{expiry_date}</code> <code style="color: #4da6ff;">{group_title}</code>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
+                                    <button class="btn-secondary" onclick="testGroupVipReminder()" style="padding: 9px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                        <i class="fas fa-paper-plane"></i> Send Test Alert
+                                    </button>
+                                    <button class="btn-primary" onclick="saveGroupVipReminderSettings()" style="padding: 9px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; background: #0088cc; color: #fff; border: none;">
+                                        <i class="fas fa-save"></i> Save Settings
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Card 2: Track & Manage Group VIP Members -->
+                            <div class="vip-subcard" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 18px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                                    <h4 style="margin: 0; display: flex; align-items: center; gap: 8px; color: #e0e0e0;">
+                                        <i class="fas fa-users" style="color: #00cc88;"></i> VIP Member Tracking (<span id="vipTotalCount">0</span>)
+                                    </h4>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn-primary" onclick="toggleAddVipMemberForm()" style="padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; background: linear-gradient(135deg, #00cc88, #009966); color: #fff; border: none; cursor: pointer;">
+                                            <i class="fas fa-user-plus"></i> Add VIP Member
+                                        </button>
+                                        <button class="btn-secondary" onclick="loadGroupVipMembers()" title="Refresh" style="padding: 8px 12px; border-radius: 8px; cursor: pointer;">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Add Member Form (collapsible) -->
+                                <div id="addVipMemberBox" style="display: none; background: rgba(0, 204, 136, 0.06); border: 1px solid rgba(0, 204, 136, 0.2); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+                                    <div style="display: grid; grid-template-columns: 1fr 120px auto; gap: 10px; align-items: end;">
+                                        <div>
+                                            <label style="display: block; font-size: 12px; margin-bottom: 4px; color: #bbb;">Telegram User ID</label>
+                                            <input type="text" id="newVipUserId" class="input-field" placeholder="e.g. 123456789" style="width: 100%; padding: 8px; border-radius: 6px; background: #1a1a24; color: #fff; border: 1px solid rgba(255,255,255,0.2);">
+                                        </div>
+                                        <div>
+                                            <label style="display: block; font-size: 12px; margin-bottom: 4px; color: #bbb;">Duration (Days)</label>
+                                            <input type="number" id="newVipDays" class="input-field" value="30" min="1" max="3650" style="width: 100%; padding: 8px; border-radius: 6px; background: #1a1a24; color: #fff; border: 1px solid rgba(255,255,255,0.2);">
+                                        </div>
+                                        <div style="display: flex; gap: 6px;">
+                                            <button class="btn-primary" onclick="submitAddVipMember()" style="padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; background: #00cc88; color: #fff; border: none;">Add</button>
+                                            <button class="btn-secondary" onclick="toggleAddVipMemberForm()" style="padding: 8px 12px; border-radius: 6px; cursor: pointer;">Cancel</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Stats Row -->
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 14px;">
+                                    <div style="background: rgba(255,255,255,0.04); padding: 10px; border-radius: 8px; text-align: center;">
+                                        <div style="font-size: 18px; font-weight: 700; color: #00cc88;" id="vipActiveCount">0</div>
+                                        <div style="font-size: 11px; color: #aaa;">Active</div>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.04); padding: 10px; border-radius: 8px; text-align: center;">
+                                        <div style="font-size: 18px; font-weight: 700; color: #ffaa00;" id="vipExpiringCount">0</div>
+                                        <div style="font-size: 11px; color: #aaa;">Expiring Soon (&le;3d)</div>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.04); padding: 10px; border-radius: 8px; text-align: center;">
+                                        <div style="font-size: 18px; font-weight: 700; color: #ff4d4d;" id="vipExpiredCount">0</div>
+                                        <div style="font-size: 11px; color: #aaa;">Expired</div>
+                                    </div>
+                                </div>
+
+                                <!-- Filter & Search -->
+                                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                                    <input type="text" id="vipSearchInput" class="input-field" placeholder="Search by User ID..." oninput="filterVipMembersTable()" style="flex: 1; padding: 8px 12px; border-radius: 6px; background: #1a1a24; color: #fff; border: 1px solid rgba(255,255,255,0.15); font-size: 13px;">
+                                    <select id="vipFilterStatus" onchange="filterVipMembersTable()" style="padding: 8px 12px; border-radius: 6px; background: #1a1a24; color: #fff; border: 1px solid rgba(255,255,255,0.15); font-size: 13px;">
+                                        <option value="all">All Members</option>
+                                        <option value="active">Active Only</option>
+                                        <option value="expiring">Expiring Soon</option>
+                                        <option value="expired">Expired Only</option>
+                                    </select>
+                                </div>
+
+                                <!-- Members Table -->
+                                <div style="overflow-x: auto; max-height: 380px; overflow-y: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                                        <thead>
+                                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: #888;">
+                                                <th style="padding: 8px;">User ID</th>
+                                                <th style="padding: 8px;">Status</th>
+                                                <th style="padding: 8px;">Time Left</th>
+                                                <th style="padding: 8px;">Expiry Date</th>
+                                                <th style="padding: 8px; text-align: right;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="vipMembersTableBody">
+                                            <tr>
+                                                <td colspan="5" style="text-align: center; padding: 24px; color: #777;">
+                                                    <i class="fas fa-spinner fa-spin"></i> Loading VIP members...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

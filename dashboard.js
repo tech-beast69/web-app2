@@ -486,6 +486,7 @@ async function fetchUserDetails(userId) {
         
         const data = await response.json();
         console.log('✅ User details fetched:', data);
+        window.currentAuthUser = data;
         
         // Check premium access
         checkPremiumAccess(data);
@@ -498,11 +499,13 @@ async function fetchUserDetails(userId) {
         
         // Use fallback data for testing
         console.log('Using fallback user data for display');
-        updateUserInfoDisplay({
+        const fallbackData = {
             is_admin: true,
             is_premium: false,
             token_balance: 100
-        });
+        };
+        window.currentAuthUser = fallbackData;
+        updateUserInfoDisplay(fallbackData);
     }
 }
 
@@ -510,6 +513,7 @@ async function fetchUserDetails(userId) {
 function updateUserInfoDisplay(userData) {
     console.log('=== Updating user info display ===');
     console.log('User data received:', userData);
+    window.currentAuthUser = userData;
     
     const userInfo = document.getElementById('telegramUserInfo');
     if (!userInfo) {
@@ -3122,6 +3126,9 @@ async function populateGroupSettings(config) {
     // Load federation info (if any)
     await loadFederationInfo();
     
+    // Load VIP reminders and member tracking
+    await loadGroupVipTab();
+
     // Media reactions settings
     document.getElementById('mediaReactionsEnabled').checked = config.media_reactions_enabled || false;
     document.getElementById('mediaReactionEmojis').value = (config.media_reaction_emojis || ["🔥", "❤", "👍", "😍", "🤩", "👌", "😘", "🙊", "💯", "🎉", "😎", "👏", "😁", "🏆", "😱", "🤡"]).join(', ');
@@ -3959,6 +3966,10 @@ function switchTab(tabName, evt) {
     const content = document.getElementById(tabName + 'Tab');
     if (content) content.classList.add('active');
 
+    if (tabName === 'vipReminders') {
+        loadGroupVipTab();
+    }
+
     try {
         const e = evt || (window.event || null);
         let target = null;
@@ -4073,3 +4084,430 @@ function checkPremiumAccess(userData) {
         document.body.style.overflow = 'hidden';
     }
 }
+
+// ==========================================
+// VIP Membership & Expiry Reminders Feature
+// ==========================================
+
+let allGroupVipMembers = [];
+
+function getActiveApiBase() {
+    return (typeof API_BASE_URL !== 'undefined' && API_BASE_URL && !API_BASE_URL.includes('github.io')) 
+        ? API_BASE_URL 
+        : (API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '');
+}
+
+async function loadGroupVipTab() {
+    const banner = document.getElementById('vipLockedBanner');
+    const container = document.getElementById('vipActiveContainer');
+    if (!banner || !container) return;
+
+    // Check user auth state: admin or bot premium status
+    const authUser = window.currentAuthUser || {};
+    const hasPremium = !!(authUser.is_admin || authUser.is_premium);
+
+    if (!hasPremium) {
+        banner.style.display = 'block';
+        container.style.display = 'none';
+        return;
+    }
+
+    banner.style.display = 'none';
+    container.style.display = 'block';
+
+    await Promise.all([
+        loadGroupVipRemindersConfig(),
+        loadGroupVipMembers()
+    ]);
+}
+
+async function loadGroupVipRemindersConfig() {
+    if (!currentGroupId) return;
+    try {
+        const apiBase = getActiveApiBase();
+        const res = await fetch(`${apiBase}/api/group/${currentGroupId}/premium-reminders`, {
+            headers: getWebappHeaders()
+        });
+        if (res.status === 403) {
+            const errData = await res.json().catch(() => ({}));
+            if (errData.premium_required) {
+                const banner = document.getElementById('vipLockedBanner');
+                const container = document.getElementById('vipActiveContainer');
+                if (banner) banner.style.display = 'block';
+                if (container) container.style.display = 'none';
+            }
+            return;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.success && data.config) {
+            const c = data.config;
+            const enabledEl = document.getElementById('vipReminderEnabled');
+            if (enabledEl) enabledEl.checked = !!c.enabled;
+
+            const days = Array.isArray(c.alert_days) ? c.alert_days : [3, 1, 0];
+            [7, 3, 2, 1, 0].forEach(d => {
+                const el = document.getElementById(`alertDay${d}`);
+                if (el) el.checked = days.includes(d);
+            });
+
+            const modeEl = document.getElementById('vipDeliveryMode');
+            if (modeEl) modeEl.value = c.delivery_mode || 'both';
+
+            const autoRemEl = document.getElementById('vipAutoRemoveExpired');
+            if (autoRemEl) autoRemEl.checked = !!c.auto_remove_expired;
+
+            const msgEl = document.getElementById('vipCustomMessage');
+            if (msgEl) msgEl.value = c.custom_message || '';
+        }
+    } catch (e) {
+        console.error('Failed to load group VIP reminder config:', e);
+    }
+}
+
+async function saveGroupVipReminderSettings() {
+    if (!currentGroupId) return;
+    try {
+        const enabled = !!document.getElementById('vipReminderEnabled')?.checked;
+        const alert_days = [];
+        [7, 3, 2, 1, 0].forEach(d => {
+            const el = document.getElementById(`alertDay${d}`);
+            if (el && el.checked) alert_days.push(d);
+        });
+        if (alert_days.length === 0) {
+            alert_days.push(1, 0);
+        }
+        const delivery_mode = document.getElementById('vipDeliveryMode')?.value || 'both';
+        const auto_remove_expired = !!document.getElementById('vipAutoRemoveExpired')?.checked;
+        const custom_message = document.getElementById('vipCustomMessage')?.value?.trim() || '';
+
+        const apiBase = getActiveApiBase();
+        const res = await fetch(`${apiBase}/api/group/${currentGroupId}/premium-reminders`, {
+            method: 'POST',
+            headers: getWebappHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                enabled,
+                alert_days,
+                delivery_mode,
+                auto_remove_expired,
+                custom_message
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (typeof showNotification === 'function') {
+                showNotification('VIP reminder settings saved successfully!', 'success');
+            } else {
+                await tgAlert('VIP reminder settings saved successfully!');
+            }
+        } else {
+            throw new Error(data.error || 'Failed to save');
+        }
+    } catch (e) {
+        console.error('Error saving VIP reminder settings:', e);
+        if (typeof showNotification === 'function') {
+            showNotification(`Failed to save settings: ${e.message}`, 'error');
+        } else {
+            await tgAlert(`Failed to save settings: ${e.message}`);
+        }
+    }
+}
+
+async function testGroupVipReminder() {
+    if (!currentGroupId) return;
+    try {
+        const apiBase = getActiveApiBase();
+        const res = await fetch(`${apiBase}/api/group/${currentGroupId}/premium-reminders/test`, {
+            method: 'POST',
+            headers: getWebappHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (typeof showNotification === 'function') {
+                showNotification(`Test reminder sent successfully via ${data.delivery_mode}!`, 'success');
+            } else {
+                await tgAlert(`Test reminder sent successfully via ${data.delivery_mode}!`);
+            }
+        } else {
+            throw new Error(data.error || 'Test failed');
+        }
+    } catch (e) {
+        console.error('Error testing VIP reminder:', e);
+        if (typeof showNotification === 'function') {
+            showNotification(`Test reminder failed: ${e.message}`, 'error');
+        } else {
+            await tgAlert(`Test reminder failed: ${e.message}`);
+        }
+    }
+}
+
+async function loadGroupVipMembers() {
+    if (!currentGroupId) return;
+    const tableBody = document.getElementById('vipMembersTableBody');
+    if (tableBody) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 24px; color: #777;">
+                    <i class="fas fa-spinner fa-spin"></i> Loading VIP members...
+                </td>
+            </tr>`;
+    }
+    try {
+        const apiBase = getActiveApiBase();
+        const res = await fetch(`${apiBase}/api/group/${currentGroupId}/premium-members`, {
+            headers: getWebappHeaders()
+        });
+        if (res.status === 403) {
+            const errData = await res.json().catch(() => ({}));
+            if (errData.premium_required) {
+                const banner = document.getElementById('vipLockedBanner');
+                const container = document.getElementById('vipActiveContainer');
+                if (banner) banner.style.display = 'block';
+                if (container) container.style.display = 'none';
+            }
+            return;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        allGroupVipMembers = Array.isArray(data.members) ? data.members : [];
+
+        // Update counts
+        const total = allGroupVipMembers.length;
+        let active = 0, expiring = 0, expired = 0;
+        allGroupVipMembers.forEach(m => {
+            if (m.status === 'expired' || m.days_left < 0) expired++;
+            else if (m.status === 'expiring' || m.days_left <= 3) expiring++;
+            else active++;
+        });
+
+        const totalEl = document.getElementById('vipTotalCount');
+        if (totalEl) totalEl.textContent = total;
+        const activeEl = document.getElementById('vipActiveCount');
+        if (activeEl) activeEl.textContent = active;
+        const expiringEl = document.getElementById('vipExpiringCount');
+        if (expiringEl) expiringEl.textContent = expiring;
+        const expiredEl = document.getElementById('vipExpiredCount');
+        if (expiredEl) expiredEl.textContent = expired;
+
+        filterVipMembersTable();
+    } catch (e) {
+        console.error('Error loading VIP members:', e);
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 20px; color: #ff6666;">
+                        Failed to load members: ${e.message}
+                    </td>
+                </tr>`;
+        }
+    }
+}
+
+function filterVipMembersTable() {
+    const q = (document.getElementById('vipSearchInput')?.value || '').toLowerCase().trim();
+    const statusFilter = document.getElementById('vipFilterStatus')?.value || 'all';
+
+    const filtered = allGroupVipMembers.filter(m => {
+        const uid = String(m.user_id || '');
+        if (q && !uid.includes(q)) return false;
+        if (statusFilter === 'all') return true;
+        if (statusFilter === 'active') return m.status === 'active' && m.days_left > 3;
+        if (statusFilter === 'expiring') return m.status === 'expiring' || (m.days_left >= 0 && m.days_left <= 3);
+        if (statusFilter === 'expired') return m.status === 'expired' || m.days_left < 0;
+        return true;
+    });
+
+    renderVipMembersTable(filtered);
+}
+
+function renderVipMembersTable(members) {
+    const tbody = document.getElementById('vipMembersTableBody');
+    if (!tbody) return;
+
+    if (!members || members.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 28px; color: #777;">
+                    <i class="fas fa-user-slash" style="font-size: 24px; margin-bottom: 8px; display: block; opacity: 0.5;"></i>
+                    No VIP members found
+                </td>
+            </tr>`;
+        return;
+    }
+
+    tbody.innerHTML = members.map(m => {
+        let statusBadge = '';
+        let timeLeftStr = '';
+        if (m.status === 'expired' || m.days_left < 0) {
+            statusBadge = '<span style="background: rgba(255, 77, 77, 0.15); color: #ff6666; border: 1px solid rgba(255, 77, 77, 0.3); padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">Expired</span>';
+            const ago = Math.abs(m.days_left);
+            timeLeftStr = `<span style="color: #ff6666;">${ago === 0 ? 'Today' : ago + 'd ago'}</span>`;
+        } else if (m.days_left === 0) {
+            statusBadge = '<span style="background: rgba(255, 170, 0, 0.15); color: #ffaa00; border: 1px solid rgba(255, 170, 0, 0.3); padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">Expires Today</span>';
+            timeLeftStr = '<span style="color: #ffaa00; font-weight: bold;">Final Day</span>';
+        } else if (m.days_left <= 3) {
+            statusBadge = '<span style="background: rgba(255, 170, 0, 0.15); color: #ffaa00; border: 1px solid rgba(255, 170, 0, 0.3); padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">Expiring Soon</span>';
+            timeLeftStr = `<span style="color: #ffaa00;">${m.days_left}d left</span>`;
+        } else {
+            statusBadge = '<span style="background: rgba(0, 204, 136, 0.15); color: #00cc88; border: 1px solid rgba(0, 204, 136, 0.3); padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">Active</span>';
+            timeLeftStr = `<span style="color: #00cc88;">${m.days_left}d left</span>`;
+        }
+
+        const safeId = escapeHtml(String(m.user_id));
+        const safeExpiry = escapeHtml(String(m.expiry || '—'));
+
+        return `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <td style="padding: 10px 8px; font-family: monospace; font-size: 13px;">
+                    <i class="fas fa-user-circle" style="color: #888; margin-right: 6px;"></i>${safeId}
+                </td>
+                <td style="padding: 10px 8px;">${statusBadge}</td>
+                <td style="padding: 10px 8px; font-size: 12px;">${timeLeftStr}</td>
+                <td style="padding: 10px 8px; font-size: 12px; color: #bbb;">${safeExpiry}</td>
+                <td style="padding: 10px 8px; text-align: right;">
+                    <button onclick="extendGroupVipMember('${safeId}')" title="Extend VIP" style="background: rgba(0, 136, 204, 0.15); color: #4da6ff; border: 1px solid rgba(0, 136, 204, 0.3); padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-right: 4px;">
+                        <i class="fas fa-plus"></i> Extend
+                    </button>
+                    <button onclick="deleteGroupVipMember('${safeId}')" title="Remove VIP" style="background: rgba(255, 77, 77, 0.15); color: #ff6666; border: 1px solid rgba(255, 77, 77, 0.3); padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function toggleAddVipMemberForm() {
+    const box = document.getElementById('addVipMemberBox');
+    if (!box) return;
+    const isHidden = box.style.display === 'none' || !box.style.display;
+    box.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        document.getElementById('newVipUserId')?.focus();
+    }
+}
+
+async function submitAddVipMember() {
+    if (!currentGroupId) return;
+    const userIdInput = document.getElementById('newVipUserId');
+    const daysInput = document.getElementById('newVipDays');
+
+    const targetUserId = userIdInput?.value?.trim();
+    const days = parseInt(daysInput?.value || '30', 10);
+
+    if (!targetUserId || isNaN(targetUserId)) {
+        await tgAlert('Please enter a valid numeric Telegram User ID.');
+        return;
+    }
+    if (isNaN(days) || days < 1) {
+        await tgAlert('Please enter a positive duration in days.');
+        return;
+    }
+
+    try {
+        const apiBase = getActiveApiBase();
+        const res = await fetch(`${apiBase}/api/group/${currentGroupId}/premium-members/add`, {
+            method: 'POST',
+            headers: getWebappHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                user_id: targetUserId,
+                days: days
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            userIdInput.value = '';
+            toggleAddVipMemberForm();
+            await loadGroupVipMembers();
+            if (typeof showNotification === 'function') {
+                showNotification(`User ${targetUserId} added as VIP until ${data.expiry}!`, 'success');
+            } else {
+                await tgAlert(`User ${targetUserId} added as VIP until ${data.expiry}!`);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to add member');
+        }
+    } catch (e) {
+        console.error('Error adding VIP member:', e);
+        if (typeof showNotification === 'function') {
+            showNotification(`Failed: ${e.message}`, 'error');
+        } else {
+            await tgAlert(`Failed: ${e.message}`);
+        }
+    }
+}
+
+async function extendGroupVipMember(targetUserId) {
+    if (!currentGroupId || !targetUserId) return;
+    const daysStr = prompt(`Extend VIP for user ${targetUserId} by how many days?`, '30');
+    if (daysStr === null) return;
+    const days = parseInt(daysStr, 10);
+    if (isNaN(days) || days < 1) {
+        await tgAlert('Please enter a valid positive number of days.');
+        return;
+    }
+
+    try {
+        const apiBase = getActiveApiBase();
+        const res = await fetch(`${apiBase}/api/group/${currentGroupId}/premium-members/update`, {
+            method: 'POST',
+            headers: getWebappHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                user_id: targetUserId,
+                days: days
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            await loadGroupVipMembers();
+            if (typeof showNotification === 'function') {
+                showNotification(`User ${targetUserId} extended until ${data.expiry}!`, 'success');
+            } else {
+                await tgAlert(`User ${targetUserId} extended until ${data.expiry}!`);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to extend member');
+        }
+    } catch (e) {
+        console.error('Error extending VIP member:', e);
+        if (typeof showNotification === 'function') {
+            showNotification(`Failed: ${e.message}`, 'error');
+        } else {
+            await tgAlert(`Failed: ${e.message}`);
+        }
+    }
+}
+
+async function deleteGroupVipMember(targetUserId) {
+    if (!currentGroupId || !targetUserId) return;
+    const ok = await tgConfirm(`Are you sure you want to revoke VIP membership for user ${targetUserId}?`);
+    if (!ok) return;
+
+    try {
+        const apiBase = getActiveApiBase();
+        const res = await fetch(`${apiBase}/api/group/${currentGroupId}/premium-members/${targetUserId}`, {
+            method: 'DELETE',
+            headers: getWebappHeaders()
+        });
+        const data = await res.json();
+        if (data.success) {
+            await loadGroupVipMembers();
+            if (typeof showNotification === 'function') {
+                showNotification(`VIP membership revoked for user ${targetUserId}.`, 'success');
+            } else {
+                await tgAlert(`VIP membership revoked for user ${targetUserId}.`);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to revoke member');
+        }
+    } catch (e) {
+        console.error('Error revoking VIP member:', e);
+        if (typeof showNotification === 'function') {
+            showNotification(`Failed: ${e.message}`, 'error');
+        } else {
+            await tgAlert(`Failed: ${e.message}`);
+        }
+    }
+}
+

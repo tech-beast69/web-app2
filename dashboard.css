@@ -3692,4 +3692,25 @@ body.tg-dark-theme .error-content i {
     color: #f87171 !important;
 }
 
+/* VIP Reminders and Membership Tracking Styles */
+.alert-day-chip {
+    transition: all 0.2s ease;
+    user-select: none;
+}
+.alert-day-chip:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 215, 0, 0.4) !important;
+}
+.alert-day-chip input[type="checkbox"] {
+    accent-color: #ffd700;
+    cursor: pointer;
+}
+.vip-subcard {
+    transition: border-color 0.2s ease;
+}
+.vip-subcard:hover {
+    border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+
 
