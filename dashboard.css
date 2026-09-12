@@ -3692,25 +3692,441 @@ body.tg-dark-theme .error-content i {
     color: #f87171 !important;
 }
 
-/* VIP Reminders and Membership Tracking Styles */
-.alert-day-chip {
+/* ============================================================================ */
+/* UNIVERSAL SLEEK SCROLLBARS (PREVENTS WHITE BROWSER DEFAULT TRACK) */
+/* ============================================================================ */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+/* Modal Overflow Prevention */
+.modal {
+    overflow-x: hidden !important;
+}
+.modal-content {
+    overflow-x: hidden !important;
+    box-sizing: border-box;
+}
+.modal-body {
+    overflow-x: hidden !important;
+    box-sizing: border-box;
+}
+
+/* Secondary Button Dark Theme Fixes (Replaces Stark White Background) */
+.btn-secondary,
+.modal-body .btn-secondary,
+body.tg-dark-theme .btn-secondary {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    box-shadow: none !important;
     transition: all 0.2s ease;
-    user-select: none;
 }
-.alert-day-chip:hover {
+.btn-secondary:hover,
+.modal-body .btn-secondary:hover,
+body.tg-dark-theme .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.16) !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    color: #ffffff !important;
+    transform: none !important;
+}
+.btn-secondary:active,
+.modal-body .btn-secondary:active,
+body.tg-dark-theme .btn-secondary:active {
     background: rgba(255, 255, 255, 0.12) !important;
-    border-color: rgba(255, 215, 0, 0.4) !important;
 }
-.alert-day-chip input[type="checkbox"] {
-    accent-color: #ffd700;
-    cursor: pointer;
-}
+
+/* ============================================================================ */
+/* VIP REMINDERS & MEMBER TRACKING RESPONSIVE STYLES */
+/* ============================================================================ */
 .vip-subcard {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow-x: hidden;
     transition: border-color 0.2s ease;
 }
 .vip-subcard:hover {
     border-color: rgba(255, 255, 255, 0.16) !important;
 }
 
+.vip-subcard-title {
+    margin: 0 0 14px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #f1f5f9;
+    font-size: 1.1em;
+}
 
+.vip-switch-row {
+    border: none !important;
+    padding: 0 0 12px 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
 
+.vip-field-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #cbd5e1;
+}
+
+.vip-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.alert-day-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 12px;
+    color: #cbd5e1;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+.alert-day-chip:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 215, 0, 0.4) !important;
+}
+.alert-day-chip:has(input:checked) {
+    background: rgba(0, 136, 204, 0.18);
+    border-color: rgba(0, 136, 204, 0.5);
+    color: #60a5fa;
+    font-weight: 600;
+}
+.alert-day-chip input[type="checkbox"] {
+    accent-color: #0088cc;
+    cursor: pointer;
+}
+
+.vip-delivery-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 14px;
+    margin-bottom: 14px;
+    align-items: stretch;
+}
+.vip-select {
+    width: 100% !important;
+    padding: 10px 12px !important;
+    border-radius: 8px !important;
+    background: #1a1a24 !important;
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-sizing: border-box;
+}
+
+.vip-auto-revoke-item {
+    border: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vip-template-section {
+    margin-bottom: 14px;
+}
+.vip-textarea {
+    width: 100% !important;
+    padding: 10px 12px !important;
+    border-radius: 8px !important;
+    background: #1a1a24 !important;
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    font-family: inherit;
+    font-size: 13px !important;
+    resize: vertical;
+    box-sizing: border-box;
+}
+.vip-placeholders-hint {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+.vip-placeholders-hint code {
+    color: #60a5fa;
+    background: rgba(96, 165, 250, 0.1);
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.vip-action-bar {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+.vip-btn-test {
+    padding: 9px 16px !important;
+    border-radius: 8px !important;
+    font-weight: 600;
+    cursor: pointer;
+}
+.vip-btn-save {
+    padding: 9px 20px !important;
+    border-radius: 8px !important;
+    font-weight: 600;
+    cursor: pointer;
+    background: #0088cc !important;
+    color: #fff !important;
+    border: none !important;
+}
+
+.vip-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.vip-top-btns {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.vip-btn-add-member {
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    background: linear-gradient(135deg, #00cc88, #009966) !important;
+    color: #fff !important;
+    border: none !important;
+    cursor: pointer;
+}
+.vip-btn-refresh {
+    padding: 8px 12px !important;
+    border-radius: 8px !important;
+    cursor: pointer;
+}
+
+/* Add Member Form */
+.vip-add-box {
+    background: rgba(0, 204, 136, 0.06);
+    border: 1px solid rgba(0, 204, 136, 0.25);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+    box-sizing: border-box;
+}
+.vip-add-grid {
+    display: grid;
+    grid-template-columns: 1fr 110px auto;
+    gap: 10px;
+    align-items: flex-end;
+    box-sizing: border-box;
+}
+.vip-add-field input {
+    width: 100% !important;
+    padding: 8px 10px !important;
+    border-radius: 6px !important;
+    background: #1a1a24 !important;
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-sizing: border-box;
+}
+.vip-add-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.vip-btn-add {
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    background: #00cc88 !important;
+    color: #fff !important;
+    border: none !important;
+    white-space: nowrap;
+}
+.vip-btn-cancel {
+    padding: 8px 12px !important;
+    border-radius: 6px !important;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* Symmetrical 4-Card Stats Grid */
+.vip-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.vip-stat-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 10px 8px;
+    border-radius: 10px;
+    text-align: center;
+    box-sizing: border-box;
+}
+.vip-stat-num {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.vip-stat-text {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 3px;
+    font-weight: 500;
+}
+
+/* Search & Filter Row */
+.vip-filter-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.vip-filter-row input {
+    flex: 1;
+    padding: 8px 12px !important;
+    border-radius: 6px !important;
+    background: #1a1a24 !important;
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    font-size: 13px !important;
+    box-sizing: border-box;
+}
+.vip-filter-row select {
+    padding: 8px 12px !important;
+    border-radius: 6px !important;
+    background: #1a1a24 !important;
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    font-size: 13px !important;
+    box-sizing: border-box;
+}
+
+/* Members Table */
+.vip-table-container {
+    overflow-x: auto;
+    max-height: 380px;
+    overflow-y: auto;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    -webkit-overflow-scrolling: touch;
+}
+.vip-table {
+    width: 100%;
+    min-width: 480px;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 13px;
+}
+.vip-table th {
+    padding: 10px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 12px;
+    position: sticky;
+    top: 0;
+    background: #131b2e;
+    z-index: 2;
+}
+
+/* Responsive Breakpoints for Mobile View */
+@media (max-width: 640px) {
+    .vip-subcard {
+        padding: 14px 12px !important;
+        margin-bottom: 16px;
+    }
+    .vip-delivery-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .vip-auto-revoke-item {
+        flex-direction: row !important;
+        align-items: center !important;
+        background: rgba(255, 255, 255, 0.03) !important;
+        padding: 10px 12px !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    }
+}
+
+@media (max-width: 580px) {
+    .vip-action-bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
+    }
+    .vip-action-bar button {
+        width: 100%;
+        justify-content: center;
+        padding: 10px 6px !important;
+        font-size: 12px !important;
+    }
+    .vip-add-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .vip-add-actions {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 4px;
+    }
+    .vip-btn-add,
+    .vip-btn-cancel {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+    .vip-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    .vip-filter-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .vip-chips-container {
+        gap: 6px;
+    }
+    .alert-day-chip {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+}

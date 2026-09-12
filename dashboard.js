@@ -4283,6 +4283,8 @@ async function loadGroupVipMembers() {
 
         const totalEl = document.getElementById('vipTotalCount');
         if (totalEl) totalEl.textContent = total;
+        const totalStatEl = document.getElementById('vipTotalStat');
+        if (totalStatEl) totalStatEl.textContent = total;
         const activeEl = document.getElementById('vipActiveCount');
         if (activeEl) activeEl.textContent = active;
         const expiringEl = document.getElementById('vipExpiringCount');
