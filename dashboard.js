@@ -217,14 +217,12 @@ function persistDashboardUserId(userId) {
 
 function withAdminId(url, userId) {
     const normalized = String(userId || '').trim();
-    if (!normalized) {
-        return url;
-    }
     try {
         const resolved = new URL(url, window.location.href);
-        if (!resolved.searchParams.get('admin_id') && !resolved.searchParams.get('user_id')) {
+        if (normalized && !resolved.searchParams.get('admin_id') && !resolved.searchParams.get('user_id')) {
             resolved.searchParams.set('admin_id', normalized);
         }
+        resolved.searchParams.set('v', '4.2');
         if (window.location.hash && !resolved.hash) {
             resolved.hash = window.location.hash;
         }
