@@ -204,6 +204,12 @@
         el._t = setTimeout(() => { el.className = "save-status"; el.innerHTML = ""; }, 4000);
     }
 
+    function flashStatus(el, text, type) {
+        if (!el) return;
+        const ok = type === "success" || type === "ok";
+        setSaveStatus(el, ok, text);
+    }
+
     function clearSaveStatus(el) {
         if (!el) return;
         clearTimeout(el._t);
@@ -1308,9 +1314,9 @@
         try {
             const payload = {
                 enabled: els.ticketEnabled ? els.ticketEnabled.checked : true,
-                category_id: els.ticketCategoryId && els.ticketCategoryId.value ? Number(els.ticketCategoryId.value) : null,
-                support_role_id: els.ticketSupportRoleId && els.ticketSupportRoleId.value ? Number(els.ticketSupportRoleId.value) : null,
-                log_channel_id: els.ticketLogChannelId && els.ticketLogChannelId.value ? Number(els.ticketLogChannelId.value) : null,
+                category_id: (els.ticketCategoryId && els.ticketCategoryId.value.trim()) || null,
+                support_role_id: (els.ticketSupportRoleId && els.ticketSupportRoleId.value.trim()) || null,
+                log_channel_id: (els.ticketLogChannelId && els.ticketLogChannelId.value.trim()) || null,
                 max_tickets_per_user: els.ticketMaxPerUser ? Math.max(1, Number(els.ticketMaxPerUser.value) || 1) : 1,
                 ticket_prefix: els.ticketPrefix && els.ticketPrefix.value ? els.ticketPrefix.value.trim() : "ticket",
                 creation_mode: els.ticketCreationMode && els.ticketCreationMode.value ? els.ticketCreationMode.value : "thread",
