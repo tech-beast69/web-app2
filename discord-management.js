@@ -84,6 +84,7 @@
         ticketLogChannelId: $("ticketLogChannelId"),
         ticketMaxPerUser: $("ticketMaxPerUser"),
         ticketPrefix: $("ticketPrefix"),
+        ticketCreationMode: $("ticketCreationMode"),
         saveTicketConfigBtn: $("saveTicketConfigBtn"),
         ticketSaveStatus: $("ticketSaveStatus"),
         ticketPanelChannelSelect: $("ticketPanelChannelSelect"),
@@ -1287,6 +1288,7 @@
             if (els.ticketLogChannelId) els.ticketLogChannelId.value = cfg.log_channel_id || "";
             if (els.ticketMaxPerUser) els.ticketMaxPerUser.value = cfg.max_tickets_per_user || 1;
             if (els.ticketPrefix) els.ticketPrefix.value = cfg.ticket_prefix || "ticket";
+            if (els.ticketCreationMode) els.ticketCreationMode.value = cfg.creation_mode || "thread";
             if (els.ticketPanelTitle && cfg.panel_title) els.ticketPanelTitle.value = cfg.panel_title;
             if (els.ticketPanelDescription && cfg.panel_description) els.ticketPanelDescription.value = cfg.panel_description;
             if (els.ticketPanelButtonLabel && cfg.panel_button_label) els.ticketPanelButtonLabel.value = cfg.panel_button_label;
@@ -1311,6 +1313,7 @@
                 log_channel_id: els.ticketLogChannelId && els.ticketLogChannelId.value ? Number(els.ticketLogChannelId.value) : null,
                 max_tickets_per_user: els.ticketMaxPerUser ? Math.max(1, Number(els.ticketMaxPerUser.value) || 1) : 1,
                 ticket_prefix: els.ticketPrefix && els.ticketPrefix.value ? els.ticketPrefix.value.trim() : "ticket",
+                creation_mode: els.ticketCreationMode && els.ticketCreationMode.value ? els.ticketCreationMode.value : "thread",
             };
             await api(`/api/discord/tickets/config/${encodeURIComponent(gid)}`, {
                 method: "PATCH",

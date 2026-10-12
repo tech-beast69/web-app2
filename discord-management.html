@@ -1108,7 +1108,15 @@
                     </div>
                 </div>
 
-                <div class="grid-3" style="margin-top:10px;">
+                <div class="grid-2" style="margin-top:10px;">
+                    <div class="form-group">
+                        <label>Ticket Creation Mode</label>
+                        <select id="ticketCreationMode">
+                            <option value="thread" selected>Thread in Panel Channel (e.g. #buy-here)</option>
+                            <option value="channel">Separate Channel in Category</option>
+                        </select>
+                        <div class="help-text" style="font-size:11px;color:var(--text-muted);margin-top:4px;">When set to Thread, tickets open directly as threads inside the panel channel.</div>
+                    </div>
                     <div class="form-group">
                         <label>Transcript & Close Log Channel</label>
                         <select id="ticketLogChannelSelect">
@@ -1116,12 +1124,15 @@
                         </select>
                         <input type="text" id="ticketLogChannelId" placeholder="Or Channel ID manually" style="margin-top:6px;">
                     </div>
+                </div>
+
+                <div class="grid-2" style="margin-top:10px;">
                     <div class="form-group">
                         <label>Max Open Tickets / User</label>
                         <input type="number" id="ticketMaxPerUser" min="1" max="10" value="1">
                     </div>
                     <div class="form-group">
-                        <label>Channel Name Prefix</label>
+                        <label>Ticket Name Prefix</label>
                         <input type="text" id="ticketPrefix" value="ticket" placeholder="e.g. ticket">
                     </div>
                 </div>
