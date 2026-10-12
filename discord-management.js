@@ -74,7 +74,27 @@
         guidedMode: $("guidedMode"), enforcementMode: $("enforcementMode"),
         syncServersBtn: $("syncServersBtn"), applyGuidedBtn: $("applyGuidedBtn"),
         advancedToggle: $("advancedToggle"), advancedSection: $("advancedSection"),
-        advancedStateLabel: $("advancedStateLabel"), configChecklist: $("configChecklist")
+        advancedStateLabel: $("advancedStateLabel"), configChecklist: $("configChecklist"),
+        ticketEnabled: $("ticketEnabled"),
+        ticketCategorySelect: $("ticketCategorySelect"),
+        ticketCategoryId: $("ticketCategoryId"),
+        ticketSupportRoleSelect: $("ticketSupportRoleSelect"),
+        ticketSupportRoleId: $("ticketSupportRoleId"),
+        ticketLogChannelSelect: $("ticketLogChannelSelect"),
+        ticketLogChannelId: $("ticketLogChannelId"),
+        ticketMaxPerUser: $("ticketMaxPerUser"),
+        ticketPrefix: $("ticketPrefix"),
+        saveTicketConfigBtn: $("saveTicketConfigBtn"),
+        ticketSaveStatus: $("ticketSaveStatus"),
+        ticketPanelChannelSelect: $("ticketPanelChannelSelect"),
+        ticketPanelChannelId: $("ticketPanelChannelId"),
+        ticketPanelButtonLabel: $("ticketPanelButtonLabel"),
+        ticketPanelTitle: $("ticketPanelTitle"),
+        ticketPanelDescription: $("ticketPanelDescription"),
+        deployTicketPanelBtn: $("deployTicketPanelBtn"),
+        ticketDeployStatus: $("ticketDeployStatus"),
+        refreshTicketsBtn: $("refreshTicketsBtn"),
+        ticketsBody: $("ticketsBody")
     };
 
     let adminId = "";
@@ -268,6 +288,7 @@
         setRoleSelectFromInput(els.joinGateRoleSelect, els.joinGateRoleId);
         setRoleSelectFromInput(els.antiProfileQuarantineRoleSelect, els.antiProfileQuarantineRoleId);
         setRoleSelectFromInput(els.raidQuarantineRoleSelect, els.raidQuarantineRoleId);
+        setRoleSelectFromInput(els.ticketSupportRoleSelect, els.ticketSupportRoleId);
     }
 
     /* ── Servers ── */
@@ -626,7 +647,7 @@
         try {
             const res = await api(`/api/discord/moderation/config/${encodeURIComponent(gid)}`);
             applyConfig(res.data || {});
-            await Promise.all([fetchChannels(), fetchRoles()]);
+            await Promise.all([fetchChannels(), fetchRoles(), loadTicketConfig(), loadTicketsList()]);
             notify("Config loaded", "success");
             setConnectionStatus("Connected", true);
         } catch (err) {
@@ -673,6 +694,18 @@
             if (els.joinGateChannelSelect) {
                 const savedJoin = String(els.joinGateChannelId && els.joinGateChannelId.value ? els.joinGateChannelId.value : "");
                 fillSelect(els.joinGateChannelSelect, channels, savedJoin, els.joinGateChannelsSourceHint);
+            }
+            if (els.ticketCategorySelect) {
+                const savedCat = String(els.ticketCategoryId && els.ticketCategoryId.value ? els.ticketCategoryId.value : "");
+                fillSelect(els.ticketCategorySelect, channels, savedCat);
+            }
+            if (els.ticketLogChannelSelect) {
+                const savedTLog = String(els.ticketLogChannelId && els.ticketLogChannelId.value ? els.ticketLogChannelId.value : "");
+                fillSelect(els.ticketLogChannelSelect, channels, savedTLog);
+            }
+            if (els.ticketPanelChannelSelect) {
+                const savedPanel = String(els.ticketPanelChannelId && els.ticketPanelChannelId.value ? els.ticketPanelChannelId.value : "");
+                fillSelect(els.ticketPanelChannelSelect, channels, savedPanel);
             }
         } catch (err) {
             els.logChannelSelect.innerHTML = '<option value="">— Channel lookup failed —</option>';
@@ -722,6 +755,7 @@
             fillRoleSelect(els.joinGateRoleSelect, els.joinGateRolesSourceHint, String((els.joinGateRoleId && els.joinGateRoleId.value) || ""));
             fillRoleSelect(els.antiProfileQuarantineRoleSelect, null, String((els.antiProfileQuarantineRoleId && els.antiProfileQuarantineRoleId.value) || ""));
             fillRoleSelect(els.raidQuarantineRoleSelect, null, String((els.raidQuarantineRoleId && els.raidQuarantineRoleId.value) || ""));
+            fillRoleSelect(els.ticketSupportRoleSelect, null, String((els.ticketSupportRoleId && els.ticketSupportRoleId.value) || ""));
             syncRoleSelectionFromTextarea();
             syncRoleSelectorsFromInputs();
             return true;
@@ -1221,6 +1255,159 @@
             } catch (err) { notify(`Unquarantine failed: ${err.message}`, "error"); }
             finally { setBusy(els.unquarantineBtn, false); }
         });
+
+        // Ticket settings & panel handlers
+        if (els.ticketCategorySelect) els.ticketCategorySelect.addEventListener("change", () => {
+            if (els.ticketCategoryId) els.ticketCategoryId.value = els.ticketCategorySelect.value;
+        });
+        if (els.ticketSupportRoleSelect) els.ticketSupportRoleSelect.addEventListener("change", () => {
+            if (els.ticketSupportRoleId) els.ticketSupportRoleId.value = els.ticketSupportRoleSelect.value;
+        });
+        if (els.ticketLogChannelSelect) els.ticketLogChannelSelect.addEventListener("change", () => {
+            if (els.ticketLogChannelId) els.ticketLogChannelId.value = els.ticketLogChannelSelect.value;
+        });
+        if (els.ticketPanelChannelSelect) els.ticketPanelChannelSelect.addEventListener("change", () => {
+            if (els.ticketPanelChannelId) els.ticketPanelChannelId.value = els.ticketPanelChannelSelect.value;
+        });
+        if (els.saveTicketConfigBtn) els.saveTicketConfigBtn.addEventListener("click", saveTicketConfig);
+        if (els.deployTicketPanelBtn) els.deployTicketPanelBtn.addEventListener("click", deployTicketPanel);
+        if (els.refreshTicketsBtn) els.refreshTicketsBtn.addEventListener("click", loadTicketsList);
+    }
+
+    /* ── Ticket System Functions ── */
+    async function loadTicketConfig() {
+        const gid = selectedGuildId();
+        if (!gid) return;
+        try {
+            const res = await api(`/api/discord/tickets/config/${encodeURIComponent(gid)}`);
+            const cfg = res.data || {};
+            if (els.ticketEnabled) els.ticketEnabled.checked = cfg.enabled !== false;
+            if (els.ticketCategoryId) els.ticketCategoryId.value = cfg.category_id || "";
+            if (els.ticketSupportRoleId) els.ticketSupportRoleId.value = cfg.support_role_id || "";
+            if (els.ticketLogChannelId) els.ticketLogChannelId.value = cfg.log_channel_id || "";
+            if (els.ticketMaxPerUser) els.ticketMaxPerUser.value = cfg.max_tickets_per_user || 1;
+            if (els.ticketPrefix) els.ticketPrefix.value = cfg.ticket_prefix || "ticket";
+            if (els.ticketPanelTitle && cfg.panel_title) els.ticketPanelTitle.value = cfg.panel_title;
+            if (els.ticketPanelDescription && cfg.panel_description) els.ticketPanelDescription.value = cfg.panel_description;
+            if (els.ticketPanelButtonLabel && cfg.panel_button_label) els.ticketPanelButtonLabel.value = cfg.panel_button_label;
+
+            if (els.ticketCategorySelect && cfg.category_id) els.ticketCategorySelect.value = String(cfg.category_id);
+            if (els.ticketSupportRoleSelect && cfg.support_role_id) els.ticketSupportRoleSelect.value = String(cfg.support_role_id);
+            if (els.ticketLogChannelSelect && cfg.log_channel_id) els.ticketLogChannelSelect.value = String(cfg.log_channel_id);
+        } catch (err) {
+            console.warn("loadTicketConfig failed:", err);
+        }
+    }
+
+    async function saveTicketConfig() {
+        const gid = selectedGuildId();
+        if (!gid) { notify("Select a server first", "error"); return; }
+        setBusy(els.saveTicketConfigBtn, true, "Saving…");
+        try {
+            const payload = {
+                enabled: els.ticketEnabled ? els.ticketEnabled.checked : true,
+                category_id: els.ticketCategoryId && els.ticketCategoryId.value ? Number(els.ticketCategoryId.value) : null,
+                support_role_id: els.ticketSupportRoleId && els.ticketSupportRoleId.value ? Number(els.ticketSupportRoleId.value) : null,
+                log_channel_id: els.ticketLogChannelId && els.ticketLogChannelId.value ? Number(els.ticketLogChannelId.value) : null,
+                max_tickets_per_user: els.ticketMaxPerUser ? Math.max(1, Number(els.ticketMaxPerUser.value) || 1) : 1,
+                ticket_prefix: els.ticketPrefix && els.ticketPrefix.value ? els.ticketPrefix.value.trim() : "ticket",
+            };
+            await api(`/api/discord/tickets/config/${encodeURIComponent(gid)}`, {
+                method: "PATCH",
+                body: JSON.stringify(payload)
+            });
+            notify("Ticket settings saved", "success");
+            flashStatus(els.ticketSaveStatus, "Saved ✓", "success");
+        } catch (err) {
+            notify(`Save ticket settings failed: ${err.message}`, "error");
+            flashStatus(els.ticketSaveStatus, "Failed ✕", "error");
+        } finally {
+            setBusy(els.saveTicketConfigBtn, false);
+        }
+    }
+
+    async function deployTicketPanel() {
+        const gid = selectedGuildId();
+        if (!gid) { notify("Select a server first", "error"); return; }
+        const chId = els.ticketPanelChannelId && els.ticketPanelChannelId.value ? els.ticketPanelChannelId.value.trim() : "";
+        if (!chId) { notify("Select or enter a channel ID to send the panel", "error"); return; }
+
+        setBusy(els.deployTicketPanelBtn, true, "Deploying…");
+        try {
+            const payload = {
+                channel_id: chId,
+                title: els.ticketPanelTitle ? els.ticketPanelTitle.value.trim() : "🎫 Support Ticket System",
+                description: els.ticketPanelDescription ? els.ticketPanelDescription.value.trim() : "",
+                button_label: els.ticketPanelButtonLabel ? els.ticketPanelButtonLabel.value.trim() : "Create Ticket",
+            };
+            await api(`/api/discord/tickets/send_panel/${encodeURIComponent(gid)}`, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
+            notify("Ticket creation panel sent to Discord channel!", "success");
+            flashStatus(els.ticketDeployStatus, "Panel Sent ✓", "success");
+        } catch (err) {
+            notify(`Deploy panel failed: ${err.message}`, "error");
+            flashStatus(els.ticketDeployStatus, "Failed ✕", "error");
+        } finally {
+            setBusy(els.deployTicketPanelBtn, false);
+        }
+    }
+
+    async function loadTicketsList() {
+        const gid = selectedGuildId();
+        if (!gid || !els.ticketsBody) return;
+        setBusy(els.refreshTicketsBtn, true, "Refreshing…");
+        try {
+            const res = await api(`/api/discord/tickets/${encodeURIComponent(gid)}`);
+            const tickets = (res && res.data && res.data.tickets) || [];
+            if (!tickets.length) {
+                els.ticketsBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:16px;">No tickets found</td></tr>';
+                return;
+            }
+            els.ticketsBody.innerHTML = tickets.map(t => {
+                const isClosed = t.status === "closed";
+                const pillClass = t.status === "open" ? "pill-timeout" : (t.status === "claimed" ? "pill-warn" : "pill-auto");
+                const openedDate = t.opened_at ? new Date(t.opened_at * 1000).toLocaleString() : "—";
+                const actionBtn = !isClosed ? `
+                    <button class="btn btn-ghost btn-sm close-ticket-btn" data-chid="${escapeHtml(t.channel_id)}" style="color:var(--danger);padding:4px 8px;">
+                        <i class="fas fa-lock"></i> Close
+                    </button>` : `<span style="color:var(--text-muted);font-size:0.75rem;">Archived</span>`;
+
+                return `
+                    <tr>
+                        <td style="font-weight:700;font-family:monospace;">#${String(t.ticket_id || 0).padStart(4, "0")}</td>
+                        <td><span style="font-family:monospace;font-size:0.8rem;">#${escapeHtml(t.channel_id)}</span></td>
+                        <td>${escapeHtml(t.user_name || "Unknown")}<br><span style="font-size:0.75rem;color:var(--text-muted);">${escapeHtml(t.user_id || "")}</span></td>
+                        <td>${escapeHtml(t.topic || "N/A")}</td>
+                        <td><span class="pill ${pillClass}">${escapeHtml(t.status || "open")}</span></td>
+                        <td>${escapeHtml(t.claimed_by_name || "—")}</td>
+                        <td style="font-size:0.78rem;color:var(--text-muted);">${escapeHtml(openedDate)}</td>
+                        <td>${actionBtn}</td>
+                    </tr>
+                `;
+            }).join("");
+
+            els.ticketsBody.querySelectorAll(".close-ticket-btn").forEach(btn => {
+                btn.addEventListener("click", async () => {
+                    const cid = btn.getAttribute("data-chid");
+                    if (!cid) return;
+                    if (!(await tgConfirm(`Close and delete ticket channel #${cid}?`))) return;
+                    try {
+                        await api(`/api/discord/tickets/close/${encodeURIComponent(gid)}/${encodeURIComponent(cid)}`, { method: "POST" });
+                        notify(`Ticket #${cid} closed`, "success");
+                        await loadTicketsList();
+                    } catch (ce) {
+                        notify(`Close failed: ${ce.message}`, "error");
+                    }
+                });
+            });
+        } catch (err) {
+            console.warn("loadTicketsList failed:", err);
+            els.ticketsBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--danger); padding:16px;">Failed to load tickets: ${escapeHtml(err.message)}</td></tr>`;
+        } finally {
+            setBusy(els.refreshTicketsBtn, false);
+        }
     }
 
     /* ── Init ── */
@@ -1230,7 +1417,7 @@
         renderServers();
         bindEvents();
         if (selectedGuildId()) {
-            Promise.allSettled([fetchChannels(), fetchRoles()]);
+            Promise.allSettled([fetchChannels(), fetchRoles(), loadTicketConfig(), loadTicketsList()]);
         }
         updateChecklist();
     }

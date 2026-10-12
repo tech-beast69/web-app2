@@ -545,6 +545,7 @@
             <a class="quick-link" href="#exemptions">Exemptions</a>
             <a class="quick-link" href="#filters">Filters</a>
             <a class="quick-link" href="#join-gate">Join-Gate</a>
+            <a class="quick-link" href="#tickets">Tickets</a>
             <a class="quick-link" href="#cases">Cases</a>
         </div>
     </div>
@@ -1071,6 +1072,132 @@
                     <button class="btn btn-ghost btn-sm" id="useSelectedChannelBtn"><i class="fas fa-arrow-down"></i> Use Selected Channel</button>
                     <button class="btn btn-ghost btn-sm" id="useSelectedRoleBtn"><i class="fas fa-arrow-down"></i> Use Selected Role</button>
                     <button class="btn btn-primary btn-sm" id="applyVerificationBtn"><i class="fas fa-paper-plane"></i> Send Test Message</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Support Ticket System ── -->
+        <section id="tickets">
+            <div class="section-title"><i class="fas fa-ticket-alt"></i> Support Ticket System</div>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title"><i class="fas fa-sliders"></i> Ticket Configuration</div>
+                        <div class="card-desc">Enable private user-staff support ticket channels with automated logging</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="ticketEnabled" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Category (Parent for New Ticket Channels)</label>
+                        <select id="ticketCategorySelect">
+                            <option value="">— Select Category / Channel —</option>
+                        </select>
+                        <input type="text" id="ticketCategoryId" placeholder="Or enter Category ID manually" style="margin-top:6px;">
+                    </div>
+                    <div class="form-group">
+                        <label>Support Staff Role</label>
+                        <select id="ticketSupportRoleSelect">
+                            <option value="">— Select Staff Role —</option>
+                        </select>
+                        <input type="text" id="ticketSupportRoleId" placeholder="Or enter Role ID manually" style="margin-top:6px;">
+                    </div>
+                </div>
+
+                <div class="grid-3" style="margin-top:10px;">
+                    <div class="form-group">
+                        <label>Transcript & Close Log Channel</label>
+                        <select id="ticketLogChannelSelect">
+                            <option value="">— Select Log Channel —</option>
+                        </select>
+                        <input type="text" id="ticketLogChannelId" placeholder="Or Channel ID manually" style="margin-top:6px;">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Open Tickets / User</label>
+                        <input type="number" id="ticketMaxPerUser" min="1" max="10" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Channel Name Prefix</label>
+                        <input type="text" id="ticketPrefix" value="ticket" placeholder="e.g. ticket">
+                    </div>
+                </div>
+
+                <div class="actions-row" style="margin-top:16px;">
+                    <button class="btn btn-primary" id="saveTicketConfigBtn"><i class="fas fa-save"></i> Save Ticket Settings</button>
+                    <span class="save-status" id="ticketSaveStatus"></span>
+                </div>
+            </div>
+
+            <!-- Deploy Ticket Panel Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title"><i class="fas fa-paper-plane"></i> Deploy Ticket Creation Panel</div>
+                        <div class="card-desc">Send the interactive "Create Ticket" panel embed with a persistent button to a channel</div>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Target Channel for Panel</label>
+                        <select id="ticketPanelChannelSelect">
+                            <option value="">— Select Channel —</option>
+                        </select>
+                        <input type="text" id="ticketPanelChannelId" placeholder="Or enter Channel ID" style="margin-top:6px;">
+                    </div>
+                    <div class="form-group">
+                        <label>Button Label</label>
+                        <input type="text" id="ticketPanelButtonLabel" value="Create Ticket" placeholder="e.g. Create Ticket">
+                    </div>
+                </div>
+                <div class="grid-2" style="margin-top:10px;">
+                    <div class="form-group">
+                        <label>Panel Embed Title</label>
+                        <input type="text" id="ticketPanelTitle" value="🎫 Support Ticket System" placeholder="Title">
+                    </div>
+                    <div class="form-group">
+                        <label>Panel Embed Description</label>
+                        <textarea id="ticketPanelDescription" rows="2" placeholder="Description shown in embed...">Need assistance or have questions? Click the Create Ticket button below to speak privately with our team.</textarea>
+                    </div>
+                </div>
+                <div class="actions-row" style="margin-top:14px;">
+                    <button class="btn btn-primary" id="deployTicketPanelBtn"><i class="fas fa-bullhorn"></i> Deploy Panel Now</button>
+                    <span class="save-status" id="ticketDeployStatus"></span>
+                </div>
+            </div>
+
+            <!-- Active Tickets List -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title"><i class="fas fa-inbox"></i> Active & Recent Tickets</div>
+                        <div class="card-desc">View currently open or claimed support tickets across this server</div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" id="refreshTicketsBtn"><i class="fas fa-sync-alt"></i> Refresh Tickets</button>
+                </div>
+                <div style="max-height: 320px; overflow: auto; margin-top: 10px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th># ID</th>
+                                <th>Channel</th>
+                                <th>User</th>
+                                <th>Topic</th>
+                                <th>Status</th>
+                                <th>Claimed By</th>
+                                <th>Opened</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ticketsBody">
+                            <tr>
+                                <td colspan="8" style="text-align:center; color:var(--text-muted); padding:16px;">No tickets loaded or none open</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </section>
