@@ -19,7 +19,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     
-    <link rel="stylesheet" href="dashboard.css?v=4.2">
+    <link rel="stylesheet" href="dashboard.css?v=5.2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js?61"></script>
@@ -70,7 +70,23 @@
     <div id="groupModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modalGroupTitle">Group Settings</h2>
+                <div style="flex: 1;">
+                    <h2 id="modalGroupTitle">Group Settings</h2>
+                    <div id="modalInviteSection" class="modal-invite-box" style="display: none;">
+                        <div class="modal-invite-info">
+                            <i class="fas fa-link"></i>
+                            <span id="modalInviteText">https://t.me/...</span>
+                        </div>
+                        <div class="modal-invite-btns">
+                            <a id="modalJoinBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn-join-action">
+                                <i class="fas fa-external-link-alt"></i> Join Group
+                            </a>
+                            <button id="modalCopyInviteBtn" class="action-btn" type="button" onclick="copyModalInviteLink()">
+                                <i class="fas fa-copy"></i> Copy Link
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <button class="close-modal" onclick="closeModal()">
                     <i class="fas fa-times"></i>
                 </button>
@@ -929,8 +945,8 @@
         </div>
     </div>
 
-    <script src="config.js?v=4.2"></script>
-    <script src="dashboard.js?v=4.2"></script>
+    <script src="config.js?v=5.2"></script>
+    <script src="dashboard.js?v=5.2"></script>
 </body>
 
 </html>

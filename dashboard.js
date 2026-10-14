@@ -50,6 +50,46 @@ function getWebappHeaders(customHeaders = {}) {
     return headers;
 }
 
+function tgConfirm(message) {
+    return new Promise((resolve) => {
+        if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.showConfirm === 'function') {
+            window.Telegram.WebApp.showConfirm(message, (ok) => resolve(Boolean(ok)));
+        } else {
+            resolve(window.confirm(message));
+        }
+    });
+}
+
+function tgAlert(message) {
+    return new Promise((resolve) => {
+        if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.showAlert === 'function') {
+            window.Telegram.WebApp.showAlert(message, () => resolve());
+        } else {
+            window.alert(message);
+            resolve();
+        }
+    });
+}
+
+function resolveCurrentUserId() {
+    if (typeof currentUserId !== 'undefined' && currentUserId && String(currentUserId).trim()) return String(currentUserId).trim();
+    if (typeof userId !== 'undefined' && userId && String(userId).trim()) return String(userId).trim();
+    if (typeof telegramUser !== 'undefined' && telegramUser && telegramUser.id) return String(telegramUser.id).trim();
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user && window.Telegram.WebApp.initDataUnsafe.user.id) {
+        return String(window.Telegram.WebApp.initDataUnsafe.user.id).trim();
+    }
+    try {
+        const p = new URLSearchParams(window.location.search || '');
+        const u = p.get('user_id') || p.get('admin_id') || p.get('tg_user_id');
+        if (u) return u.trim();
+    } catch (_) {}
+    try {
+        const stored = localStorage.getItem('tg_user_id') || localStorage.getItem('current_user_id') || localStorage.getItem('dashboard_user_id');
+        if (stored) return stored.trim();
+    } catch (_) {}
+    return '';
+}
+
 function getStoredApiBase() {
     try {
         const stored = normalizeApiBase(localStorage.getItem(API_BASE_STORAGE_KEY) || '');
@@ -1354,6 +1394,289 @@ async function loadUserForLinks(userId) {
                 tokenBalanceEl.textContent = '0';
             }
         }
+    }
+}
+
+// Submit a new link for admin approval
+async function submitNewLink() {
+    const nameInput = document.getElementById('linkNameInput');
+    const urlInput = document.getElementById('linkUrlInput');
+    const descInput = document.getElementById('linkDescInput');
+    const submitBtn = document.getElementById('submitLinkBtn');
+    
+    if (!nameInput || !urlInput) return;
+    
+    const name = nameInput.value.trim();
+    let url = urlInput.value.trim();
+    const desc = descInput ? descInput.value.trim() : '';
+    
+    if (!name) {
+        showNotification('Please enter a group or channel name', 'warning');
+        nameInput.focus();
+        return;
+    }
+    
+    if (!url) {
+        showNotification('Please enter an invite link', 'warning');
+        urlInput.focus();
+        return;
+    }
+    
+    // Normalize url
+    if (url.startsWith('@')) {
+        url = 'https://t.me/' + url.substring(1);
+    } else if (url.startsWith('t.me/') || url.startsWith('telegram.me/')) {
+        url = 'https://' + url;
+    }
+    
+    const uid = resolveCurrentUserId();
+    const originalText = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        submitBtn.disabled = true;
+    }
+    
+    try {
+        const targetBase = API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
+        const resp = await fetch(`${targetBase}/api/links/submit`, {
+            method: 'POST',
+            headers: getWebappHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                user_id: uid,
+                submitted_by: uid,
+                name: name,
+                title: name,
+                link: url,
+                url: url,
+                description: desc
+            })
+        });
+        
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            showNotification(data.message || 'Link submitted successfully! Waiting for admin approval.', 'success');
+            nameInput.value = '';
+            urlInput.value = '';
+            if (descInput) descInput.value = '';
+            if (uid) {
+                loadPendingLinks(uid);
+            }
+        } else {
+            showNotification(data.error || 'Failed to submit link', 'error');
+        }
+    } catch (err) {
+        console.error('Error submitting link:', err);
+        showNotification('Network error submitting link: ' + err.message, 'error');
+    } finally {
+        if (submitBtn) {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    }
+}
+
+// Load pending links for admin approval
+async function loadPendingLinks(userId) {
+    const section = document.getElementById('pendingLinksSection');
+    const container = document.getElementById('pendingLinksContainer');
+    if (!section || !container) return;
+    
+    try {
+        const targetBase = API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
+        const uid = userId || resolveCurrentUserId();
+        const resp = await fetch(`${targetBase}/api/links/pending?admin_id=${encodeURIComponent(uid)}`, {
+            headers: getWebappHeaders()
+        });
+        
+        if (!resp.ok) {
+            if (resp.status === 403 || resp.status === 401) {
+                section.style.display = 'none';
+                return;
+            }
+            throw new Error(`HTTP ${resp.status}`);
+        }
+        
+        const data = await resp.json();
+        const pending = (data && data.pending_links) || [];
+        
+        if (!pending || pending.length === 0) {
+            section.style.display = 'none';
+            container.innerHTML = '<p style="text-align:center; padding:15px; color:#9ca3af;">No pending links to review.</p>';
+            return;
+        }
+        
+        section.style.display = 'block';
+        container.innerHTML = pending.map((item, idx) => {
+            const title = escapeHtml(item.title || item.name || 'Submitted Link');
+            const linkUrl = escapeHtml(item.link || item.url || '');
+            const desc = escapeHtml(item.description || 'No description provided');
+            const submitter = escapeHtml(String(item.submitted_by || 'Unknown'));
+            const date = item.submitted_at ? new Date(item.submitted_at).toLocaleDateString() : '';
+            
+            return `
+                <div class="pending-card" id="pending-card-${idx}">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                        <div>
+                            <h4 style="margin: 0 0 5px 0; color: #6b21a8; font-size: 1.05rem;">
+                                <i class="fas fa-layer-group"></i> ${title}
+                            </h4>
+                            <a href="${linkUrl}" target="_blank" rel="noopener noreferrer" style="color: #7c3aed; font-size: 0.88rem; word-break: break-all;">
+                                <i class="fas fa-external-link-alt"></i> ${linkUrl}
+                            </a>
+                        </div>
+                        <span class="pending-badge">Pending</span>
+                    </div>
+                    <p class="pending-info" style="margin: 10px 0 6px 0; font-size: 0.88rem; color: #4b5563;">
+                        ${desc}
+                    </p>
+                    <div style="font-size: 0.78rem; color: #9ca3af; margin-bottom: 12px;">
+                        <span><i class="fas fa-user"></i> By: ${submitter}</span>
+                        ${date ? `<span style="margin-left: 12px;"><i class="fas fa-clock"></i> ${date}</span>` : ''}
+                    </div>
+                    <div class="approval-actions">
+                        <button class="btn-approve" onclick="approvePendingLink('${encodeURIComponent(item.link || item.url)}', '${encodeURIComponent(item.title || item.name || '')}', '${encodeURIComponent(item.description || '')}', ${idx})">
+                            <i class="fas fa-check"></i> Approve & Add
+                        </button>
+                        <button class="btn-reject" onclick="rejectPendingLink('${encodeURIComponent(item.link || item.url)}', ${idx})">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error('Error loading pending links:', err);
+    }
+}
+
+// Approve pending link
+async function approvePendingLink(encodedUrl, encodedTitle, encodedDesc, cardIdx) {
+    const url = decodeURIComponent(encodedUrl || '');
+    const title = decodeURIComponent(encodedTitle || '');
+    const desc = decodeURIComponent(encodedDesc || '');
+    
+    const confirmed = await tgConfirm(`Approve and add this link to the database?\n\n"${title || url}"`);
+    if (!confirmed) return;
+    
+    const uid = resolveCurrentUserId();
+    showLoading('Approving link...');
+    try {
+        const targetBase = API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
+        const resp = await fetch(`${targetBase}/api/links/approve`, {
+            method: 'POST',
+            headers: getWebappHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                admin_id: uid,
+                link: url,
+                url: url,
+                name: title,
+                title: title,
+                description: desc
+            })
+        });
+        
+        hideLoading();
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            showNotification(data.message || 'Link approved and added successfully!', 'success');
+            const card = document.getElementById(`pending-card-${cardIdx}`);
+            if (card) card.remove();
+            loadPendingLinks(uid);
+            loadLinks();
+        } else {
+            showNotification(data.error || 'Failed to approve link', 'error');
+        }
+    } catch (err) {
+        hideLoading();
+        console.error('Error approving link:', err);
+        showNotification('Network error approving link: ' + err.message, 'error');
+    }
+}
+
+// Reject pending link
+async function rejectPendingLink(encodedUrl, cardIdx) {
+    const url = decodeURIComponent(encodedUrl || '');
+    const confirmed = await tgConfirm(`Reject and remove this submitted link?\n\n"${url}"`);
+    if (!confirmed) return;
+    
+    const uid = resolveCurrentUserId();
+    showLoading('Rejecting link...');
+    try {
+        const targetBase = API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
+        const resp = await fetch(`${targetBase}/api/links/reject`, {
+            method: 'POST',
+            headers: getWebappHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                admin_id: uid,
+                link: url,
+                url: url
+            })
+        });
+        
+        hideLoading();
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            showNotification(data.message || 'Pending link rejected', 'info');
+            const card = document.getElementById(`pending-card-${cardIdx}`);
+            if (card) card.remove();
+            loadPendingLinks(uid);
+        } else {
+            showNotification(data.error || 'Failed to reject link', 'error');
+        }
+    } catch (err) {
+        hideLoading();
+        console.error('Error rejecting link:', err);
+        showNotification('Network error rejecting link: ' + err.message, 'error');
+    }
+}
+
+// Load reported links for admin
+async function loadReportedLinks(userId) {
+    const section = document.getElementById('reportedLinksSection');
+    const container = document.getElementById('reportedLinksContainer');
+    if (!section || !container) return;
+    
+    try {
+        const targetBase = API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '';
+        const uid = userId || resolveCurrentUserId();
+        const resp = await fetch(`${targetBase}/api/links/reported?admin_id=${encodeURIComponent(uid)}`, {
+            headers: getWebappHeaders()
+        });
+        
+        if (!resp.ok) {
+            if (resp.status === 403 || resp.status === 401) {
+                section.style.display = 'none';
+                return;
+            }
+            throw new Error(`HTTP ${resp.status}`);
+        }
+        
+        const data = await resp.json();
+        const reported = (data && data.reported_links) || [];
+        
+        if (!reported || reported.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+        
+        section.style.display = 'block';
+        container.innerHTML = reported.map((item, idx) => {
+            const title = escapeHtml(item.title || item.name || 'Reported Link');
+            const linkUrl = escapeHtml(item.link || item.url || '');
+            const count = item.report_count || (item.reporters ? item.reporters.length : 1);
+            
+            return `
+                <div class="reported-card" id="reported-card-${idx}" style="background:white; border:2px solid #fca5a5; border-radius:12px; padding:15px; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h4 style="margin:0; color:#b91c1c;">${title}</h4>
+                        <span style="background:#ef4444; color:white; padding:3px 8px; border-radius:10px; font-size:0.78rem;">${count} report(s)</span>
+                    </div>
+                    <p style="margin:8px 0; word-break:break-all; font-size:0.85rem;"><a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${linkUrl}</a></p>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error('Error loading reported links:', err);
     }
 }
 
@@ -2918,17 +3241,29 @@ async function loadGroups() {
         if (data.success && data.groups.length > 0) {
             groupsSection.style.display = 'block';
             emptyState.style.display = 'none';
-            
-            groupsGrid.innerHTML = data.groups.map(group => `
+
+            const isBotAdmin = data.groups.some(g => g.is_bot_admin);
+            const myGroups = data.groups.filter(g => g.is_my_group || (!isBotAdmin && (g.is_owner || g.is_group_admin)));
+            const otherGroups = data.groups.filter(g => !g.is_my_group && isBotAdmin);
+
+            const renderCard = (group) => `
                 <div class="group-card" onclick='openGroupSettings(${JSON.stringify(group.group_id)})'>
                     <div class="group-header">
                         <div>
                             <h3 class="group-title">${escapeHtml(group.group_title)}</h3>
                             <p class="group-id">ID: ${group.group_id}</p>
-                            ${group.is_owner ? '<p class="group-id" style="color: #ffd700;"><i class="fas fa-crown"></i> You are the owner</p>' : ''}
-                            ${!group.is_owner && group.is_group_admin ? '<p class="group-id" style="color: #60a5fa;"><i class="fas fa-user-shield"></i> You are an admin</p>' : ''}
+                            ${group.is_owner ? '<p class="group-id" style="color: #ffd700; font-weight: 600;"><i class="fas fa-crown"></i> You are the owner</p>' : ''}
+                            ${!group.is_owner && group.is_group_admin ? '<p class="group-id" style="color: #60a5fa; font-weight: 600;"><i class="fas fa-user-shield"></i> You are an admin</p>' : ''}
+                            ${!group.is_owner && !group.is_group_admin && group.is_bot_admin ? '<p class="group-id" style="color: #c084fc; font-weight: 500;"><i class="fas fa-robot"></i> Other Group (Bot Admin)</p>' : ''}
                         </div>
-                        ${group.bot_is_admin ? '<span class="admin-badge"><i class="fas fa-shield-alt"></i> Admin</span>' : ''}
+                        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                            ${group.bot_is_admin ? '<span class="admin-badge"><i class="fas fa-shield-alt"></i> Bot Admin</span>' : ''}
+                            ${group.invite_link ? `
+                                <a href="${escapeHtml(group.invite_link)}" target="_blank" rel="noopener noreferrer" class="btn-join-group" onclick="event.stopPropagation();" title="Join Telegram Group">
+                                    <i class="fas fa-paper-plane"></i> Join
+                                </a>
+                            ` : ''}
+                        </div>
                     </div>
                     
                     <div class="group-stats">
@@ -2954,9 +3289,33 @@ async function loadGroups() {
                         <button class="action-btn" onclick='event.stopPropagation(); openGroupSettings(${JSON.stringify(group.group_id)})'>
                             <i class="fas fa-cog"></i> Manage
                         </button>
+                        ${group.invite_link ? `
+                            <a href="${escapeHtml(group.invite_link)}" target="_blank" rel="noopener noreferrer" class="action-btn btn-join-action" onclick="event.stopPropagation();">
+                                <i class="fas fa-external-link-alt"></i> Join Group
+                            </a>
+                        ` : ''}
                     </div>
                 </div>
-            `).join('');
+            `;
+
+            if (isBotAdmin && myGroups.length > 0 && otherGroups.length > 0) {
+                groupsGrid.innerHTML = `
+                    <div class="groups-section-heading" style="grid-column: 1 / -1; margin: 5px 0 10px 0;">
+                        <h4 style="margin: 0; color: #ffd700; display: flex; align-items: center; gap: 8px; font-size: 1.05rem;">
+                            <i class="fas fa-crown"></i> Your Admin Groups (${myGroups.length})
+                        </h4>
+                    </div>
+                    ${myGroups.map(renderCard).join('')}
+                    <div class="groups-section-heading" style="grid-column: 1 / -1; margin: 25px 0 10px 0; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 15px;">
+                        <h4 style="margin: 0; color: #c084fc; display: flex; align-items: center; gap: 8px; font-size: 1.05rem;">
+                            <i class="fas fa-robot"></i> Other Managed Groups (${otherGroups.length})
+                        </h4>
+                    </div>
+                    ${otherGroups.map(renderCard).join('')}
+                `;
+            } else {
+                groupsGrid.innerHTML = data.groups.map(renderCard).join('');
+            }
         } else {
             groupsSection.style.display = 'none';
             emptyState.style.display = 'block';
@@ -3084,6 +3443,24 @@ async function openGroupSettings(groupId) {
 async function populateGroupSettings(config) {
     // Keep a local reference for other functions
     currentGroupConfig = config || {};
+
+    // Group Invite link in modal header
+    const inviteSection = document.getElementById('modalInviteSection');
+    const inviteText = document.getElementById('modalInviteText');
+    const joinBtn = document.getElementById('modalJoinBtn');
+    const inviteUrl = (config && config.invite_link) ? String(config.invite_link).trim() : '';
+    if (inviteSection) {
+        if (inviteUrl) {
+            inviteSection.style.display = 'flex';
+            if (inviteText) inviteText.textContent = inviteUrl;
+            if (joinBtn) {
+                joinBtn.href = inviteUrl;
+                joinBtn.style.display = 'inline-flex';
+            }
+        } else {
+            inviteSection.style.display = 'none';
+        }
+    }
     
     // General settings
     document.getElementById('welcomeEnabled').checked = config.settings?.welcome_enabled || false;
@@ -3132,6 +3509,24 @@ async function populateGroupSettings(config) {
     document.getElementById('mediaReactionEmojis').value = (config.media_reaction_emojis || ["🔥", "❤", "👍", "😍", "🤩", "👌", "😘", "🙊", "💯", "🎉", "😎", "👏", "😁", "🏆", "😱", "🤡"]).join(', ');
     updateEmojiPreview();
 }
+
+function copyModalInviteLink() {
+    const inviteUrl = (currentGroupConfig && currentGroupConfig.invite_link) || '';
+    if (!inviteUrl) {
+        showNotification('No invite link available for this group', 'warning');
+        return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(inviteUrl).then(() => {
+            showNotification('Invite link copied to clipboard!', 'success');
+        }).catch(() => {
+            prompt('Copy group invite link:', inviteUrl);
+        });
+    } else {
+        prompt('Copy group invite link:', inviteUrl);
+    }
+}
+window.copyModalInviteLink = copyModalInviteLink;
 
 // Helper Functions
 function updateFiltersDisplay(filters) {
