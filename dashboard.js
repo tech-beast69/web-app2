@@ -4360,11 +4360,8 @@ function renderVipMembersTable(members) {
                     <button onclick="extendGroupVipMember('${safeId}')" title="Extend VIP Duration" style="background: rgba(0, 136, 204, 0.15); color: #4da6ff; border: 1px solid rgba(0, 136, 204, 0.3); padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-right: 4px; font-weight: 600;">
                         <i class="fas fa-plus"></i> Extend
                     </button>
-                    <button onclick="deleteGroupVipMember('${safeId}')" title="Revoke VIP Status only" style="background: rgba(255, 170, 0, 0.15); color: #ffaa00; border: 1px solid rgba(255, 170, 0, 0.3); padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-right: 4px; font-weight: 600;">
-                        <i class="fas fa-user-slash"></i> Revoke VIP
-                    </button>
-                    <button onclick="kickGroupMemberDirect('${safeId}')" title="Remove Member from Telegram Group Chat" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;">
-                        <i class="fas fa-user-minus"></i> Remove Member
+                    <button onclick="kickGroupMemberDirect('${safeId}')" title="Remove Member from Telegram Group Chat" style="background: rgba(255, 77, 77, 0.15); color: #ff6666; border: 1px solid rgba(255, 77, 77, 0.3); padding: 5px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">
+                        <i class="fas fa-trash-alt"></i>
                     </button>
                 </td>
             </tr>
@@ -4474,35 +4471,7 @@ async function extendGroupVipMember(targetUserId) {
 }
 
 async function deleteGroupVipMember(targetUserId) {
-    if (!currentGroupId || !targetUserId) return;
-    const ok = await tgConfirm(`Are you sure you want to revoke VIP membership for user ${targetUserId}?`);
-    if (!ok) return;
-
-    try {
-        const apiBase = getActiveApiBase();
-        const res = await fetch(`${apiBase}/api/group/${currentGroupId}/premium-members/${targetUserId}`, {
-            method: 'DELETE',
-            headers: getWebappHeaders()
-        });
-        const data = await res.json();
-        if (data.success) {
-            await loadGroupVipMembers();
-            if (typeof showNotification === 'function') {
-                showNotification(`VIP membership revoked for user ${targetUserId}.`, 'success');
-            } else {
-                await tgAlert(`VIP membership revoked for user ${targetUserId}.`);
-            }
-        } else {
-            throw new Error(data.error || 'Failed to revoke member');
-        }
-    } catch (e) {
-        console.error('Error revoking VIP member:', e);
-        if (typeof showNotification === 'function') {
-            showNotification(`Failed: ${e.message}`, 'error');
-        } else {
-            await tgAlert(`Failed: ${e.message}`);
-        }
-    }
+    return kickGroupMemberDirect(targetUserId);
 }
 
 async function kickGroupMemberDirect(targetUserId) {
