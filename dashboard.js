@@ -4100,16 +4100,7 @@ async function loadGroupVipTab() {
     const container = document.getElementById('vipActiveContainer');
     if (!banner || !container) return;
 
-    // Check user auth state: admin or bot premium status
-    const authUser = window.currentAuthUser || {};
-    const hasPremium = !!(authUser.is_admin || authUser.is_premium);
-
-    if (!hasPremium) {
-        banner.style.display = 'block';
-        container.style.display = 'none';
-        return;
-    }
-
+    // Show container by default; authoritative server API checks will display locked banner if 403
     banner.style.display = 'none';
     container.style.display = 'block';
 
@@ -4365,12 +4356,15 @@ function renderVipMembersTable(members) {
                 <td style="padding: 10px 8px;">${statusBadge}</td>
                 <td style="padding: 10px 8px; font-size: 12px;">${timeLeftStr}</td>
                 <td style="padding: 10px 8px; font-size: 12px; color: #bbb;">${safeExpiry}</td>
-                <td style="padding: 10px 8px; text-align: right;">
-                    <button onclick="extendGroupVipMember('${safeId}')" title="Extend VIP" style="background: rgba(0, 136, 204, 0.15); color: #4da6ff; border: 1px solid rgba(0, 136, 204, 0.3); padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-right: 4px;">
+                <td style="padding: 10px 8px; text-align: right; white-space: nowrap;">
+                    <button onclick="extendGroupVipMember('${safeId}')" title="Extend VIP Duration" style="background: rgba(0, 136, 204, 0.15); color: #4da6ff; border: 1px solid rgba(0, 136, 204, 0.3); padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-right: 4px; font-weight: 600;">
                         <i class="fas fa-plus"></i> Extend
                     </button>
-                    <button onclick="deleteGroupVipMember('${safeId}')" title="Remove VIP" style="background: rgba(255, 77, 77, 0.15); color: #ff6666; border: 1px solid rgba(255, 77, 77, 0.3); padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;">
-                        <i class="fas fa-trash-alt"></i>
+                    <button onclick="deleteGroupVipMember('${safeId}')" title="Revoke VIP Status only" style="background: rgba(255, 170, 0, 0.15); color: #ffaa00; border: 1px solid rgba(255, 170, 0, 0.3); padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-right: 4px; font-weight: 600;">
+                        <i class="fas fa-user-slash"></i> Revoke VIP
+                    </button>
+                    <button onclick="kickGroupMemberDirect('${safeId}')" title="Remove Member from Telegram Group Chat" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-user-minus"></i> Remove Member
                     </button>
                 </td>
             </tr>
@@ -4503,6 +4497,101 @@ async function deleteGroupVipMember(targetUserId) {
         }
     } catch (e) {
         console.error('Error revoking VIP member:', e);
+        if (typeof showNotification === 'function') {
+            showNotification(`Failed: ${e.message}`, 'error');
+        } else {
+            await tgAlert(`Failed: ${e.message}`);
+        }
+    }
+}
+
+async function kickGroupMemberDirect(targetUserId) {
+    if (!currentGroupId || !targetUserId) return;
+    const ok = await tgConfirm(`Are you sure you want to REMOVE user ${targetUserId} from the Telegram group chat and revoke their VIP status?`);
+    if (!ok) return;
+
+    try {
+        const apiBase = getActiveApiBase();
+        const res = await fetch(`${apiBase}/api/group/${currentGroupId}/members/remove`, {
+            method: 'POST',
+            headers: getWebappHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                user_id: targetUserId,
+                revoke_vip: true
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            await loadGroupVipMembers();
+            if (typeof showNotification === 'function') {
+                showNotification(data.message || `Member ${targetUserId} removed from group!`, 'success');
+            } else {
+                await tgAlert(data.message || `Member ${targetUserId} removed from group!`);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to remove member');
+        }
+    } catch (e) {
+        console.error('Error removing member from group:', e);
+        if (typeof showNotification === 'function') {
+            showNotification(`Failed: ${e.message}`, 'error');
+        } else {
+            await tgAlert(`Failed: ${e.message}`);
+        }
+    }
+}
+
+function toggleRemoveMemberForm() {
+    const box = document.getElementById('removeMemberBox');
+    if (!box) return;
+    const isHidden = box.style.display === 'none' || !box.style.display;
+    box.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        document.getElementById('removeMemberUserId')?.focus();
+    }
+}
+
+async function submitRemoveMember() {
+    if (!currentGroupId) return;
+    const userIdInput = document.getElementById('removeMemberUserId');
+    const revokeVipCheckbox = document.getElementById('removeMemberRevokeVip');
+
+    const targetUserId = userIdInput?.value?.trim();
+    const revokeVip = revokeVipCheckbox ? revokeVipCheckbox.checked : true;
+
+    if (!targetUserId || isNaN(targetUserId)) {
+        await tgAlert('Please enter a valid numeric Telegram User ID.');
+        return;
+    }
+
+    const ok = await tgConfirm(`Are you sure you want to remove user ${targetUserId} from the Telegram group?`);
+    if (!ok) return;
+
+    try {
+        const apiBase = getActiveApiBase();
+        const res = await fetch(`${apiBase}/api/group/${currentGroupId}/members/remove`, {
+            method: 'POST',
+            headers: getWebappHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                user_id: targetUserId,
+                revoke_vip: revokeVip
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            userIdInput.value = '';
+            toggleRemoveMemberForm();
+            await loadGroupVipMembers();
+            if (typeof showNotification === 'function') {
+                showNotification(data.message || `User ${targetUserId} removed from group!`, 'success');
+            } else {
+                await tgAlert(data.message || `User ${targetUserId} removed from group!`);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to remove member');
+        }
+    } catch (e) {
+        console.error('Error removing member:', e);
         if (typeof showNotification === 'function') {
             showNotification(`Failed: ${e.message}`, 'error');
         } else {
