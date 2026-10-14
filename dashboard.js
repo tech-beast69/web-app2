@@ -4100,7 +4100,16 @@ async function loadGroupVipTab() {
     const container = document.getElementById('vipActiveContainer');
     if (!banner || !container) return;
 
-    // Show container by default; authoritative server API checks will display locked banner if 403
+    // Check user auth state: admin or bot premium status
+    const authUser = window.currentAuthUser || {};
+    const hasPremium = !!(authUser.is_admin || authUser.is_premium);
+
+    if (!hasPremium) {
+        banner.style.display = 'block';
+        container.style.display = 'none';
+        return;
+    }
+
     banner.style.display = 'none';
     container.style.display = 'block';
 
@@ -4235,15 +4244,12 @@ async function loadGroupVipMembers() {
     if (!currentGroupId) return;
     const tableBody = document.getElementById('vipMembersTableBody');
     if (tableBody) {
-        tableBody.innerHTML = Array(4).fill(0).map(() => `
-            <tr class="vip-skeleton-row" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <td class="col-user" style="padding: 12px 6px;"><div class="skeleton-shimmer" style="height: 14px; width: 75px; border-radius: 4px;"></div></td>
-                <td class="col-status" style="padding: 12px 4px; text-align: center;"><div class="skeleton-shimmer" style="height: 18px; width: 52px; border-radius: 12px; display: inline-block;"></div></td>
-                <td class="col-time" style="padding: 12px 6px;"><div class="skeleton-shimmer" style="height: 14px; width: 60px; border-radius: 4px;"></div></td>
-                <td class="col-expiry" style="padding: 12px 8px;"><div class="skeleton-shimmer" style="height: 14px; width: 75px; border-radius: 4px;"></div></td>
-                <td class="col-actions" style="padding: 12px 6px; text-align: right;"><div class="skeleton-shimmer" style="height: 26px; width: 70px; border-radius: 6px; display: inline-block;"></div></td>
-            </tr>
-        `).join('');
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 24px; color: #777;">
+                    <i class="fas fa-spinner fa-spin"></i> Loading VIP members...
+                </td>
+            </tr>`;
     }
     try {
         const apiBase = getActiveApiBase();
@@ -4352,25 +4358,20 @@ function renderVipMembersTable(members) {
         const safeExpiry = escapeHtml(String(m.expiry || '—'));
 
         return `
-            <tr data-user-id="${safeId}" class="vip-member-row" style="border-bottom: 1px solid rgba(255,255,255,0.06);">
-                <td class="col-user" style="padding: 10px 6px; font-family: monospace; font-size: 13px;">
-                    <i class="fas fa-user-circle" style="color: #888; margin-right: 5px;"></i>${safeId}
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <td style="padding: 10px 8px; font-family: monospace; font-size: 13px;">
+                    <i class="fas fa-user-circle" style="color: #888; margin-right: 6px;"></i>${safeId}
                 </td>
-                <td class="col-status" style="padding: 10px 4px; text-align: center;">${statusBadge}</td>
-                <td class="col-time" style="padding: 10px 6px; font-size: 12px;">
-                    <div class="time-main">${timeLeftStr}</div>
-                    <div class="col-expiry-sub">${safeExpiry}</div>
-                </td>
-                <td class="col-expiry" style="padding: 10px 8px; font-size: 12px; color: #bbb;">${safeExpiry}</td>
-                <td class="col-actions" style="padding: 10px 6px; text-align: right; white-space: nowrap;">
-                    <div class="actions-cell-wrap">
-                        <button class="btn-vip-action btn-extend" onclick="extendGroupVipMember('${safeId}')" title="Extend VIP Duration">
-                            <i class="fas fa-plus"></i><span class="btn-text"> Extend</span>
-                        </button>
-                        <button class="btn-vip-action btn-remove" onclick="kickGroupMemberDirect('${safeId}')" title="Remove Member from Telegram Group Chat">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
+                <td style="padding: 10px 8px;">${statusBadge}</td>
+                <td style="padding: 10px 8px; font-size: 12px;">${timeLeftStr}</td>
+                <td style="padding: 10px 8px; font-size: 12px; color: #bbb;">${safeExpiry}</td>
+                <td style="padding: 10px 8px; text-align: right;">
+                    <button onclick="extendGroupVipMember('${safeId}')" title="Extend VIP" style="background: rgba(0, 136, 204, 0.15); color: #4da6ff; border: 1px solid rgba(0, 136, 204, 0.3); padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-right: 4px;">
+                        <i class="fas fa-plus"></i> Extend
+                    </button>
+                    <button onclick="deleteGroupVipMember('${safeId}')" title="Remove VIP" style="background: rgba(255, 77, 77, 0.15); color: #ff6666; border: 1px solid rgba(255, 77, 77, 0.3); padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </td>
             </tr>
         `;
@@ -4479,120 +4480,29 @@ async function extendGroupVipMember(targetUserId) {
 }
 
 async function deleteGroupVipMember(targetUserId) {
-    return kickGroupMemberDirect(targetUserId);
-}
-
-async function kickGroupMemberDirect(targetUserId) {
     if (!currentGroupId || !targetUserId) return;
-    const ok = await tgConfirm(`Are you sure you want to REMOVE user ${targetUserId} from the Telegram group chat and revoke their VIP status?`);
-    if (!ok) return;
-
-    // Optimistic visual feedback: dim target row immediately
-    const row = document.querySelector(`tr[data-user-id="${targetUserId}"]`);
-    if (row) {
-        row.style.transition = 'all 0.3s ease';
-        row.style.opacity = '0.35';
-        row.style.pointerEvents = 'none';
-    }
-
-    try {
-        const apiBase = getActiveApiBase();
-        const res = await fetch(`${apiBase}/api/group/${currentGroupId}/members/remove`, {
-            method: 'POST',
-            headers: getWebappHeaders({ 'Content-Type': 'application/json' }),
-            body: JSON.stringify({
-                user_id: targetUserId,
-                revoke_vip: true
-            })
-        });
-        const data = await res.json();
-        if (data.success) {
-            // Smooth slide-out on success
-            if (row) {
-                row.style.transform = 'translateX(20px)';
-                row.style.opacity = '0';
-                setTimeout(() => {
-                    row.remove();
-                }, 300);
-            }
-            await loadGroupVipMembers();
-            if (typeof showNotification === 'function') {
-                showNotification(data.message || `Member ${targetUserId} removed from group!`, 'success');
-            } else {
-                await tgAlert(data.message || `Member ${targetUserId} removed from group!`);
-            }
-        } else {
-            if (row) {
-                row.style.opacity = '1';
-                row.style.pointerEvents = 'auto';
-            }
-            throw new Error(data.error || 'Failed to remove member');
-        }
-    } catch (e) {
-        if (row) {
-            row.style.opacity = '1';
-            row.style.pointerEvents = 'auto';
-        }
-        console.error('Error removing member from group:', e);
-        if (typeof showNotification === 'function') {
-            showNotification(`Failed: ${e.message}`, 'error');
-        } else {
-            await tgAlert(`Failed: ${e.message}`);
-        }
-    }
-}
-
-function toggleRemoveMemberForm() {
-    const box = document.getElementById('removeMemberBox');
-    if (!box) return;
-    const isHidden = box.style.display === 'none' || !box.style.display;
-    box.style.display = isHidden ? 'block' : 'none';
-    if (isHidden) {
-        document.getElementById('removeMemberUserId')?.focus();
-    }
-}
-
-async function submitRemoveMember() {
-    if (!currentGroupId) return;
-    const userIdInput = document.getElementById('removeMemberUserId');
-    const revokeVipCheckbox = document.getElementById('removeMemberRevokeVip');
-
-    const targetUserId = userIdInput?.value?.trim();
-    const revokeVip = revokeVipCheckbox ? revokeVipCheckbox.checked : true;
-
-    if (!targetUserId || isNaN(targetUserId)) {
-        await tgAlert('Please enter a valid numeric Telegram User ID.');
-        return;
-    }
-
-    const ok = await tgConfirm(`Are you sure you want to remove user ${targetUserId} from the Telegram group?`);
+    const ok = await tgConfirm(`Are you sure you want to revoke VIP membership for user ${targetUserId}?`);
     if (!ok) return;
 
     try {
         const apiBase = getActiveApiBase();
-        const res = await fetch(`${apiBase}/api/group/${currentGroupId}/members/remove`, {
-            method: 'POST',
-            headers: getWebappHeaders({ 'Content-Type': 'application/json' }),
-            body: JSON.stringify({
-                user_id: targetUserId,
-                revoke_vip: revokeVip
-            })
+        const res = await fetch(`${apiBase}/api/group/${currentGroupId}/premium-members/${targetUserId}`, {
+            method: 'DELETE',
+            headers: getWebappHeaders()
         });
         const data = await res.json();
         if (data.success) {
-            userIdInput.value = '';
-            toggleRemoveMemberForm();
             await loadGroupVipMembers();
             if (typeof showNotification === 'function') {
-                showNotification(data.message || `User ${targetUserId} removed from group!`, 'success');
+                showNotification(`VIP membership revoked for user ${targetUserId}.`, 'success');
             } else {
-                await tgAlert(data.message || `User ${targetUserId} removed from group!`);
+                await tgAlert(`VIP membership revoked for user ${targetUserId}.`);
             }
         } else {
-            throw new Error(data.error || 'Failed to remove member');
+            throw new Error(data.error || 'Failed to revoke member');
         }
     } catch (e) {
-        console.error('Error removing member:', e);
+        console.error('Error revoking VIP member:', e);
         if (typeof showNotification === 'function') {
             showNotification(`Failed: ${e.message}`, 'error');
         } else {
