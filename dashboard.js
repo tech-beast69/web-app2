@@ -3508,7 +3508,114 @@ async function populateGroupSettings(config) {
     document.getElementById('mediaReactionsEnabled').checked = config.media_reactions_enabled || false;
     document.getElementById('mediaReactionEmojis').value = (config.media_reaction_emojis || ["🔥", "❤", "👍", "😍", "🤩", "👌", "😘", "🙊", "💯", "🎉", "😎", "👏", "😁", "🏆", "😱", "🤡"]).join(', ');
     updateEmojiPreview();
+
+    // Join Request & Bio Protection settings
+    loadJoinVerificationSettings(config);
 }
+
+// ==================== JOIN REQUEST & BIO PROTECTION ====================
+window.currentBioWords = [];
+
+function loadJoinVerificationSettings(config) {
+    const jrv = config?.settings?.join_request_verification || {};
+    const captchaEl = document.getElementById('jrvCaptchaEnabled');
+    if (captchaEl) captchaEl.checked = jrv.enabled !== false;
+
+    const timeoutEl = document.getElementById('jrvTimeout');
+    if (timeoutEl) timeoutEl.value = jrv.timeout || 300;
+
+    const bioLinksEl = document.getElementById('jrvBioCheckLinks');
+    if (bioLinksEl) bioLinksEl.checked = !!jrv.bio_check_links;
+
+    const bioWordsEl = document.getElementById('jrvBioCheckWords');
+    if (bioWordsEl) bioWordsEl.checked = !!jrv.bio_check_words;
+
+    const bioActionEl = document.getElementById('jrvBioAction');
+    if (bioActionEl) bioActionEl.value = jrv.bio_action || 'decline';
+
+    window.currentBioWords = Array.isArray(jrv.bio_blocklist_words) ? [...jrv.bio_blocklist_words] : [];
+    renderBioWordsChips();
+}
+window.loadJoinVerificationSettings = loadJoinVerificationSettings;
+
+function renderBioWordsChips() {
+    const container = document.getElementById('jrvBioWordsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    const words = window.currentBioWords || [];
+    if (words.length === 0) {
+        container.innerHTML = '<span style="color: #888; font-size: 0.85em; padding: 5px;">No custom bio words added yet. Group blocklist words will also be checked if enabled.</span>';
+        return;
+    }
+    words.forEach((word, idx) => {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; background: rgba(255, 71, 87, 0.2); color: #ff6b81; border: 1px solid rgba(255, 71, 87, 0.4); border-radius: 16px; padding: 4px 10px; font-size: 0.85em; font-weight: 500;';
+        chip.innerHTML = `${escapeHtml(word)} <i class="fas fa-times" style="cursor: pointer; opacity: 0.8;" title="Remove word" onclick="removeBioBlocklistWord(${idx})"></i>`;
+        container.appendChild(chip);
+    });
+}
+window.renderBioWordsChips = renderBioWordsChips;
+
+function addBioBlocklistWord() {
+    const input = document.getElementById('jrvNewWordInput');
+    if (!input) return;
+    const val = input.value.trim();
+    if (!val) return;
+    window.currentBioWords = window.currentBioWords || [];
+    const splitWords = val.split(',').map(w => w.trim()).filter(w => w);
+    splitWords.forEach(w => {
+        if (!window.currentBioWords.includes(w)) {
+            window.currentBioWords.push(w);
+        }
+    });
+    input.value = '';
+    renderBioWordsChips();
+    saveJoinVerificationSettings(false);
+}
+window.addBioBlocklistWord = addBioBlocklistWord;
+
+function removeBioBlocklistWord(index) {
+    if (!window.currentBioWords) return;
+    window.currentBioWords.splice(index, 1);
+    renderBioWordsChips();
+    saveJoinVerificationSettings(false);
+}
+window.removeBioBlocklistWord = removeBioBlocklistWord;
+
+async function saveJoinVerificationSettings(showToast = false) {
+    if (!currentGroupId) return;
+    try {
+        const payload = {
+            enabled: document.getElementById('jrvCaptchaEnabled')?.checked ?? true,
+            timeout: parseInt(document.getElementById('jrvTimeout')?.value || '300', 10),
+            bio_check_links: document.getElementById('jrvBioCheckLinks')?.checked ?? false,
+            bio_check_words: document.getElementById('jrvBioCheckWords')?.checked ?? false,
+            bio_action: document.getElementById('jrvBioAction')?.value || 'decline',
+            bio_blocklist_words: window.currentBioWords || []
+        };
+        const targetBase = (typeof API_BASE_URL !== 'undefined' && API_BASE_URL && !API_BASE_URL.includes('github.io'))
+            ? API_BASE_URL
+            : (API_BASE || (window.DASHBOARDCONFIG && window.DASHBOARDCONFIG.APIURL) || '');
+        const res = await fetch(`${targetBase}/api/group/${currentGroupId}/join-verification`, {
+            method: 'POST',
+            headers: {
+                ...getWebappHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (showToast) showNotification('Join & Bio Protection settings saved successfully!', 'success');
+        } else {
+            showNotification(`Failed to save: ${data.error || 'Unknown error'}`, 'error');
+        }
+    } catch (e) {
+        console.error('Error saving join verification settings:', e);
+        if (showToast) showNotification(`Error: ${e.message}`, 'error');
+    }
+}
+window.saveJoinVerificationSettings = saveJoinVerificationSettings;
 
 function copyModalInviteLink() {
     const inviteUrl = (currentGroupConfig && currentGroupConfig.invite_link) || '';

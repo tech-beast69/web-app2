@@ -129,6 +129,9 @@
                     <button class="tab" onclick="switchTab('vipReminders', event)" id="vipRemindersTabBtn">
                         <i class="fas fa-crown" style="color: #ffd700;"></i> VIP Reminders
                     </button>
+                    <button class="tab" onclick="switchTab('joinVerification', event)" id="joinVerificationTabBtn">
+                        <i class="fas fa-user-shield" style="color: #4da6ff;"></i> Join & Bio Protection
+                    </button>
                 </div>
 
                 <!-- General Settings Tab -->
@@ -938,6 +941,102 @@
                                     </table>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Join Request & Bio Protection Tab -->
+                <div id="joinVerificationTab" class="tab-content">
+                    <div class="settings-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+                            <div>
+                                <h3 style="margin: 0; color: #4da6ff;"><i class="fas fa-user-shield"></i> Join Request & Bio Protection</h3>
+                                <p class="setting-description" style="margin-top: 4px;">Automated join request verification, captcha challenge, and Telegram profile bio spam protection</p>
+                            </div>
+                        </div>
+
+                        <!-- Card 1: Join Request Captcha Challenge -->
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 12px 0; color: #fff; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-robot" style="color: #4da6ff;"></i> Join Request Captcha Challenge
+                            </h4>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">Require Captcha Verification</div>
+                                    <div class="setting-description">Send private verification captcha challenge to users when they request to join via invite link</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="jrvCaptchaEnabled" onchange="saveJoinVerificationSettings()">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="form-group" style="margin-top: 15px; margin-bottom: 0;">
+                                <label class="form-label">Captcha Expiration Timeout (seconds)</label>
+                                <input type="number" id="jrvTimeout" class="input-field" value="300" min="30" max="3600" onchange="saveJoinVerificationSettings()">
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Profile Bio Anti-Spam & Link Protection -->
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 12px 0; color: #fff; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-shield-alt" style="color: #ff4757;"></i> Telegram Bio Anti-Spam & Link Protection
+                            </h4>
+
+                            <!-- Toggle 1: Bio Links Check -->
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <div class="setting-label">🔗 Block Links & Invites in Bio</div>
+                                    <div class="setting-description">Automatically reject join requests (or kick joining members) if their Telegram bio contains website URLs, t.me links, or channel invite handles (@...)</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="jrvBioCheckLinks" onchange="saveJoinVerificationSettings()">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- Toggle 2: Bio Words Check -->
+                            <div class="setting-item" style="margin-top: 15px;">
+                                <div class="setting-info">
+                                    <div class="setting-label">🚫 Block Prohibited Words in Bio</div>
+                                    <div class="setting-description">Automatically reject join requests (or kick joining members) if their Telegram bio contains configured spam words or promotion keywords</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="jrvBioCheckWords" onchange="saveJoinVerificationSettings()">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- Violation Action -->
+                            <div class="form-group" style="margin-top: 18px;">
+                                <label class="form-label">Action on Bio Violation</label>
+                                <select id="jrvBioAction" class="input-field" onchange="saveJoinVerificationSettings()">
+                                    <option value="decline">Decline Join Request (Kick if already joined)</option>
+                                    <option value="ban">Decline Join Request & Ban User Permanently</option>
+                                </select>
+                            </div>
+
+                            <!-- Bio Words Manager -->
+                            <div style="margin-top: 20px;">
+                                <label class="form-label">Custom Bio Blocked Words & Phrases</label>
+                                <p style="color: #888; font-size: 0.85em; margin-bottom: 10px;">
+                                    Words configured here are strictly matched against user bios using anti-evasion filtering. If empty, the group's general blocklist words will also be checked.
+                                </p>
+                                <div class="add-form" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                    <input type="text" id="jrvNewWordInput" class="input-field" placeholder="e.g. dm me, promo, crypto, earn, free" style="flex: 1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addBioBlocklistWord();}">
+                                    <button class="btn-primary" onclick="addBioBlocklistWord()" style="white-space: nowrap;">
+                                        <i class="fas fa-plus"></i> Add Word
+                                    </button>
+                                </div>
+                                <div id="jrvBioWordsContainer" class="bio-words-chips" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 40px; padding: 10px; background: rgba(0,0,0,0.25); border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+                                    <!-- Dynamic chip badges -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="text-align: right; margin-top: 20px;">
+                            <button class="btn-primary" onclick="saveJoinVerificationSettings(true)" style="padding: 10px 24px;">
+                                <i class="fas fa-save"></i> Save Bio Protection Settings
+                            </button>
                         </div>
                     </div>
                 </div>
