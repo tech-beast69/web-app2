@@ -3518,8 +3518,18 @@ window.currentBioWords = [];
 
 function loadJoinVerificationSettings(config) {
     const jrv = config?.settings?.join_request_verification || {};
-    const captchaEl = document.getElementById('jrvCaptchaEnabled');
-    if (captchaEl) captchaEl.checked = jrv.enabled !== false;
+    let mode = jrv.verification_mode;
+    if (mode !== 'profile' && mode !== 'captcha' && mode !== 'off') {
+        mode = jrv.enabled === false ? 'off' : 'captcha';
+    }
+
+    const modeEl = document.getElementById('jrvMode');
+    if (modeEl) modeEl.value = mode;
+
+    const profileUsernameEl = document.getElementById('jrvProfileCheckUsername');
+    if (profileUsernameEl) profileUsernameEl.checked = jrv.profile_check_username !== false;
+
+    updateJoinVerificationUI(mode, jrv);
 
     const timeoutEl = document.getElementById('jrvTimeout');
     if (timeoutEl) timeoutEl.value = jrv.timeout || 300;
@@ -3582,11 +3592,67 @@ function removeBioBlocklistWord(index) {
 }
 window.removeBioBlocklistWord = removeBioBlocklistWord;
 
+function updateJoinVerificationUI(mode, jrv = null) {
+    const hints = {
+        captcha: '🧮 Captcha mode: every join request gets a private math captcha. The bio/word checks below run first, then the captcha is sent.',
+        profile: '🛡️ Profile Check mode: NO captcha is sent. A request is approved only when the username, display name and bio contain no links/invites and no blocked words. Violations are declined (or banned) automatically.',
+        off: '✅ Disabled: every join request is auto-approved. No captcha and no profile checks are applied.'
+    };
+    const hintEl = document.getElementById('jrvModeHint');
+    if (hintEl) hintEl.textContent = hints[mode] || hints.captcha;
+
+    const captchaOptions = document.getElementById('jrvCaptchaOptions');
+    if (captchaOptions) {
+        const showCaptcha = mode === 'captcha';
+        captchaOptions.style.display = showCaptcha ? '' : 'none';
+    }
+
+    const linksEl = document.getElementById('jrvBioCheckLinks');
+    const wordsEl = document.getElementById('jrvBioCheckWords');
+    const usernameEl = document.getElementById('jrvProfileCheckUsername');
+    const actionEl = document.getElementById('jrvBioAction');
+    const disabled = mode === 'off';
+    [linksEl, wordsEl, usernameEl, actionEl].forEach((el) => {
+        if (el) el.disabled = disabled;
+    });
+
+    if (jrv) {
+        const summaryEl = document.getElementById('jrvStatusSummary');
+        if (summaryEl) {
+            const links = jrv.bio_check_links ? '✅' : '❌';
+            const words = jrv.bio_check_words ? '✅' : '❌';
+            const uname = jrv.profile_check_username !== false ? '✅' : '❌';
+            const action = (jrv.bio_action === 'ban') ? 'Ban' : 'Decline';
+            summaryEl.innerHTML = mode === 'off'
+                ? 'Current status: <b>auto-approving</b> all join requests.'
+                : `Checks → links/invites ${links} · blocked words ${words} · username/name ${uname} · violation action: <b>${action}</b>`;
+        }
+    }
+}
+window.updateJoinVerificationUI = updateJoinVerificationUI;
+
+function onJoinVerificationModeChange() {
+    const mode = document.getElementById('jrvMode')?.value || 'captcha';
+    if (mode === 'profile') {
+        // Profile mode is meaningless without checks: enable all three automatically.
+        ['jrvBioCheckLinks', 'jrvBioCheckWords', 'jrvProfileCheckUsername'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.checked = true;
+        });
+    }
+    updateJoinVerificationUI(mode);
+    saveJoinVerificationSettings();
+}
+window.onJoinVerificationModeChange = onJoinVerificationModeChange;
+
 async function saveJoinVerificationSettings(showToast = false) {
     if (!currentGroupId) return;
     try {
+        const mode = document.getElementById('jrvMode')?.value || 'captcha';
         const payload = {
-            enabled: document.getElementById('jrvCaptchaEnabled')?.checked ?? true,
+            enabled: mode !== 'off',
+            verification_mode: mode,
+            profile_check_username: document.getElementById('jrvProfileCheckUsername')?.checked ?? true,
             timeout: parseInt(document.getElementById('jrvTimeout')?.value || '300', 10),
             bio_check_links: document.getElementById('jrvBioCheckLinks')?.checked ?? false,
             bio_check_words: document.getElementById('jrvBioCheckWords')?.checked ?? false,
@@ -3606,6 +3672,12 @@ async function saveJoinVerificationSettings(showToast = false) {
         });
         const data = await res.json();
         if (data.success) {
+            const saved = data.join_verification || payload;
+            if (currentGroupConfig) {
+                currentGroupConfig.settings = currentGroupConfig.settings || {};
+                currentGroupConfig.settings.join_request_verification = saved;
+            }
+            updateJoinVerificationUI(saved.verification_mode || payload.verification_mode, saved);
             if (showToast) showNotification('Join & Bio Protection settings saved successfully!', 'success');
         } else {
             showNotification(`Failed to save: ${data.error || 'Unknown error'}`, 'error');
