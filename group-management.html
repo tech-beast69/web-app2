@@ -955,25 +955,25 @@
                             </div>
                         </div>
 
-                        <!-- Card 1: Join Request Captcha Challenge -->
+                        <!-- Card 1: Join Request Verification Mode -->
                         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
                             <h4 style="margin: 0 0 12px 0; color: #fff; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-robot" style="color: #4da6ff;"></i> Join Request Captcha Challenge
+                                <i class="fas fa-robot" style="color: #4da6ff;"></i> Join Request Verification Mode
                             </h4>
-                            <div class="setting-item">
-                                <div class="setting-info">
-                                    <div class="setting-label">Require Captcha Verification</div>
-                                    <div class="setting-description">Send private verification captcha challenge to users when they request to join via invite link</div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="jrvCaptchaEnabled" onchange="saveJoinVerificationSettings()">
-                                    <span class="toggle-slider"></span>
-                                </label>
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label class="form-label">Verification Method</label>
+                                <select id="jrvMode" class="input-field" onchange="onJoinVerificationModeChange()">
+                                    <option value="captcha">🧮 Captcha Challenge (send math captcha in DM)</option>
+                                    <option value="profile">🛡️ Profile Check — No Captcha (auto-approve clean username + bio)</option>
+                                    <option value="off">✅ Disabled — Auto-Approve All Requests</option>
+                                </select>
+                                <p id="jrvModeHint" style="color: #888; font-size: 0.85em; margin-top: 8px;"></p>
                             </div>
-                            <div class="form-group" style="margin-top: 15px; margin-bottom: 0;">
+                            <div id="jrvCaptchaOptions" class="form-group" style="margin-top: 15px; margin-bottom: 0;">
                                 <label class="form-label">Captcha Expiration Timeout (seconds)</label>
                                 <input type="number" id="jrvTimeout" class="input-field" value="300" min="30" max="3600" onchange="saveJoinVerificationSettings()">
                             </div>
+                            <div id="jrvStatusSummary" style="margin-top: 16px; padding: 12px; border-radius: 8px; background: rgba(77,166,255,0.08); border: 1px solid rgba(77,166,255,0.2); color: #b9d9ff; font-size: 0.9em;"></div>
                         </div>
 
                         <!-- Card 2: Profile Bio Anti-Spam & Link Protection -->
@@ -1006,9 +1006,21 @@
                                 </label>
                             </div>
 
+                            <!-- Toggle 3: Username / Display Name Check -->
+                            <div class="setting-item" style="margin-top: 15px;">
+                                <div class="setting-info">
+                                    <div class="setting-label">👤 Check Username & Display Name (Profile Mode)</div>
+                                    <div class="setting-description">Also inspect the user's @username and first/last name for links and blocked words. Required for captcha-free Profile Check mode</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="jrvProfileCheckUsername" onchange="saveJoinVerificationSettings()">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+
                             <!-- Violation Action -->
                             <div class="form-group" style="margin-top: 18px;">
-                                <label class="form-label">Action on Bio Violation</label>
+                                <label class="form-label">Action on Profile / Bio Violation</label>
                                 <select id="jrvBioAction" class="input-field" onchange="saveJoinVerificationSettings()">
                                     <option value="decline">Decline Join Request (Kick if already joined)</option>
                                     <option value="ban">Decline Join Request & Ban User Permanently</option>
@@ -1035,7 +1047,7 @@
 
                         <div style="text-align: right; margin-top: 20px;">
                             <button class="btn-primary" onclick="saveJoinVerificationSettings(true)" style="padding: 10px 24px;">
-                                <i class="fas fa-save"></i> Save Bio Protection Settings
+                                <i class="fas fa-save"></i> Save Join & Bio Protection Settings
                             </button>
                         </div>
                     </div>
